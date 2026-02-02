@@ -1,0 +1,51 @@
+<div class="fuel-surcharge-detail-page">
+  <ui-breadcrumbs
+    variant="page-header"
+    separator="chevron"
+    [items]="[
+      { label: 'Fuel surcharges', route: '/admin/fuel-surcharges' },
+      { label: isEditMode() ? 'Edit' : 'Add' }
+    ]"
+  ></ui-breadcrumbs>
+
+  <ui-detail-header
+    [title]="isEditMode() ? 'Edit option' : 'New option'"
+    [isEditMode]="isEditMode()"
+    [showSaveAndContinue]="true"
+    [showDiscard]="false"
+    (back)="goBack()"
+    (save)="onSave()"
+    (saveAndContinue)="onSaveAndContinue()"
+  ></ui-detail-header>
+
+  <div class="page-content">
+    <div class="form-card">
+      <ui-form-field label="Delivery type" layout="horizontal">
+        <div class="select-with-pill">
+          <span class="select-placeholder" *ngIf="!fuelSurcharge().deliveryType">Select</span>
+          <div class="pill" *ngIf="fuelSurcharge().deliveryType">
+            <button class="pill__remove" (click)="removeDeliveryType(); $event.stopPropagation()">
+              <ui-icon name="close" size="xs" color="#fafafa"></ui-icon>
+            </button>
+            <span>{{ fuelSurcharge().deliveryType }}</span>
+          </div>
+          <select class="select-field" [(ngModel)]="selectedDeliveryType" (change)="onDeliveryTypeChange()">
+            <option value="" disabled selected>Select</option>
+            <option *ngFor="let opt of deliveryTypeOptions" [value]="opt.value">{{ opt.label }}</option>
+          </select>
+          <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+        </div>
+      </ui-form-field>
+
+      <ui-form-field label="Date" layout="horizontal">
+        <input type="text" [value]="fuelSurcharge().date" (input)="onDateChange($event)" placeholder="01/01/2025">
+      </ui-form-field>
+
+      <ui-form-field label="Fuel surcharge" layout="horizontal">
+        <input type="text" [value]="formatFuelSurcharge(fuelSurcharge().fuelSurcharge)" (input)="onFuelSurchargeChange($event)" placeholder="1,025">
+      </ui-form-field>
+    </div>
+  </div>
+
+  <ui-mobile-footer (primaryClick)="onSave()" (secondaryClick)="onSaveAndContinue()"></ui-mobile-footer>
+</div>

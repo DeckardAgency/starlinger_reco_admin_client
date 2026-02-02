@@ -1,0 +1,113 @@
+<div class="discount-detail-page" (click)="closeDropdown()">
+  <ui-breadcrumbs
+    variant="page-header"
+    separator="chevron"
+    [items]="[
+      { label: 'Discounts', route: '/admin/discounts' },
+      { label: isEditMode() ? discount().name : 'Add new' }
+    ]"
+  ></ui-breadcrumbs>
+
+  <ui-detail-header
+    [title]="isEditMode() ? 'Edit discount' : 'New discount'"
+    [isEditMode]="isEditMode()"
+    [showSaveAndContinue]="true"
+    [showDiscard]="false"
+    (back)="onBack()"
+    (save)="onSave()"
+    (saveAndContinue)="onSaveAndContinue()"
+  ></ui-detail-header>
+
+  <div class="detail-content">
+    <div class="form-card">
+      <div class="form-card__toggles">
+        <ui-toggle label="Active" labelPosition="left" [checked]="discount().active" (toggleChange)="onActiveChange($event)"></ui-toggle>
+      </div>
+
+      <div class="form-card__fields">
+        <ui-form-field label="Name" layout="horizontal">
+          <input type="text" [ngModel]="discount().name" (ngModelChange)="onNameChange($event)" placeholder="Enter name">
+        </ui-form-field>
+
+        <ui-form-field label="Date from" layout="horizontal">
+          <input type="text" [ngModel]="discount().dateFrom" (ngModelChange)="onDateFromChange($event)" placeholder="DD/MM/YYYY">
+        </ui-form-field>
+
+        <ui-form-field label="Date to" layout="horizontal">
+          <input type="text" [ngModel]="discount().dateTo" (ngModelChange)="onDateToChange($event)" placeholder="DD/MM/YYYY">
+        </ui-form-field>
+
+        <ui-form-field label="Discount %" layout="horizontal">
+          <input type="number" [ngModel]="discount().discountPercent" (ngModelChange)="onDiscountPercentChange($event)" placeholder="0">
+        </ui-form-field>
+
+        <ui-form-field label="Priority" layout="horizontal">
+          <input type="number" [ngModel]="discount().priority" (ngModelChange)="onPriorityChange($event)" placeholder="0">
+        </ui-form-field>
+
+        <ui-form-field label="Account groups" layout="horizontal">
+          <div class="select-with-pill">
+            <span class="select-placeholder" *ngIf="discount().accountGroups.length === 0">Select</span>
+            <div class="pill" *ngFor="let group of discount().accountGroups">
+              <button class="pill__remove" (click)="removeAccountGroup(group); $event.stopPropagation()">
+                <ui-icon name="close" size="xs"></ui-icon>
+              </button>
+              <span>{{ getAccountGroupLabel(group) }}</span>
+            </div>
+            <select class="select-field" [(ngModel)]="selectedAccountGroup" (change)="onAccountGroupChange()">
+              <option value="" disabled selected>Select</option>
+              <option *ngFor="let opt of accountGroupOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+            <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+          </div>
+        </ui-form-field>
+
+        <ui-form-field label="Accounts" layout="horizontal">
+          <div class="select-with-pill">
+            <span class="select-placeholder" *ngIf="discount().accounts.length === 0">Select</span>
+            <div class="pill" *ngFor="let account of discount().accounts">
+              <button class="pill__remove" (click)="removeAccount(account); $event.stopPropagation()">
+                <ui-icon name="close" size="xs"></ui-icon>
+              </button>
+              <span>{{ getAccountLabel(account) }}</span>
+            </div>
+            <select class="select-field" [(ngModel)]="selectedAccount" (change)="onAccountChange()">
+              <option value="" disabled selected>Select</option>
+              <option *ngFor="let opt of accountOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+            <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+          </div>
+        </ui-form-field>
+      </div>
+    </div>
+
+    @if (isEditMode()) {
+      <div class="products-section">
+        <div class="section-title-header">
+          <div class="section-title-header__left">
+            <h2 class="section-title-header__title">Products that match criteria</h2>
+            <span class="section-title-header__count">{{ totalItems() }}</span>
+          </div>
+          <div class="section-title-header__right">
+            <div class="search-input">
+              <ui-icon name="search" size="sm" class="search-input__icon"></ui-icon>
+              <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearch($event)" placeholder="Search products..." class="search-input__field"/>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <ui-data-table [columns]="productColumns" [data]="products()" [sortColumn]="sortColumn" [sortDirection]="sortDirection" (sort)="onSortChange($event)"></ui-data-table>
+        </div>
+
+        <ui-table-footer [currentPage]="currentPage()" [totalItems]="totalItems()" [itemsPerPage]="itemsPerPage()" (pageChange)="onPageChange($event)"></ui-table-footer>
+      </div>
+    }
+  </div>
+
+  <ui-mobile-footer (primaryClick)="onSave()" (secondaryClick)="onSaveAndContinue()"></ui-mobile-footer>
+</div>
+
+<ng-template #productActionsTemplate let-row>
+  <ui-table-actions-dropdown [isOpen]="openDropdownId() === row.id" [row]="row" [actions]="productActions" (toggle)="toggleDropdown(row.id)" (actionClick)="onProductActionClick($event)" (close)="closeDropdown()"></ui-table-actions-dropdown>
+</ng-template>

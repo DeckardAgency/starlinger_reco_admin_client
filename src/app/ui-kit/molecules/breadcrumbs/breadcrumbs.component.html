@@ -1,0 +1,81 @@
+<nav class="ui-breadcrumbs" [class.ui-breadcrumbs--page-header]="variant === 'page-header'" aria-label="Breadcrumb">
+  <ol class="ui-breadcrumbs__list">
+    <!-- Home item -->
+    <li *ngIf="showHome" class="ui-breadcrumbs__item">
+      <a [routerLink]="homeRoute" class="ui-breadcrumbs__link ui-breadcrumbs__link--home">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" width="16" height="16">
+          <path d="M6 14.667V8h4v6.667M2 6l6-4.667L14 6v7.333a1.334 1.334 0 01-1.333 1.334H3.333A1.334 1.334 0 012 13.333V6z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+      <!-- Separator after home: line for page-header, otherwise use selected separator -->
+      <span *ngIf="items.length > 0" class="ui-breadcrumbs__separator ui-breadcrumbs__separator--after-home">
+        <ng-container *ngIf="variant === 'page-header'; else defaultHomeSeparator">
+          <svg width="1" height="15" viewBox="0 0 1 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="0.5" y1="0" x2="0.5" y2="15" stroke="#E4E4E7"/>
+          </svg>
+        </ng-container>
+        <ng-template #defaultHomeSeparator>
+          <ng-container [ngSwitch]="separator">
+            <svg *ngSwitchCase="'chevron'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+              <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg *ngSwitchCase="'arrow'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+              <path d="M3.333 8H12.667M12.667 8L8 3.333M12.667 8L8 12.667" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span *ngSwitchCase="'slash'" class="ui-breadcrumbs__separator--slash">/</span>
+            <svg *ngSwitchCase="'line'" width="1" height="15" viewBox="0 0 1 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="0.5" y1="0" x2="0.5" y2="15" stroke="#E4E4E7"/>
+            </svg>
+          </ng-container>
+        </ng-template>
+      </span>
+    </li>
+
+    <!-- Breadcrumb items -->
+    <li
+      *ngFor="let item of items; let last = last; let i = index; trackBy: trackByIndex"
+      class="ui-breadcrumbs__item"
+    >
+      <!-- Link (not last) -->
+      <a
+        *ngIf="!last && item.route"
+        [routerLink]="item.route"
+        class="ui-breadcrumbs__link"
+      >
+        {{ item.label }}
+      </a>
+
+      <!-- Current page (last or no route) -->
+      <span
+        *ngIf="last || !item.route"
+        class="ui-breadcrumbs__current"
+        [attr.aria-current]="last ? 'page' : null"
+      >
+        {{ item.label }}
+      </span>
+
+      <!-- Separator between items: chevron for page-header, otherwise use selected separator -->
+      <span *ngIf="!last" class="ui-breadcrumbs__separator">
+        <ng-container *ngIf="variant === 'page-header'; else defaultItemSeparator">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="24" height="24">
+            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </ng-container>
+        <ng-template #defaultItemSeparator>
+          <ng-container [ngSwitch]="separator">
+            <svg *ngSwitchCase="'chevron'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+              <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg *ngSwitchCase="'arrow'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+              <path d="M3.333 8H12.667M12.667 8L8 3.333M12.667 8L8 12.667" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span *ngSwitchCase="'slash'" class="ui-breadcrumbs__separator--slash">/</span>
+            <svg *ngSwitchCase="'line'" width="1" height="15" viewBox="0 0 1 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="0.5" y1="0" x2="0.5" y2="15" stroke="#E4E4E7"/>
+            </svg>
+          </ng-container>
+        </ng-template>
+      </span>
+    </li>
+  </ol>
+</nav>

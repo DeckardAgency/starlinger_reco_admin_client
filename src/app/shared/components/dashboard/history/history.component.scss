@@ -1,0 +1,40 @@
+@use '../../../../ui-kit/admin-shared' as admin;
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__table-container {
+    @include admin.tabs-table-container;
+  }
+
+  ui-tabs {
+    @include admin.tabs-table-tabs;
+  }
+
+  @include admin.tabs-table-data-table;
+
+  &__customer {
+    @include admin.customer-cell;
+  }
+
+  &__customer-name {
+    @include admin.customer-name;
+  }
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  color: #71717a;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+}

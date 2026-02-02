@@ -1,0 +1,243 @@
+import { Component, ChangeDetectionStrategy, ViewChild, TemplateRef, signal, OnInit, AfterViewInit, ChangeDetectorRef, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { forkJoin } from 'rxjs';
+import { SectionHeaderComponent, TabsComponent, BadgeComponent, AvatarComponent, TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit';
+import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms';
+import { DashboardService, DashboardOrder, DashboardInquiry } from '@core/services/http/dashboard.service';
+
+export type HistoryStatus = 'completed' | 'cancelled' | 'in-review';
+export type HistoryType = 'order' | 'manual';
+
+export interface HistoryItem {
+  inquiryId: string;
+  type: HistoryType;
+  dateCreated: string;
+  internalReference: string;
+  customerInitials: string;
+  customerName: string;
+  partsOrdered: number;
+  status: HistoryStatus;
+}
+
+@Component({
+  selector: 'app-history',
+  standalone: true,
+  imports: [
+    CommonModule,
+    RouterModule,
+    SectionHeaderComponent,
+    TabsComponent,
+    DataTableComponent,
+    BadgeComponent,
+    AvatarComponent,
+    TableActionsDropdownComponent
+  ],
+  templateUrl: './history.component.html',
+  styleUrls: ['./history.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class HistoryComponent implements OnInit, AfterViewInit {
+  private dashboardService = inject(DashboardService);
+  private cdr = inject(ChangeDetectorRef);
+
+  @ViewChild('typeCell', { static: true }) typeCell!: TemplateRef<any>;
+  @ViewChild('customerCell', { static: true }) customerCell!: TemplateRef<any>;
+  @ViewChild('statusCell', { static: true }) statusCell!: TemplateRef<any>;
+  @ViewChild('actionsCell', { static: true }) actionsCell!: TemplateRef<any>;
+
+  activeTab = signal('latest');
+  sortColumn = signal<string | null>('dateCreated');
+  sortDirection = signal<'asc' | 'desc' | null>('desc');
+  openMenuRowId = signal<string | null>(null);
+  isLoading = signal(true);
+  allData = signal<HistoryItem[]>([]);
+
+  tabs = [
+    { id: 'latest', label: 'Latest' },
+    { id: 'completed', label: 'Completed' },
+    { id: 'cancelled', label: 'Cancelled' }
+  ];
+
+  historyIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <path d="M11.6667 1.66675V5.00008C11.6667 5.44211 11.8423 5.86603 12.1548 6.17859C12.4674 6.49115 12.8913 6.66675 13.3333 6.66675H16.6667M7.5 12.5001L9.16667 14.1667L12.5 10.8334M12.5 1.66675H5C4.55798 1.66675 4.13405 1.84234 3.82149 2.1549C3.50893 2.46746 3.33334 2.89139 3.33334 3.33341V16.6667C3.33334 17.1088 3.50893 17.5327 3.82149 17.8453C4.13405 18.1578 4.55798 18.3334 5 18.3334H15C15.442 18.3334 15.866 18.1578 16.1785 17.8453C16.4911 17.5327 16.6667 17.1088 16.6667 16.6667V5.83341L12.5 1.66675Z" stroke="#232323" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+
+  columns = signal<TableColumn[]>([]);
+
+  ngOnInit(): void {
+    this.loadData();
+  }
+
+  private loadData(): void {
+    this.isLoading.set(true);
+
+    forkJoin({
+      orders: this.dashboardService.getRecentOrders(30),
+      inquiries: this.dashboardService.getRecentInquiries(30)
+    }).subscribe({
+      next: ({ orders, inquiries }) => {
+        const items = this.mapToHistoryItems(orders, inquiries);
+        this.allData.set(items);
+        this.isLoading.set(false);
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        console.error('Failed to load history:', error);
+        this.allData.set([]);
+        this.isLoading.set(false);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private mapToHistoryItems(orders: DashboardOrder[], inquiries: DashboardInquiry[]): HistoryItem[] {
+    const orderItems: HistoryItem[] = orders.map(o => ({
+      inquiryId: o.id,
+      type: 'order' as HistoryType,
+      dateCreated: this.formatDate(o.createdAt),
+      internalReference: o.orderNumber || o.id.slice(0, 8),
+      customerInitials: this.getInitials(o.user),
+      customerName: this.getUserName(o.user),
+      partsOrdered: 0,
+      status: this.mapStatus(o.status)
+    }));
+
+    const inquiryItems: HistoryItem[] = inquiries.map(i => ({
+      inquiryId: i.id,
+      type: 'manual' as HistoryType,
+      dateCreated: this.formatDate(i.createdAt),
+      internalReference: i.inquiryNumber || i.id.slice(0, 8),
+      customerInitials: this.getInitials(i.user),
+      customerName: this.getUserName(i.user),
+      partsOrdered: 0,
+      status: this.mapStatus(i.status)
+    }));
+
+    return [...orderItems, ...inquiryItems].sort((a, b) => {
+      const parse = (d: string) => { const [day, month, year] = d.split('-'); return new Date(Number(year), Number(month) - 1, Number(day)).getTime(); };
+      return parse(b.dateCreated) - parse(a.dateCreated);
+    });
+  }
+
+  private formatDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
+
+  private getInitials(user: { firstName?: string; lastName?: string; email?: string } | undefined): string {
+    if (!user) return 'U';
+    const first = user.firstName?.[0] || '';
+    const last = user.lastName?.[0] || '';
+    if (first || last) return (first + last).toUpperCase();
+    return (user.email?.[0] || 'U').toUpperCase();
+  }
+
+  private getUserName(user: { firstName?: string; lastName?: string; email?: string } | undefined): string {
+    if (!user) return 'Unknown';
+    const name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    return name || user.email || 'Unknown';
+  }
+
+  private mapStatus(status: string): HistoryStatus {
+    const s = (status || '').toLowerCase();
+    if (['completed', 'delivered', 'answered'].includes(s)) return 'completed';
+    if (['cancelled', 'canceled', 'rejected'].includes(s)) return 'cancelled';
+    if (['in_review', 'in-review', 'more_info', 'in_progress'].includes(s)) return 'in-review';
+    return 'in-review';
+  }
+
+  ngAfterViewInit(): void {
+    this.columns.set([
+      { key: 'inquiryId', label: 'Inquiry ID' },
+      { key: 'type', label: 'Type', template: this.typeCell },
+      { key: 'dateCreated', label: 'Date Created', sortable: true },
+      { key: 'internalReference', label: 'Internal reference number' },
+      { key: 'customer', label: 'Customer', template: this.customerCell },
+      { key: 'partsOrdered', label: 'Parts ordered' },
+      { key: 'status', label: 'Status', template: this.statusCell },
+      { key: 'actions', label: '', template: this.actionsCell }
+    ]);
+  }
+
+  get filteredData(): HistoryItem[] {
+    const tab = this.activeTab();
+    const data = this.allData();
+    if (tab === 'completed') {
+      return data.filter(item => item.status === 'completed');
+    } else if (tab === 'cancelled') {
+      return data.filter(item => item.status === 'cancelled');
+    }
+    return data;
+  }
+
+  onTabChange(tabId: string): void {
+    this.activeTab.set(tabId);
+  }
+
+  onSort(event: SortEvent): void {
+    this.sortColumn.set(event.column);
+    this.sortDirection.set(event.direction);
+  }
+
+  getTypeBadgeVariant(type: HistoryType): 'success' | 'info' {
+    return type === 'order' ? 'success' : 'info';
+  }
+
+  getTypeLabel(type: HistoryType): string {
+    return type === 'order' ? 'Order' : 'Manual';
+  }
+
+  getStatusBadgeVariant(status: HistoryStatus): 'success' | 'danger' | 'warning' {
+    const variants: Record<HistoryStatus, 'success' | 'danger' | 'warning'> = {
+      'completed': 'success',
+      'cancelled': 'danger',
+      'in-review': 'warning'
+    };
+    return variants[status];
+  }
+
+  getStatusLabel(status: HistoryStatus): string {
+    const labels: Record<HistoryStatus, string> = {
+      'completed': 'Completed',
+      'cancelled': 'Cancelled',
+      'in-review': 'In review'
+    };
+    return labels[status];
+  }
+
+  tableActions: TableAction[] = [
+    { id: 'view', label: 'View', icon: 'eye' },
+    { id: 'archive', label: 'Archive', icon: 'archive' },
+    { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
+  ];
+
+  toggleMenu(rowId: string): void {
+    this.openMenuRowId.set(this.openMenuRowId() === rowId ? null : rowId);
+  }
+
+  closeMenu(): void {
+    this.openMenuRowId.set(null);
+  }
+
+  onActionClick(event: ActionClickEvent): void {
+    const row = event.row as HistoryItem;
+    console.log(`Action ${event.actionId} for row:`, row);
+    // Handle actions here
+    switch (event.actionId) {
+      case 'view':
+        // Navigate to view page or show details
+        break;
+      case 'archive':
+        // Archive the item
+        break;
+      case 'delete':
+        // Delete the item
+        break;
+    }
+  }
+}

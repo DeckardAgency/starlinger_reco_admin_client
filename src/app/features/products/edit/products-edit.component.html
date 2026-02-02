@@ -1,0 +1,469 @@
+<div class="product-detail-page">
+  <!-- Page Header with Breadcrumb -->
+  <ui-breadcrumbs
+    [items]="breadcrumbItems"
+    [showHome]="true"
+    homeRoute="/admin/dashboard"
+    variant="page-header">
+  </ui-breadcrumbs>
+
+  <!-- Main Content -->
+  <div class="page-content">
+    <!-- Section Header -->
+    <div class="section-header">
+      <div class="section-header__left">
+        <button class="btn btn--icon btn--outline" (click)="goBack()">
+          <ui-icon name="arrow-back" size="sm"></ui-icon>
+        </button>
+        <ui-badge *ngIf="isEditMode()" variant="dark" size="sm">{{ product().code }}</ui-badge>
+        <h1 class="section-header__title">{{ isEditMode() ? product().name : 'New product' }}</h1>
+      </div>
+      <div class="section-header__actions">
+        <button class="btn btn--outline" (click)="onSaveAndContinue()">
+          <span>Save and continue</span>
+          <ui-icon name="chevron-right" size="sm"></ui-icon>
+        </button>
+        <button class="btn btn--primary" (click)="onSave()">
+          <span>Save</span>
+          <ui-icon name="save" size="sm"></ui-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Form Cards -->
+    <div class="form-cards">
+      <!-- Basic Details Card -->
+      <div class="card">
+        <h2 class="card__title">Basic details</h2>
+
+        <div class="card__toggles">
+          <ui-toggle
+            label="Active"
+            labelPosition="left"
+            [checked]="product().active"
+            (toggleChange)="onActiveChange($event)">
+          </ui-toggle>
+          <ui-toggle
+            label="Ready for Shop"
+            labelPosition="left"
+            [checked]="product().readyForShop"
+            (toggleChange)="onReadyForShopChange($event)">
+          </ui-toggle>
+        </div>
+
+        <div class="card__fields">
+          <ui-form-field label="URL" layout="horizontal">
+            <input type="text" [value]="product().url" placeholder="Enter URL" disabled>
+          </ui-form-field>
+          <ui-form-field label="Quantity" layout="horizontal">
+            <input type="number" [value]="product().quantity" placeholder="0">
+          </ui-form-field>
+          <ui-form-field label="Quantity step" layout="horizontal">
+            <input type="number" [value]="product().quantityStep" placeholder="0.00">
+          </ui-form-field>
+          <ui-form-field label="Quote item limit" layout="horizontal">
+            <input type="number" [value]="product().quoteItemLimit" placeholder="0.00">
+          </ui-form-field>
+          <ui-form-field label="Fixed quantity" layout="horizontal">
+            <input type="number" [value]="product().fixedQuantity" placeholder="0.00">
+          </ui-form-field>
+          <ui-form-field label="Weight" layout="horizontal">
+            <input type="text" [value]="product().weight" placeholder="kg 0.00">
+          </ui-form-field>
+          <ui-form-field label="Product group" layout="horizontal">
+            <div class="select-with-pill">
+              <div class="pill" *ngIf="productGroupValue">
+                <button class="pill__remove" (click)="productGroupValue = ''">
+                  <ui-icon name="x" size="xs" color="#fafafa"></ui-icon>
+                </button>
+                <span>{{ getProductGroupLabel(productGroupValue) }}</span>
+              </div>
+              <select class="select-field" [(ngModel)]="productGroupValue">
+                <option value="" disabled>Select product group</option>
+                <option *ngFor="let opt of productGroupOptions" [value]="opt.value">{{ opt.label }}</option>
+              </select>
+              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+            </div>
+          </ui-form-field>
+          <ui-form-field label="Code" layout="horizontal">
+            <input type="text" [value]="product().code" placeholder="Enter code">
+          </ui-form-field>
+          <ui-form-field label="Catalog code" layout="horizontal">
+            <input type="text" [value]="product().catalogCode" placeholder="Enter catalog code">
+          </ui-form-field>
+        </div>
+      </div>
+
+      <!-- Prices Card -->
+      <div class="card">
+        <h2 class="card__title">Prices</h2>
+
+        <div class="card__fields">
+          <ui-form-field label="Base price" layout="horizontal">
+            <input type="text" [value]="'€ ' + product().basePrice" placeholder="€ 0.00">
+          </ui-form-field>
+          <ui-form-field label="Retail price" layout="horizontal">
+            <input type="text" [value]="'€ ' + product().retailPrice" placeholder="€ 0.00" disabled>
+          </ui-form-field>
+          <ui-form-field label="Tax percent" layout="horizontal">
+            <input type="text" [value]="product().taxPercent" placeholder="PDV20" disabled>
+          </ui-form-field>
+          <ui-form-field label="Currency" layout="horizontal">
+            <input type="text" [value]="product().currency === 'EUR' ? 'Euro' : product().currency" placeholder="Euro" disabled>
+          </ui-form-field>
+          <ui-form-field label="Discount %" layout="horizontal">
+            <input type="number" [value]="product().discountPercent" placeholder="0.00" disabled>
+          </ui-form-field>
+          <ui-form-field label="Discount price" layout="horizontal">
+            <input type="number" [value]="product().discountPrice" placeholder="0.00" disabled>
+          </ui-form-field>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabbed Content Section -->
+    <div class="tabbed-section">
+      <div class="tabbed-section__header">
+        <ui-tabs
+          [tabs]="editorTabs"
+          [activeTab]="activeTab()"
+          (tabChange)="onTabChange($event)"
+          variant="underline"
+          class="tabbed-section__tabs">
+        </ui-tabs>
+
+        <!-- Tab-specific CTAs -->
+        <div class="tabbed-section__cta" *ngIf="activeTab() === 'documents'">
+          <button class="btn btn--outline" (click)="addDocument()">
+            <span>Add document</span>
+            <ui-icon name="plus" size="sm"></ui-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Short Description Tab Content -->
+      <div class="tab-content" *ngIf="activeTab() === 'shortDescription'">
+        <app-text-editor
+          [initialContent]="product().shortDescription"
+          placeholder="Enter short description..."
+          (contentChange)="onEditorInput($event)">
+        </app-text-editor>
+      </div>
+
+      <!-- Gallery Tab Content -->
+      <div class="tab-content" *ngIf="activeTab() === 'gallery'" (click)="closeImageDropdown()">
+        <div class="gallery-toolbar">
+          <button class="btn btn--secondary" (click)="uploadImage()">
+            <span>Upload image</span>
+            <ui-icon name="plus" size="sm"></ui-icon>
+          </button>
+          <button class="btn btn--outline" (click)="downloadAllImages()">
+            <span>Download all images</span>
+            <ui-icon name="download" size="sm"></ui-icon>
+          </button>
+          <button class="btn btn--outline" (click)="deleteAllImages()">
+            <span>Delete all images</span>
+            <ui-icon name="trash" size="sm"></ui-icon>
+          </button>
+        </div>
+        <div class="gallery-grid">
+          <div class="gallery-item" *ngFor="let image of galleryImages()">
+            <div class="gallery-item__header">
+              <span class="gallery-item__name">{{ image.name }}</span>
+              <button class="gallery-item__menu-btn" (click)="toggleImageDropdown(image.id, $event)">
+                <ui-icon name="more-vertical" size="md"></ui-icon>
+              </button>
+              <div class="gallery-item__dropdown" *ngIf="activeImageDropdown() === image.id" (click)="$event.stopPropagation()">
+                <button class="gallery-item__dropdown-item" (click)="makeImagePrimary(image.id)">
+                  <ui-icon name="circle-dot" size="sm"></ui-icon>
+                  <span>Make primary</span>
+                </button>
+                <button class="gallery-item__dropdown-item" (click)="renameImage(image.id)">
+                  <ui-icon name="edit" size="sm"></ui-icon>
+                  <span>Rename</span>
+                </button>
+                <button class="gallery-item__dropdown-item" (click)="downloadImage(image.id)">
+                  <ui-icon name="download" size="sm"></ui-icon>
+                  <span>Download</span>
+                </button>
+                <button class="gallery-item__dropdown-item" (click)="deleteImage(image.id)">
+                  <ui-icon name="trash" size="sm"></ui-icon>
+                  <span>Delete</span>
+                </button>
+              </div>
+            </div>
+            <div class="gallery-item__image">
+              <div class="gallery-item__placeholder"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product Documents Tab Content -->
+      <div class="tab-content tab-content--no-padding" *ngIf="activeTab() === 'documents'">
+        <div class="documents-table">
+          <ui-data-table
+            [columns]="documentColumns"
+            [data]="productDocuments()"
+            [sortColumn]="sortColumn()"
+            [sortDirection]="sortDirection()"
+            (sort)="onSort($event)">
+          </ui-data-table>
+        </div>
+      </div>
+
+      <!-- Applied Discounts Tab Content -->
+      <div class="tab-content tab-content--no-padding" *ngIf="activeTab() === 'discounts'">
+        <div class="discounts-table">
+          <table class="discount-table">
+            <thead>
+              <tr>
+                <th style="width: 112px;">Id</th>
+                <th style="width: 180px;">Date valid from</th>
+                <th style="width: 180px;">Date valid to</th>
+                <th style="width: 180px;">Discount price base</th>
+                <th style="width: 180px;">Discount %</th>
+                <th>Applied to</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let discount of appliedDiscounts(); let odd = odd" [class.discount-table__row--odd]="odd">
+                <td>{{ discount.id }}</td>
+                <td>{{ discount.dateValidFrom }}</td>
+                <td>{{ discount.dateValidTo }}</td>
+                <td>{{ discount.discountPriceBase }}</td>
+                <td>{{ discount.discountPercent }}</td>
+                <td>{{ discount.appliedTo }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Select Related Products Section -->
+      <div class="section-title-header">
+        <div class="section-title-header__left">
+          <h2 class="section-title-header__title">Select related products</h2>
+          <span class="section-title-header__count">{{ totalItems() }}</span>
+        </div>
+        <div class="section-title-header__right">
+          <div class="search-wrapper">
+            <ui-icon name="search" size="sm" class="search-icon"></ui-icon>
+            <input
+              type="text"
+              class="search-input"
+              placeholder="Search..."
+              [value]="searchQuery()"
+              (input)="onSearch($any($event.target).value)">
+          </div>
+        <button *ngIf="selectedProductIds().size > 0" class="btn btn--secondary" (click)="addSelectedProducts()">
+            <span>Add selected</span>
+            <ui-icon name="plus" size="sm"></ui-icon>
+          </button>
+        </div>
+      </div>
+
+    <div class="related-section">
+      <div class="table-container">
+        <ui-data-table
+          [columns]="availableProductColumns"
+          [data]="availableProducts()"
+          [sortColumn]="sortColumn()"
+          [sortDirection]="sortDirection()"
+          (sort)="onSort($event)">
+        </ui-data-table>
+      </div>
+
+      <ui-table-footer
+        [currentPage]="currentPage()"
+        [totalItems]="totalItems()"
+        [itemsPerPage]="itemsPerPage"
+        (pageChange)="onPageChange($event)">
+      </ui-table-footer>
+    </div>
+
+    <!-- Related Products Section -->
+    <div class="related-section related-section--compact">
+      <div class="section-title-header">
+        <div class="section-title-header__left">
+          <h2 class="section-title-header__title">Related products</h2>
+          <span class="section-title-header__count">{{ relatedProducts().length }}</span>
+        </div>
+        <div class="section-title-header__right" *ngIf="selectedRelatedProductIds().size > 0">
+          <button class="btn btn--secondary" (click)="removeSelectedRelatedProducts()">
+            <span>Remove selected</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <ui-data-table
+          [columns]="relatedProductColumns"
+          [data]="relatedProducts()"
+          [sortColumn]="sortColumn()"
+          [sortDirection]="sortDirection()"
+          (sort)="onSort($event)">
+        </ui-data-table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Templates for Select Related Products table -->
+<ng-template #checkboxHeaderTemplate>
+  <div class="checkbox-header-cell">
+    <button class="checkbox-menu-btn" (click)="toggleHeaderDropdown($event)">
+      <ui-icon name="more-vertical" size="sm"></ui-icon>
+    </button>
+    <div class="header-dropdown" *ngIf="isHeaderDropdownOpen()" (click)="$event.stopPropagation()">
+      <button class="header-dropdown__item" (click)="selectAllProducts()">Select all</button>
+      <button class="header-dropdown__item" (click)="selectNoneProducts()">None</button>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #checkboxTemplate let-row>
+  <div class="checkbox-cell" [class.checkbox-cell--selected]="isProductSelected(row.id)">
+    <input
+      type="checkbox"
+      class="checkbox"
+      [checked]="isProductSelected(row.id)"
+      (change)="toggleProductSelection(row.id)">
+  </div>
+</ng-template>
+
+<ng-template #statusTemplate let-row>
+  <ui-badge variant="success" size="sm">
+    {{ row.status === 'active' ? 'Active' : 'Inactive' }}
+  </ui-badge>
+</ng-template>
+
+<ng-template #availableTemplate let-row>
+  <ui-badge variant="info" size="sm">
+    {{ row.available ? 'Yes' : 'No' }}
+  </ui-badge>
+</ng-template>
+
+<ng-template #actionsTemplate let-row>
+  <button class="btn btn--outline btn--sm" (click)="addProduct(row)">
+    <span>Related</span>
+    <ui-icon name="plus" size="sm"></ui-icon>
+  </button>
+</ng-template>
+
+<!-- Templates for Related Products table -->
+<ng-template #relatedCheckboxHeaderTemplate>
+  <div class="checkbox-header-cell">
+    <button class="checkbox-menu-btn" (click)="toggleRelatedHeaderDropdown($event)">
+      <ui-icon name="more-vertical" size="sm"></ui-icon>
+    </button>
+    <div class="header-dropdown" *ngIf="isRelatedHeaderDropdownOpen()" (click)="$event.stopPropagation()">
+      <button class="header-dropdown__item" (click)="selectAllRelatedProducts()">Select all</button>
+      <button class="header-dropdown__item" (click)="selectNoneRelatedProducts()">None</button>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #relatedCheckboxTemplate let-row>
+  <div class="checkbox-cell">
+    <input type="checkbox" class="checkbox"
+      [checked]="selectedRelatedProductIds().has(row.id)"
+      (change)="toggleRelatedProductSelection(row.id)">
+  </div>
+</ng-template>
+
+<ng-template #sortOrderTemplate let-row>
+  {{ row.sortOrder }}
+</ng-template>
+
+<ng-template #removeActionsTemplate let-row>
+  <button class="btn btn--outline btn--sm" (click)="removeProduct(row)">
+    <span>Remove</span>
+    <ui-icon name="minus" size="sm"></ui-icon>
+  </button>
+</ng-template>
+
+<!-- Templates for Product Documents table -->
+<ng-template #docCheckboxHeaderTemplate>
+  <div class="checkbox-header-cell">
+    <button class="checkbox-menu-btn" (click)="toggleDocHeaderDropdown($event)">
+      <ui-icon name="more-vertical" size="sm"></ui-icon>
+    </button>
+    <div class="header-dropdown" *ngIf="isDocHeaderDropdownOpen()" (click)="$event.stopPropagation()">
+      <button class="header-dropdown__item" (click)="selectAllDocuments()">Select all</button>
+      <button class="header-dropdown__item" (click)="selectNoneDocuments()">None</button>
+    </div>
+  </div>
+</ng-template>
+
+<ng-template #docCheckboxTemplate let-row>
+  <div class="checkbox-cell" [class.checkbox-cell--selected]="isDocumentSelected(row.id)">
+    <input
+      type="checkbox"
+      class="checkbox"
+      [checked]="isDocumentSelected(row.id)"
+      (change)="toggleDocumentSelection(row.id)">
+  </div>
+</ng-template>
+
+<ng-template #docActionsTemplate let-row>
+  <div class="doc-actions">
+    <button class="doc-actions__btn" (click)="toggleDocAction($event, row.id)">
+      <ui-icon name="more-vertical" size="sm"></ui-icon>
+    </button>
+    <div class="doc-actions__dropdown" *ngIf="activeDocActionId() === row.id" (click)="$event.stopPropagation()">
+      <button class="doc-actions__dropdown-item" (click)="renameDocument(row.id)">
+        <ui-icon name="edit" size="sm"></ui-icon>
+        <span>Rename</span>
+      </button>
+      <button class="doc-actions__dropdown-item" (click)="downloadDocument(row.id)">
+        <ui-icon name="download" size="sm"></ui-icon>
+        <span>Download</span>
+      </button>
+      <button class="doc-actions__dropdown-item doc-actions__dropdown-item--danger" (click)="deleteDocument(row.id)">
+        <ui-icon name="trash" size="sm"></ui-icon>
+        <span>Delete</span>
+      </button>
+    </div>
+  </div>
+</ng-template>
+
+<!-- Rename Modal -->
+<ui-modal
+  [isOpen]="isRenameModalOpen()"
+  (isOpenChange)="isRenameModalOpen.set($event)"
+  [showClose]="false"
+  size="sm"
+>
+  <div class="rename-modal">
+    <div class="rename-modal__header">
+      <h3 class="rename-modal__title">Rename</h3>
+      <button class="rename-modal__close" (click)="cancelRename()">
+        <ui-icon name="x" size="md"></ui-icon>
+      </button>
+    </div>
+    <div class="rename-modal__body">
+      <input
+        type="text"
+        class="rename-modal__input"
+        [value]="renameValue()"
+        (input)="onRenameInputChange($event)"
+        (keyup.enter)="confirmRename()"
+      />
+    </div>
+    <div class="rename-modal__footer">
+      <button class="btn btn--ghost" (click)="cancelRename()">Cancel</button>
+      <button class="btn btn--primary" (click)="confirmRename()">
+        <span>OK</span>
+        <ui-icon name="check" size="sm"></ui-icon>
+      </button>
+    </div>
+  </div>
+</ui-modal>
+
+<!-- Mobile Footer -->
+<ui-mobile-footer
+  (primaryClick)="onSave()"
+  (secondaryClick)="onSaveAndContinue()"
+></ui-mobile-footer>

@@ -1,0 +1,153 @@
+@use '../../../ui-kit/admin-shared' as admin;
+
+// =============================================================================
+// Base Layout
+// =============================================================================
+:host {
+  @include admin.admin-host;
+  min-height: 100%;
+}
+
+.delivery-type-detail-page {
+  @include admin.detail-page;
+  min-height: 100%;
+}
+
+.detail-content {
+  @include admin.detail-page-content;
+  gap: 16px;
+
+  @media (max-width: 768px) {
+    padding-bottom: 80px;
+  }
+}
+
+// =============================================================================
+// Form Card
+// =============================================================================
+.form-card {
+  @include admin.form-card;
+
+  &__title {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: #232323;
+    margin: 0 0 16px 0;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+// =============================================================================
+// Toggles Row
+// =============================================================================
+.toggles-row {
+  @include admin.toggles-row;
+}
+
+@include admin.detail-form-styles;
+
+// =============================================================================
+// Tabs Section
+// =============================================================================
+.tabs-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.tabs-container {
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tabs-header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid #e4e4e7;
+  background: transparent;
+  overflow-x: auto;
+
+  &__spacer {
+    flex: 1;
+  }
+
+  @media (max-width: 768px) {
+    flex-wrap: nowrap;
+
+    ::ng-deep .ui-tabs__tab {
+      flex: 0 0 auto;
+    }
+  }
+}
+
+// =============================================================================
+// Buttons
+// =============================================================================
+.btn {
+  @include admin.btn-base;
+
+  &--outline {
+    @include admin.btn-outline;
+  }
+
+  &--primary {
+    @include admin.btn-primary;
+  }
+
+  &--ghost {
+    @include admin.btn-ghost;
+  }
+}
+
+// =============================================================================
+// Tab Content
+// =============================================================================
+.tab-content {
+  &--description {
+    padding: 0;
+    background: transparent;
+
+    ::ng-deep .text-editor {
+      border: none;
+      border-radius: 0;
+      background: transparent;
+
+      &__toolbar {
+        background: white;
+        border-bottom: 1px solid #e4e4e7;
+      }
+
+      &__content {
+        background: transparent;
+        min-height: 150px;
+      }
+    }
+  }
+
+  &--table {
+    padding: 0;
+  }
+}
+
+// =============================================================================
+// Modal
+// =============================================================================
+.rename-modal {
+  @include admin.rename-modal;
+}
+
+// =============================================================================
+// Table Overrides
+// =============================================================================
+@include admin.data-table-transparent-overrides;

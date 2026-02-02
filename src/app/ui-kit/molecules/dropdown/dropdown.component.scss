@@ -1,0 +1,148 @@
+.ui-dropdown {
+  position: relative;
+  display: inline-block;
+
+  &__trigger {
+    cursor: pointer;
+  }
+
+  &__default-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #18181B;
+    background-color: #FFFFFF;
+    border: 1px solid #E4E4E7;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+
+    &:hover {
+      background-color: #F4F4F5;
+      border-color: #D4D4D8;
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    }
+  }
+
+  &__menu {
+    position: absolute;
+    z-index: 50;
+    min-width: 180px;
+    padding: 4px;
+    background-color: #FFFFFF;
+    border: 1px solid #E4E4E7;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+    // Positions
+    &--bottom-start {
+      top: 100%;
+      left: 0;
+      margin-top: 4px;
+    }
+
+    &--bottom-end {
+      top: 100%;
+      right: 0;
+      margin-top: 4px;
+    }
+
+    &--top-start {
+      bottom: 100%;
+      left: 0;
+      margin-bottom: 4px;
+    }
+
+    &--top-end {
+      bottom: 100%;
+      right: 0;
+      margin-bottom: 4px;
+    }
+
+    // Sizes
+    &--sm {
+      .ui-dropdown__item {
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+    }
+
+    &--md {
+      .ui-dropdown__item {
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+    }
+
+    &--lg {
+      .ui-dropdown__item {
+        padding: 10px 14px;
+        font-size: 15px;
+      }
+    }
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    color: #18181B;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    font-family: inherit;
+
+    &:hover:not(.ui-dropdown__item--disabled) {
+      background-color: #F4F4F5;
+    }
+
+    &:focus {
+      outline: none;
+      background-color: #F4F4F5;
+    }
+
+    &--disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &--danger {
+      color: #DC2626;
+
+      &:hover:not(.ui-dropdown__item--disabled) {
+        background-color: #FEE2E2;
+      }
+    }
+
+    &-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      color: #71717A;
+    }
+
+    &-label {
+      flex: 1;
+    }
+  }
+
+  &__divider {
+    height: 1px;
+    margin: 4px 0;
+    background-color: #E4E4E7;
+  }
+}

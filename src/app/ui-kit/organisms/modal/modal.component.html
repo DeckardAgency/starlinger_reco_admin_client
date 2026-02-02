@@ -1,0 +1,37 @@
+<div
+  *ngIf="isOpen"
+  class="ui-modal__overlay"
+  (click)="onBackdropClick($event)"
+  [@fadeAnimation]
+  role="dialog"
+  aria-modal="true"
+>
+  <div [ngClass]="modalClasses" [@slideAnimation]>
+    <!-- Header -->
+    <header *ngIf="title || showClose" class="ui-modal__header">
+      <h2 *ngIf="title" class="ui-modal__title">{{ title }}</h2>
+      <ng-content select="[modalHeader]"></ng-content>
+
+      <button
+        *ngIf="showClose"
+        class="ui-modal__close"
+        (click)="close()"
+        aria-label="Close modal"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" width="20" height="20">
+          <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Body -->
+    <div class="ui-modal__body">
+      <ng-content></ng-content>
+    </div>
+
+    <!-- Footer -->
+    <footer class="ui-modal__footer">
+      <ng-content select="[modalFooter]"></ng-content>
+    </footer>
+  </div>
+</div>

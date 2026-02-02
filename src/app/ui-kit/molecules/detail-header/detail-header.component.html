@@ -1,0 +1,45 @@
+<div class="detail-header">
+  <div class="detail-header__left">
+    <button class="btn btn--icon btn--outline" (click)="onBack()" type="button">
+      <ui-icon name="arrow-back" size="sm"></ui-icon>
+    </button>
+    <h1 class="detail-header__title">{{ displayTitle }}</h1>
+  </div>
+
+  <div class="detail-header__actions">
+    <!-- Discard Button -->
+    @if (showDiscard) {
+      <button class="btn btn--secondary" (click)="onDiscard()" type="button">
+        <span>{{ discardLabel }}</span>
+      </button>
+    }
+
+    <!-- Save and Continue Button -->
+    @if (showSaveAndContinue) {
+      <button 
+        class="btn btn--outline" 
+        (click)="onSaveAndContinue()" 
+        [disabled]="isSaving"
+        type="button"
+      >
+        <span>{{ saveAndContinueLabel }}</span>
+        <ui-icon name="chevron-right" size="sm"></ui-icon>
+      </button>
+    }
+
+    <!-- Save Button -->
+    <button 
+      class="btn btn--primary" 
+      (click)="onSave()" 
+      [disabled]="isSaving"
+      [class.btn--loading]="isSaving"
+      type="button"
+    >
+      <span>{{ saveLabel }}</span>
+      <ui-icon name="save" size="sm"></ui-icon>
+    </button>
+
+    <!-- Additional Actions Slot -->
+    <ng-content select="[slot=actions]"></ng-content>
+  </div>
+</div>

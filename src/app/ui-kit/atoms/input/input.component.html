@@ -1,0 +1,57 @@
+<div class="ui-input" [class.ui-input--disabled]="disabled">
+  <!-- Label -->
+  <label *ngIf="label" class="ui-input__label" [attr.for]="name">
+    {{ label }} <span *ngIf="required" class="ui-input__required">(Required)</span>
+  </label>
+
+  <!-- Input wrapper -->
+  <div class="ui-input__wrapper">
+    <!-- Prefix icon / Password toggle on left -->
+    <span *ngIf="prefixIcon || (type === 'password' && showPasswordToggle)" class="ui-input__prefix">
+      <button
+        *ngIf="type === 'password' && showPasswordToggle"
+        type="button"
+        class="ui-input__password-toggle"
+        (click)="togglePasswordVisibility()"
+        [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'"
+      >
+        <svg *ngIf="!passwordVisible()" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" width="20" height="20">
+          <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M17.5 10c-1.667 3.333-4.167 5-7.5 5s-5.833-1.667-7.5-5c1.667-3.333 4.167-5 7.5-5s5.833 1.667 7.5 5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <svg *ngIf="passwordVisible()" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" width="20" height="20">
+          <path d="M2.5 2.5l15 15M8.235 8.235a2.5 2.5 0 003.53 3.53M14.95 14.95A8.14 8.14 0 0110 16.667c-5 0-8.333-5-8.333-6.667 0-1 1.25-3.333 3.383-5M8.333 3.533A6.25 6.25 0 0110 3.333c5 0 8.333 5 8.333 6.667 0 .833-.833 2.5-2.283 4.05" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <ng-content *ngIf="prefixIcon && type !== 'password'" select="[prefix]"></ng-content>
+    </span>
+
+    <!-- Input field -->
+    <input
+      [type]="actualType()"
+      [ngClass]="inputClasses()"
+      [value]="value()"
+      [placeholder]="placeholder"
+      [disabled]="disabled"
+      [readonly]="readonly"
+      [required]="required"
+      [name]="name"
+      [attr.id]="name"
+      [autocomplete]="autocomplete"
+      (input)="onInput($event)"
+      (focus)="onFocus($event)"
+      (blur)="onBlur($event)"
+    />
+
+    <!-- Suffix icon -->
+    <span *ngIf="suffixIcon" class="ui-input__suffix">
+      <ng-content select="[suffix]"></ng-content>
+    </span>
+  </div>
+
+  <!-- Hint text -->
+  <span *ngIf="hint && !error" class="ui-input__hint">{{ hint }}</span>
+
+  <!-- Error text -->
+  <span *ngIf="error" class="ui-input__error">{{ error }}</span>
+</div>

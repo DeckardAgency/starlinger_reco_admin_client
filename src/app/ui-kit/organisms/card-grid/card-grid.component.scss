@@ -1,0 +1,126 @@
+.ui-card-grid {
+  display: grid;
+  width: 100%;
+
+  // Gap sizes
+  &--gap-sm {
+    gap: 12px;
+  }
+
+  &--gap-md {
+    gap: 20px;
+  }
+
+  &--gap-lg {
+    gap: 32px;
+  }
+
+  // Column counts
+  &--cols-1 {
+    grid-template-columns: repeat(1, 1fr);
+  }
+
+  &--cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  &--cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  &--cols-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  &--cols-5 {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  &--cols-6 {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  // Skeleton loading card
+  &__skeleton {
+    display: flex;
+    flex-direction: column;
+    background-color: #FFFFFF;
+    border: 1px solid #E4E4E7;
+    border-radius: 12px;
+    overflow: hidden;
+
+    &-content {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 16px;
+    }
+  }
+
+  &__pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 32px;
+  }
+}
+
+// Responsive breakpoints
+@media (max-width: 640px) {
+  .ui-card-grid {
+    &--cols-sm-1 {
+      grid-template-columns: repeat(1, 1fr);
+    }
+
+    &--cols-sm-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .ui-card-grid {
+    &--cols-md-1 {
+      grid-template-columns: repeat(1, 1fr);
+    }
+
+    &--cols-md-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    &--cols-md-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    &--cols-md-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+}
+
+@media (min-width: 1025px) {
+  .ui-card-grid {
+    &--cols-lg-1 {
+      grid-template-columns: repeat(1, 1fr);
+    }
+
+    &--cols-lg-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    &--cols-lg-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    &--cols-lg-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    &--cols-lg-5 {
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    &--cols-lg-6 {
+      grid-template-columns: repeat(6, 1fr);
+    }
+  }
+}

@@ -1,0 +1,56 @@
+@use '../../../ui-kit/admin-shared' as admin;
+
+:host {
+  @include admin.admin-host;
+}
+
+.shop-orders-page {
+  @include admin.admin-page;
+}
+
+.page-content {
+  @include admin.list-page-content;
+}
+
+// Table container (tabs + table)
+.table-container {
+  @include admin.tabs-table-container;
+}
+
+// Tabs styling
+ui-tabs {
+  @include admin.tabs-table-tabs;
+}
+
+// Table styling (includes background colors)
+@include admin.tabs-table-data-table;
+
+// Loading state
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  color: #71717a;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+}
+
+// Customer cell
+.customer-cell {
+  @include admin.customer-cell;
+}
+
+.customer-name {
+  @include admin.customer-name;
+  font-weight: 400;
+}
+
+// Button styles for export
+.btn {
+  @include admin.btn-base;
+
+  &--icon {
+    @include admin.btn-icon;
+  }
+}

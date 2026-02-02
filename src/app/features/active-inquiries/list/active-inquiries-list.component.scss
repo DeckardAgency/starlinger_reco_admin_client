@@ -1,0 +1,58 @@
+@use '../../../ui-kit/admin-shared' as admin;
+
+:host {
+  @include admin.admin-host;
+}
+
+.active-inquiries-page {
+  @include admin.admin-page;
+  padding-bottom: 24px;
+}
+
+// =============================================================================
+// CONTENT
+// =============================================================================
+.page-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  flex: 1;
+}
+
+// =============================================================================
+// CARDS GRID
+// =============================================================================
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// =============================================================================
+// SKELETON LOADING
+// =============================================================================
+.card-skeleton {
+  background: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  height: 220px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

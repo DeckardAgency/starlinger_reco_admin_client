@@ -1,0 +1,75 @@
+<div class="ui-calendar" [class.ui-calendar--inline]="inline">
+  <!-- Header -->
+  <div class="ui-calendar__header">
+    <button
+      type="button"
+      class="ui-calendar__nav-btn"
+      (click)="previousMonth()"
+      aria-label="Previous month"
+    >
+      <ui-icon name="chevron-left" size="sm"></ui-icon>
+    </button>
+
+    <span class="ui-calendar__month-year">{{ monthYearLabel }}</span>
+
+    <button
+      type="button"
+      class="ui-calendar__nav-btn"
+      (click)="nextMonth()"
+      aria-label="Next month"
+    >
+      <ui-icon name="chevron-right" size="sm"></ui-icon>
+    </button>
+  </div>
+
+  <!-- Weekday headers -->
+  <div class="ui-calendar__weekdays">
+    <span
+      *ngFor="let day of weekDays; trackBy: trackByIndex"
+      class="ui-calendar__weekday"
+    >
+      {{ day }}
+    </span>
+  </div>
+
+  <!-- Days grid -->
+  <div class="ui-calendar__days">
+    <button
+      *ngFor="let day of calendarDays; trackBy: trackByDay"
+      type="button"
+      class="ui-calendar__day"
+      [class.ui-calendar__day--other-month]="!day.isCurrentMonth"
+      [class.ui-calendar__day--today]="day.isToday"
+      [class.ui-calendar__day--selected]="day.isSelected"
+      [class.ui-calendar__day--range-start]="day.isRangeStart"
+      [class.ui-calendar__day--range-end]="day.isRangeEnd"
+      [class.ui-calendar__day--in-range]="day.isInRange"
+      [class.ui-calendar__day--disabled]="day.isDisabled"
+      [disabled]="day.isDisabled"
+      (click)="selectDate(day)"
+    >
+      {{ day.day }}
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <div *ngIf="showTodayButton || showClearButton" class="ui-calendar__footer">
+    <button
+      *ngIf="showClearButton"
+      type="button"
+      class="ui-calendar__action-btn"
+      (click)="clearSelection()"
+    >
+      Clear
+    </button>
+
+    <button
+      *ngIf="showTodayButton"
+      type="button"
+      class="ui-calendar__action-btn ui-calendar__action-btn--primary"
+      (click)="goToToday()"
+    >
+      Today
+    </button>
+  </div>
+</div>

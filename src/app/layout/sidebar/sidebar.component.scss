@@ -1,0 +1,667 @@
+.sidebar {
+  $self: &;
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: calc(100vh - 64px);
+  width: 250px;
+  background-color: #fafafa;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e5e7eb;
+  margin-top: 64px;
+  z-index: 80;
+  overflow: hidden;
+
+  @media screen and (max-width: 834px) {
+    display: none;
+  }
+
+  &--collapsed {
+    width: 80px;
+    overflow: visible;
+
+    // Hide all text elements
+    #{$self}__link-text,
+    #{$self}__section-title,
+    #{$self}__section-chevron,
+    #{$self}__user-info,
+    #{$self}__submenu-icon,
+    #{$self}__badge,
+    #{$self}__user-icon-arrow {
+      display: none;
+    }
+
+    // Show abbreviated section title when collapsed
+    #{$self}__section-title-short {
+      display: block;
+    }
+
+    // Show nested sub-menus as flat icon list when collapsed
+    #{$self}__nested-list,
+    #{$self}__nested-list.ng-animating {
+      display: flex !important;
+      flex-direction: column !important;
+      opacity: 1 !important;
+      height: auto !important;
+      overflow: visible !important;
+      padding-left: 0 !important;
+      margin: 0 !important;
+      width: 100% !important;
+
+      // Hide the tree connector line
+      &::before {
+        display: none !important;
+      }
+    }
+
+    #{$self}__nested-item {
+      display: flex !important;
+      justify-content: center !important;
+      width: 100% !important;
+    }
+
+    #{$self}__nested-link {
+      justify-content: center !important;
+      padding: 8px !important;
+      
+      // Hide tree connectors
+      &::before,
+      &::after {
+        display: none !important;
+      }
+    }
+
+    // Expandable items should stack vertically
+    #{$self}__item--expandable {
+      display: flex !important;
+      flex-direction: column !important;
+      width: 100% !important;
+      align-items: center !important;
+    }
+
+    #{$self}__section-header {
+      pointer-events: none;
+      justify-content: center;
+    }
+
+    // Force all sub-lists and items to be visible when collapsed
+    #{$self}__sub-list,
+    #{$self}__sub-list.ng-animating,
+    #{$self}__sub-list.ng-trigger-expandCollapse {
+      display: flex !important;
+      flex-direction: column !important;
+      opacity: 1 !important;
+      height: auto !important;
+      overflow: visible !important;
+      animation: none !important;
+      transition: none !important;
+      transform: none !important;
+      margin: 0 !important;
+      width: 100% !important;
+    }
+
+    #{$self}__item {
+      display: flex !important;
+      flex-direction: column !important;
+      opacity: 1 !important;
+      height: auto !important;
+      width: 100% !important;
+      align-items: center !important;
+
+      // Keep top row items in a row (home + collapse button)
+      &#{$self}__top {
+        flex-direction: row !important;
+        justify-content: center !important;
+        gap: 4px !important;
+      }
+    }
+
+    // Center icons
+    #{$self}__link,
+    #{$self}__submenu-toggle {
+      justify-content: center;
+      padding: 8px;
+      display: flex !important;
+    }
+
+    // Add horizontal padding for selected state background
+    #{$self}__section #{$self}__link,
+    #{$self}__section #{$self}__nested-link {
+      margin: 0 8px;
+      width: calc(100% - 16px);
+    }
+
+    #{$self}__top {
+      justify-content: center;
+      gap: 0;
+      
+      // Show dashboard link but center its icon
+      .sidebar__link {
+        width: auto;
+        justify-content: center;
+
+        // Keep icon black even when active
+        &--active svg,
+        &--active svg path {
+          stroke: #3f3f46 !important;
+        }
+      }
+    }
+
+    #{$self}__section {
+      padding: 4px 0;
+    }
+
+    #{$self}__support-section,
+    #{$self}__footer {
+      #{$self}__link {
+        justify-content: center;
+      }
+      overflow: visible !important;
+    }
+
+    #{$self}__content {
+      overflow: visible !important;
+    }
+
+    #{$self}__user {
+      overflow: visible !important;
+    }
+
+    #{$self}__user-row {
+      justify-content: center;
+    }
+
+    // Position dropdown to the right of collapsed sidebar
+    #{$self}__user-dropdown {
+      left: 100%;
+      bottom: 0;
+      width: 200px;
+      margin-left: 8px;
+      z-index: 1000;
+    }
+
+    .sidebar__toggle {
+      right: -14px;
+    }
+  }
+
+  &__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    gap: 0;
+    padding: 16px 8px 8px 8px;
+  }
+
+  &__nav {
+    flex: 1;
+    padding: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    height: 40px;
+    gap: 8px;
+    overflow: hidden;
+
+    .sidebar__link {
+      flex: 1;
+      height: 32px;
+      min-width: 0;
+    }
+  }
+
+  &__toggle {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #232323;
+    flex-shrink: 0;
+
+    &:hover {
+      color: #DC2626;
+    }
+
+    .sidebar__icon {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &__section {
+    margin-top: 0;
+    padding: 4px 8px;
+  }
+
+  &__section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    height: 32px;
+    cursor: pointer;
+    border-radius: 6px;
+
+    &:hover {
+      background-color: #f4f4f5;
+    }
+  }
+
+  &__section-title {
+    display: block;
+    font-size: 12px;
+    color: #DC2626;
+    font-weight: 500;
+    margin: 0;
+    line-height: 20px;
+  }
+
+  &__section-title-short {
+    display: none;
+    font-size: 14px;
+    color: #DC2626;
+    font-weight: 500;
+    margin: 0;
+    line-height: 20px;
+    text-align: center;
+  }
+
+  &__section-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+
+    &--expanded {
+      transform: rotate(180deg);
+    }
+
+    svg path {
+      stroke: #3f3f46;
+    }
+  }
+
+  &__list,
+  &__sub-list,
+  &__nested-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  &__sub-list {
+    padding: 0;
+  }
+
+  &__nested-list {
+    position: relative;
+    margin-top: 4px;
+    overflow: hidden;
+    padding-left: 24px;
+
+    &::before {
+      content: "";
+      width: 1px;
+      height: calc(100% - 8px);
+      background-color: #E5E7EB;
+      position: absolute;
+      left: 16px;
+      top: 2px;
+    }
+  }
+
+  &__nested-item {
+    position: relative;
+  }
+
+  &__nested-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    height: 28px;
+    color: #3f3f46;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    width: 100%;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 14px;
+    border-radius: 6px;
+
+    &:hover {
+      background-color: #f4f4f5;
+    }
+
+    &--active {
+      background-color: #f4f4f5;
+
+      svg path {
+        stroke: #DC2626 !important;
+      }
+    }
+  }
+
+  &__item {
+    position: relative;
+    width: 100%;
+
+    &--indented {
+      padding-left: 32px;
+      width: calc(100% - 100px);
+    }
+  }
+
+  &__link,
+  &__submenu-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 8px;
+    height: 32px;
+    color: #3f3f46;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    width: 100%;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 14px;
+    border-radius: 6px;
+
+    &:hover {
+      background-color: #f4f4f5;
+    }
+
+    &--active {
+      background-color: #f4f4f5;
+      font-weight: normal;
+
+      svg {
+        stroke: #DC2626 !important;
+      }
+
+      svg path {
+        stroke: #DC2626 !important;
+      }
+    }
+
+    &--disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  &__link--submenu {
+    padding: 8px;
+  }
+
+  &__link--sub {
+    padding-left: 55px;
+    font-size: 13px;
+    position: relative;
+
+    // Tree structure connector
+    &::before {
+      content: '';
+      position: absolute;
+      left: 32px;
+      top: 0;
+      width: 1px;
+      height: 50%;
+      background-color: #374151;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 32px;
+      top: 50%;
+      width: 12px;
+      height: 1px;
+      background-color: #374151;
+    }
+  }
+
+  &__submenu-toggle {
+    position: relative;
+    width: 100%;
+
+    &--expanded {
+      background-color: #F9FAFB;
+      border-radius: 6px;
+
+      .sidebar__icon svg path {
+        stroke: #DC2626;
+      }
+    }
+  }
+
+  &__submenu-icon {
+    margin-left: auto;
+    transition: transform 0.3s ease;
+
+    &--rotated {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &--rotated {
+      transform: rotate(180deg);
+    }
+
+    svg {
+      stroke: #3f3f46;
+    }
+  }
+
+  &__link-text {
+    font-size: 14px;
+    font-weight: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    background-color: #f59e0b;
+    border-radius: 9px;
+    line-height: 1;
+  }
+
+  &__support-section {
+    border-top: 1px solid #e5e7eb;
+    padding: 8px;
+  }
+
+  &__footer {
+    border-top: 1px solid #e5e7eb;
+    padding: 8px;
+  }
+
+  &__divider {
+    height: 1px;
+    background-color: #e5e7eb;
+    margin: 8px 0;
+  }
+
+  &__user {
+    padding: 0;
+    position: relative;
+
+    &:hover {
+      background-color: #f4f4f5;
+      border-radius: 6px;
+    }
+
+    &-dropdown {
+      position: absolute;
+      bottom: 50px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      border-radius: 6px;
+      border: 1px solid #e4e4e7;
+      background: #fff;
+      padding: 4px 8px;
+      z-index: 100;
+      font-size: 14px;
+    }
+
+    &-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px;
+      cursor: pointer;
+      border-radius: 6px;
+
+      &:hover {
+        background-color: #f4f4f5;
+      }
+
+      svg path {
+        transition: stroke 0.2s ease;
+      }
+    }
+
+    &-icon-arrow {
+      margin-left: auto;
+      transition: transform 0.3s ease;
+      display: flex;
+      align-items: center;
+
+      &--rotated {
+        transform: rotate(180deg);
+      }
+    }
+  }
+
+  &__user-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 4px;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  &__user-name {
+    font-size: 14px;
+    font-weight: 400;
+    color: #3f3f46;
+    line-height: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__user-role {
+    font-size: 12px;
+    color: #9f9fa3;
+    line-height: 1;
+  }
+
+  &__user-switch-user {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    color: #6B7280;
+    border-radius: 2px;
+
+    &:hover {
+      background-color: #F4F4F5;
+    }
+
+    span {
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  &__user-logout {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    color: #6B7280;
+    border-radius: 2px;
+
+    &:hover {
+      background-color: #F4F4F5;
+    }
+
+    span {
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  &__user-initials {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #DC2626;
+    color: white;
+    font-size: 10px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__submenu-link--active {
+    background-color: #F9FAFB;
+    font-weight: normal;
+    border-radius: 6px;
+
+    svg {
+      stroke: #DC2626 !important;
+    }
+  }
+}

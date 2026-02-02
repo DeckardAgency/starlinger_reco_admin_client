@@ -1,0 +1,26 @@
+<div
+  [ngClass]="cardClasses"
+  (click)="onClick()"
+  [attr.role]="clickable ? 'button' : null"
+  [attr.tabindex]="clickable ? 0 : null"
+>
+  <!-- Card Image -->
+  <div *ngIf="imageUrl" class="ui-card__image" [style.height]="imageHeight">
+    <img [src]="imageUrl" [alt]="imageAlt" />
+  </div>
+
+  <!-- Card Header -->
+  <div class="ui-card__header">
+    <ng-content select="[cardHeader]"></ng-content>
+  </div>
+
+  <!-- Card Body -->
+  <div class="ui-card__body">
+    <ng-content></ng-content>
+  </div>
+
+  <!-- Card Footer -->
+  <div class="ui-card__footer">
+    <ng-content select="[cardFooter]"></ng-content>
+  </div>
+</div>

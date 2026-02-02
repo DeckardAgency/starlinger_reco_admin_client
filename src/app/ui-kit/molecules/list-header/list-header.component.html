@@ -1,0 +1,68 @@
+<div class="list-header">
+  <div class="list-header__left">
+    @if (icon) {
+      <ui-icon [name]="icon" size="md" class="list-header__icon"></ui-icon>
+    }
+    <h1 class="list-header__title">{{ title }}</h1>
+    @if (count !== undefined) {
+      <span class="list-header__count">{{ count }}</span>
+    }
+  </div>
+
+  <div class="list-header__right">
+    <!-- Search Input -->
+    @if (showSearch) {
+      <div class="search-input" [style.width]="searchWidth">
+        <ui-icon name="search" size="sm" color="#71717A" class="search-input__icon"></ui-icon>
+        <input
+          type="text"
+          [value]="searchQuery"
+          (input)="onSearchInput($event)"
+          placeholder=""
+          class="search-input__field"
+        />
+      </div>
+    }
+
+    <!-- Refresh Button -->
+    @if (showRefreshButton) {
+      <button 
+        class="btn btn--icon" 
+        (click)="onRefresh()" 
+        [class.btn--loading]="isRefreshLoading"
+        type="button"
+      >
+        <ui-icon name="refresh" size="sm"></ui-icon>
+      </button>
+    }
+
+    <!-- Export Button -->
+    @if (showExportButton) {
+      <button class="btn btn--icon" (click)="onExport()" type="button">
+        <ui-icon name="export" size="sm"></ui-icon>
+      </button>
+    }
+
+    <!-- Bulk Delete Button - only show when items are selected -->
+    @if (showBulkDeleteButton && !isBulkDeleteDisabled) {
+      <button 
+        class="btn btn--icon" 
+        (click)="onBulkDelete()" 
+        type="button"
+      >
+        <ui-icon name="trash" size="sm"></ui-icon>
+      </button>
+    }
+
+    <!-- Add Button -->
+    @if (showAddButton) {
+      <button class="btn btn--primary" (click)="onAdd()" type="button">
+        <span>{{ addButtonLabel }}</span>
+        <ui-icon name="plus" size="sm"></ui-icon>
+      </button>
+    }
+
+    <!-- Additional Actions Slot -->
+    <ng-content select="[slot=actions]"></ng-content>
+  </div>
+</div>

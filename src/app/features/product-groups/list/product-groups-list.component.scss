@@ -1,0 +1,50 @@
+@use '../../../ui-kit/admin-shared' as admin;
+
+:host {
+  @include admin.admin-host;
+  min-height: 100%;
+}
+
+.product-groups-page {
+  @include admin.admin-page;
+  min-height: 100%;
+}
+
+.page-content {
+  @include admin.list-page-content;
+}
+
+// Table container
+.table-container {
+  @include admin.tabs-table-container;
+}
+
+// Table styling
+@include admin.tabs-table-data-table;
+
+// Page-specific table styling (alternating row colors)
+::ng-deep .data-table {
+  background: #f4f4f5;
+
+  &__header-row,
+  &__header-cell {
+    background: white;
+  }
+
+  &__row {
+    &:hover {
+      background: white;
+    }
+  }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .page-content {
+    padding-bottom: 76px;
+  }
+
+  ::ng-deep .list-header__right .btn--primary {
+    display: none;
+  }
+}

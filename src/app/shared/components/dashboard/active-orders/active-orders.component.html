@@ -1,0 +1,19 @@
+<section class="active-orders">
+  <ui-section-header
+    title="Active orders & inquiries"
+    [icon]="ordersIcon"
+    viewAllLink="/admin/active-inquiries"
+  ></ui-section-header>
+
+  <div class="active-orders__cards">
+    @if (isLoading()) {
+      <p>Loading...</p>
+    } @else if (orders().length === 0) {
+      <p class="empty-state">No active orders or inquiries</p>
+    } @else {
+      @for (order of orders(); track order.id) {
+        <ui-order-card [data]="order" routePrefix="/admin"></ui-order-card>
+      }
+    }
+  </div>
+</section>

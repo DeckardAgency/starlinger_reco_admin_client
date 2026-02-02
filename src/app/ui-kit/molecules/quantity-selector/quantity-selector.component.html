@@ -1,0 +1,39 @@
+<div [ngClass]="containerClasses">
+  <button
+    type="button"
+    class="ui-quantity-selector__btn ui-quantity-selector__btn--decrement"
+    [disabled]="disabled || !canDecrement()"
+    (click)="decrement()"
+    aria-label="Decrease quantity"
+  >
+    <ui-icon name="minus" size="sm"></ui-icon>
+  </button>
+
+  <input
+    *ngIf="showInput"
+    type="number"
+    class="ui-quantity-selector__input"
+    [value]="_value()"
+    [min]="min"
+    [max]="max"
+    [disabled]="disabled"
+    [readonly]="readonly"
+    (input)="onInputChange($event)"
+    (blur)="onBlur()"
+    aria-label="Quantity"
+  />
+
+  <span *ngIf="!showInput" class="ui-quantity-selector__value">
+    {{ _value() }}
+  </span>
+
+  <button
+    type="button"
+    class="ui-quantity-selector__btn ui-quantity-selector__btn--increment"
+    [disabled]="disabled || !canIncrement()"
+    (click)="increment()"
+    aria-label="Increase quantity"
+  >
+    <ui-icon name="plus" size="sm"></ui-icon>
+  </button>
+</div>

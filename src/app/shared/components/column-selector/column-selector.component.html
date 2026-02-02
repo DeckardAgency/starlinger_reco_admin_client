@@ -1,0 +1,53 @@
+<div class="column-selector">
+    <button
+        class="column-selector__trigger"
+        (click)="toggleDropdown($event)"
+        [class.column-selector__trigger--active]="isOpen()"
+        title="Select columns"
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+    </button>
+
+    <div class="column-selector__dropdown" *ngIf="isOpen()" (click)="$event.stopPropagation()">
+        <div class="column-selector__header">
+            <span class="column-selector__title">Columns</span>
+            <span class="column-selector__count">{{ visibleCount }}/{{ totalCount }}</span>
+        </div>
+
+        <div class="column-selector__actions">
+            <button class="column-selector__action" (click)="selectAll()">Select all</button>
+            <span class="column-selector__divider">|</span>
+            <button class="column-selector__action" (click)="deselectAll()">Deselect all</button>
+        </div>
+
+        <div class="column-selector__list">
+            <label
+                *ngFor="let column of columns"
+                class="column-selector__item"
+                [class.column-selector__item--locked]="column.locked"
+                [class.column-selector__item--disabled]="column.locked"
+            >
+                <div class="column-selector__checkbox-container">
+                    <input
+                        type="checkbox"
+                        class="column-selector__checkbox"
+                        [checked]="column.visible"
+                        [disabled]="column.locked"
+                        (change)="toggleColumn(column)"
+                    >
+                    <span class="column-selector__checkmark"></span>
+                </div>
+                <span class="column-selector__label">{{ column.label }}</span>
+                <svg *ngIf="column.locked" class="column-selector__lock-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            </label>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,123 @@
+<div class="warehouse-detail-page" (click)="closeDropdowns()">
+  <ui-breadcrumbs
+    variant="page-header"
+    separator="chevron"
+    [items]="[
+      { label: 'Warehouses', route: '/admin/warehouses' },
+      { label: isEditMode() ? 'Edit' : 'Add' }
+    ]"
+  ></ui-breadcrumbs>
+
+  <ui-detail-header
+    [title]="isEditMode() ? 'Edit warehouse' : 'New warehouse'"
+    [isEditMode]="isEditMode()"
+    [showSaveAndContinue]="true"
+    [showDiscard]="false"
+    (back)="onBack()"
+    (save)="onSave()"
+    (saveAndContinue)="onSaveAndContinue()"
+  ></ui-detail-header>
+
+  <div class="detail-content">
+    <div class="form-card">
+      <h2 class="form-card__title">Warehouse details</h2>
+      <div class="form-card__content">
+        <div class="toggles-row">
+          <ui-toggle label="Ready for Shop" labelPosition="left" [checked]="warehouse().readyForShop" (toggleChange)="toggleReadyForShop()"></ui-toggle>
+          <ui-toggle label="Active" labelPosition="left" [checked]="warehouse().active" (toggleChange)="toggleActive()"></ui-toggle>
+          <ui-toggle label="Enable for Checkout" labelPosition="left" [checked]="warehouse().enableForCheckout" (toggleChange)="toggleEnableForCheckout()"></ui-toggle>
+        </div>
+
+        <ui-form-field label="Contact person" layout="horizontal">
+          <input type="text" [value]="warehouse().contactPerson" (input)="onContactPersonChange($event)" placeholder="Enter contact person">
+        </ui-form-field>
+
+        <ui-form-field label="Name" layout="horizontal">
+          <input type="text" [value]="warehouse().name" (input)="onNameChange($event)" placeholder="Enter name">
+        </ui-form-field>
+
+        <ui-form-field label="Address" layout="horizontal">
+          <input type="text" [value]="warehouse().address" (input)="onAddressChange($event)" placeholder="Enter address">
+        </ui-form-field>
+
+        <ui-form-field label="City" layout="horizontal">
+          <input type="text" [value]="warehouse().city" (input)="onCityChange($event)" placeholder="Enter city">
+        </ui-form-field>
+
+        <ui-form-field label="Phone" layout="horizontal">
+          <input type="text" [value]="warehouse().phone" (input)="onPhoneChange($event)" placeholder="Enter phone">
+        </ui-form-field>
+
+        <ui-form-field label="Email" layout="horizontal">
+          <input type="email" [value]="warehouse().email" (input)="onEmailChange($event)" placeholder="Enter email">
+        </ui-form-field>
+
+        <ui-form-field label="URL" layout="horizontal">
+          <input type="url" [value]="warehouse().url" (input)="onUrlChange($event)" placeholder="Enter URL">
+        </ui-form-field>
+      </div>
+    </div>
+
+    <div class="tabs-section">
+      <div class="tabs-container">
+        <div class="tabs-header">
+          <ui-tabs [tabs]="tabs" [activeTab]="activeTab()" variant="underline" (tabChange)="setActiveTab($event)"></ui-tabs>
+          <div class="tabs-header__spacer"></div>
+          @if (activeTab() === 'documents') {
+            <button class="btn btn--outline" (click)="onAddDocument()">
+              <span>Add document</span>
+              <ui-icon name="plus" size="sm"></ui-icon>
+            </button>
+          }
+        </div>
+
+        @if (activeTab() === 'description') {
+          <div class="tab-content tab-content--description">
+            <app-text-editor [initialContent]="warehouse().shortDescription" placeholder="Start typing." (contentChange)="onShortDescriptionChange($event)"></app-text-editor>
+          </div>
+        }
+
+        @if (activeTab() === 'documents') {
+          <div class="tab-content tab-content--table">
+            <ui-data-table [columns]="documentColumns" [data]="warehouse().documents"></ui-data-table>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <ng-template #checkboxHeaderTemplate>
+    <ui-table-checkbox-selection [isHeader]="true" [isDropdownOpen]="isHeaderDropdownOpen()" (dropdownToggle)="onHeaderDropdownToggle($event)" (selectAll)="onSelectAllDocuments()" (selectNone)="onSelectNoneDocuments()"></ui-table-checkbox-selection>
+  </ng-template>
+
+  <ng-template #checkboxTemplate let-row>
+    <ui-table-checkbox-selection [isHeader]="false" [checked]="row.selected" (change)="toggleDocumentSelection(row)"></ui-table-checkbox-selection>
+  </ng-template>
+
+  <ng-template #actionsTemplate let-row>
+    <ui-table-actions-dropdown [isOpen]="activeDocActionId() === row.id" [row]="row" [actions]="documentActions" (toggle)="toggleDocumentActions(row.id)" (actionClick)="onDocumentActionClick($event)" (close)="closeDocActionsDropdown()"></ui-table-actions-dropdown>
+  </ng-template>
+
+  <ui-modal [isOpen]="isRenameModalOpen()" (isOpenChange)="isRenameModalOpen.set($event)" [showClose]="false" size="sm">
+    <div class="rename-modal">
+      <div class="rename-modal__header">
+        <h3 class="rename-modal__title">Rename</h3>
+        <button class="rename-modal__close" (click)="cancelRename()">
+          <ui-icon name="close" size="md"></ui-icon>
+        </button>
+      </div>
+      <div class="rename-modal__body">
+        <input type="text" class="rename-modal__input" [value]="renameValue()" (input)="onRenameInputChange($event)" (keyup.enter)="confirmRename()"/>
+      </div>
+      <div class="rename-modal__footer">
+        <button class="btn btn--ghost" (click)="cancelRename()">Cancel</button>
+        <button class="btn btn--primary" (click)="confirmRename()">
+          <span>OK</span>
+          <ui-icon name="check" size="sm" color="white"></ui-icon>
+        </button>
+      </div>
+    </div>
+  </ui-modal>
+
+  <ui-mobile-footer (primaryClick)="onSave()" (secondaryClick)="onSaveAndContinue()"></ui-mobile-footer>
+</div>

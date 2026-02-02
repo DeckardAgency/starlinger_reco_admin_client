@@ -1,0 +1,9 @@
+<button
+  type="button"
+  [ngClass]="containerClasses"
+  [disabled]="disabled"
+  (click)="onClick($event)"
+  aria-label="Toggle favorite"
+>
+  <ui-icon name="heart" [size]="iconSize"></ui-icon>
+</button>

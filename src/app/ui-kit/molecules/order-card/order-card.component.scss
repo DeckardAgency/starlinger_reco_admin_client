@@ -1,0 +1,90 @@
+:host {
+  display: flex;
+  flex: 1;
+  width: 100%;
+}
+
+.order-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &--double {
+      gap: 17px;
+
+      // Tablet and mobile - stack items
+      @media screen and (max-width: 1024px) {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+      }
+    }
+  }
+
+  &__col {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+
+    // Tablet and mobile - full width
+    @media screen and (max-width: 1024px) {
+      width: 100%;
+    }
+  }
+
+  &__icon-wrap {
+    display: flex;
+    padding: 6px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 6px;
+    background: #F4F4F5;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      flex-shrink: 0;
+    }
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+  }
+
+  &__label {
+    color: #71717A;
+    font-family: Inter;
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 14px;
+  }
+
+  &__text {
+    color: #09090B;
+    font-family: Inter;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 100%;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+}

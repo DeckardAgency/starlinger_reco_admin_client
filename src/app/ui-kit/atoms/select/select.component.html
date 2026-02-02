@@ -1,0 +1,44 @@
+<div class="ui-select" [class.ui-select--disabled]="disabled">
+  <!-- Label -->
+  <label *ngIf="label" class="ui-select__label" [attr.for]="name">
+    {{ label }}
+    <span *ngIf="required" class="ui-select__required">*</span>
+  </label>
+
+  <!-- Select wrapper -->
+  <div class="ui-select__wrapper">
+    <select
+      [ngClass]="selectClasses()"
+      [value]="value()"
+      [disabled]="disabled"
+      [required]="required"
+      [name]="name"
+      [attr.id]="name"
+      (change)="onSelectChange($event)"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
+    >
+      <option value="" disabled [selected]="!value()">{{ placeholder }}</option>
+      <option
+        *ngFor="let option of options"
+        [value]="option.value"
+        [disabled]="option.disabled"
+      >
+        {{ option.label }}
+      </option>
+    </select>
+
+    <!-- Chevron icon -->
+    <span class="ui-select__icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" width="16" height="16">
+        <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+  </div>
+
+  <!-- Hint text -->
+  <span *ngIf="hint && !error" class="ui-select__hint">{{ hint }}</span>
+
+  <!-- Error text -->
+  <span *ngIf="error" class="ui-select__error">{{ error }}</span>
+</div>

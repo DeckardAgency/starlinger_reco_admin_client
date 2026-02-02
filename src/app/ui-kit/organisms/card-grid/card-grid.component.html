@@ -1,0 +1,47 @@
+<!-- Loading state -->
+<div *ngIf="loading" [ngClass]="gridClasses">
+  <ng-container *ngFor="let i of getLoadingItems(); trackBy: trackByIndex">
+    <!-- Custom loading template -->
+    <ng-container *ngIf="loadingTemplate">
+      <ng-container *ngTemplateOutlet="loadingTemplate"></ng-container>
+    </ng-container>
+
+    <!-- Default loading skeleton -->
+    <div *ngIf="!loadingTemplate" class="ui-card-grid__skeleton">
+      <ui-shimmer width="100%" height="180px" borderRadius="12px"></ui-shimmer>
+      <div class="ui-card-grid__skeleton-content">
+        <ui-shimmer width="70%" height="20px"></ui-shimmer>
+        <ui-shimmer width="100%" height="16px"></ui-shimmer>
+        <ui-shimmer width="40%" height="16px"></ui-shimmer>
+      </div>
+    </div>
+  </ng-container>
+</div>
+
+<!-- Empty state -->
+<ui-empty-state
+  *ngIf="!loading && items.length === 0"
+  [icon]="emptyIcon"
+  [title]="emptyTitle"
+  [description]="emptyDescription"
+  [actionLabel]="emptyActionLabel"
+  (actionClick)="onEmptyAction()"
+  size="lg"
+></ui-empty-state>
+
+<!-- Card grid -->
+<div *ngIf="!loading && items.length > 0" [ngClass]="gridClasses">
+  <ng-container *ngFor="let item of items; let i = index; trackBy: trackByIndex">
+    <ng-container *ngTemplateOutlet="cardTemplate; context: { $implicit: item, index: i }"></ng-container>
+  </ng-container>
+</div>
+
+<!-- Pagination -->
+<ui-pagination
+  *ngIf="paginated && !loading && items.length > 0"
+  class="ui-card-grid__pagination"
+  [totalItems]="totalItems"
+  [itemsPerPage]="pageSize"
+  [currentPage]="currentPage"
+  (pageChange)="onPageChange($event)"
+></ui-pagination>

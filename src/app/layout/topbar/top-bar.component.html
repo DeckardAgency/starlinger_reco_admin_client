@@ -1,0 +1,56 @@
+<div class="top-bar" [class.top-bar--search-open]="showMobileSearch">
+  <div class="top-bar__content">
+    <div class="top-bar__content-wrapper">
+      <div class="top-bar__logo-wrapper">
+        <a href="/admin" class="top-bar__logo">
+          <img src="icons/Logo.svg" alt="Starlinger Admin" class="top-bar__logo-img" />
+        </a>
+      </div>
+
+      <div class="top-bar__search">
+        <ui-search
+          variant="dark"
+          placeholder="Search"
+          [suggestions]="searchSuggestions"
+          [loading]="searchLoading"
+          (search)="onSearch($event)"
+          (suggestionSelect)="onSuggestionSelect($event)"
+        ></ui-search>
+      </div>
+    </div>
+
+    <div class="top-bar__actions">
+      <!-- Mobile Search Button -->
+      <button class="top-bar__action-btn top-bar__action-btn--mobile-search" (click)="openMobileSearch()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7.333 12.667A5.333 5.333 0 107.333 2a5.333 5.333 0 000 10.667zM14 14l-2.9-2.9" stroke="#FAFAFA" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- Messages Button - Desktop only -->
+      <button class="top-bar__action-btn top-bar__action-btn--desktop-only">
+        <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 10a1.333 1.333 0 0 1-1.333 1.333h-8L2 14V3.333A1.333 1.333 0 0 1 3.333 2h9.334A1.333 1.333 0 0 1 14 3.333V10Z" stroke="#FAFAFA" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+
+      <!-- Hamburger Menu -->
+      <button class="top-bar__hamburger" (click)="toggleMobileMenu()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 4h12M2 8h12M2 12h12" stroke="#FAFAFA" stroke-width="1.33" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile Search Panel -->
+  <div class="top-bar__mobile-search" *ngIf="showMobileSearch">
+    <ui-search
+      variant="dark"
+      placeholder="Search for anything"
+      [suggestions]="searchSuggestions"
+      [loading]="searchLoading"
+      [showShortcut]="false"
+      (search)="onSearch($event)"
+      (suggestionSelect)="onSuggestionSelect($event)"
+    ></ui-search>
+  </div>
+</div>

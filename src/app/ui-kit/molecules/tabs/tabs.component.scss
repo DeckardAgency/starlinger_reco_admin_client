@@ -1,0 +1,193 @@
+.ui-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  // Hide scrollbar but keep functionality
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  &--full-width {
+    .ui-tabs__tab {
+      flex: 1;
+    }
+  }
+
+  // Sizes
+  &--sm {
+    .ui-tabs__tab {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+  }
+
+  &--md {
+    .ui-tabs__tab {
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+  }
+
+  &--lg {
+    .ui-tabs__tab {
+      padding: 12px 20px;
+      font-size: 16px;
+    }
+  }
+
+  // Default variant
+  &--default {
+    background-color: #F4F4F5;
+    padding: 4px;
+    border-radius: 10px;
+
+    .ui-tabs__tab {
+      border-radius: 6px;
+      background: transparent;
+      color: #52525B;
+
+      &--active {
+        background-color: #FFFFFF;
+        color: #18181B;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+
+      &:hover:not(.ui-tabs__tab--active):not(.ui-tabs__tab--disabled) {
+        color: #18181B;
+      }
+    }
+  }
+
+  // Pills variant
+  &--pills {
+    gap: 8px;
+
+    .ui-tabs__tab {
+      border-radius: 9999px;
+      background: transparent;
+      color: #52525B;
+
+      &--active {
+        background-color: #DC2626;
+        color: #FFFFFF;
+      }
+
+      &:hover:not(.ui-tabs__tab--active):not(.ui-tabs__tab--disabled) {
+        background-color: #F4F4F5;
+      }
+    }
+  }
+
+  // Underline variant
+  &--underline {
+    gap: 0;
+    background: transparent;
+    border-bottom: 1px solid #E4E4E7;
+
+    .ui-tabs__tab {
+      flex: 1;
+      height: 56px;
+      padding: 6px 12px;
+      border-radius: 2px;
+      background: transparent;
+      color: #71717A;
+      font-family: Inter, sans-serif;
+      font-size: 14px;
+      font-style: normal;
+      font-weight: 400;
+      line-height: 20px;
+      text-align: center;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+
+      @media (max-width: 768px) {
+        flex: 0 0 auto;
+        padding: 6px 16px;
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: none;
+      }
+
+      &--active {
+        color: #232323;
+        font-weight: 500;
+        border-bottom-color: #DC2626;
+      }
+
+      &:hover:not(.ui-tabs__tab--active):not(.ui-tabs__tab--disabled) {
+        color: #18181B;
+        border-bottom-color: #D4D4D8;
+      }
+    }
+
+    .ui-tabs__tab-checkmark {
+      color: #232323;
+    }
+  }
+
+  &__tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    font-family: inherit;
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+    }
+
+    &--disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+
+    &-checkmark {
+      flex-shrink: 0;
+    }
+
+    &-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      font-size: 11px;
+      font-weight: 600;
+      background-color: #E4E4E7;
+      color: #52525B;
+      border-radius: 10px;
+    }
+  }
+
+  &__content {
+    margin-top: 16px;
+
+    &:empty {
+      display: none;
+    }
+  }
+}

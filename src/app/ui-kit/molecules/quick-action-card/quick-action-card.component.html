@@ -1,0 +1,31 @@
+<ui-card variant="outlined" padding="lg">
+  <div class="quick-action-card">
+    <div class="quick-action-card__icon">
+      <svg *ngIf="data.type === 'new-order'" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 33H27C27.7956 33 28.5587 32.6839 29.1213 32.1213C29.6839 31.5587 30 30.7956 30 30V10.5L22.5 3H9C8.20435 3 7.44129 3.31607 6.87868 3.87868C6.31607 4.44129 6 5.20435 6 6V12M21 3V9C21 9.79565 21.3161 10.5587 21.8787 11.1213C22.4413 11.6839 23.2044 12 24 12H30M4.5 22.5H13.5M9 18V27" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <svg *ngIf="data.type === 'contact-sales'" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M25.5 27C25.5 26.2044 25.1839 25.4413 24.6213 24.8787C24.0587 24.3161 23.2956 24 22.5 24H13.5C12.7044 24 11.9413 24.3161 11.3787 24.8787C10.8161 25.4413 10.5 26.2044 10.5 27M12 3V6M24 3V6M7.5 6H28.5C30.1569 6 31.5 7.34315 31.5 9V30C31.5 31.6569 30.1569 33 28.5 33H7.5C5.84315 33 4.5 31.6569 4.5 30V9C4.5 7.34315 5.84315 6 7.5 6ZM21 15C21 16.6569 19.6569 18 18 18C16.3431 18 15 16.6569 15 15C15 13.3431 16.3431 12 18 12C19.6569 12 21 13.3431 21 15Z" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="quick-action-card__content">
+      <h3 class="quick-action-card__title">{{ data.title }}</h3>
+      <p class="quick-action-card__description">{{ data.description }}</p>
+    </div>
+    @if (data.routerLink) {
+    <ui-button variant="outline" size="md" [routerLink]="data.routerLink">
+      {{ data.buttonLabel }}
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 12L10 8L6 4" stroke="#232323" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </ui-button>
+    } @else {
+      <ui-button variant="outline" size="md" (click)="onButtonClick()">
+        {{ data.buttonLabel }}
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 12L10 8L6 4" stroke="#232323" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </ui-button>
+    }
+  </div>
+</ui-card>

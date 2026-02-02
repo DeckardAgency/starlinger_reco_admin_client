@@ -1,0 +1,64 @@
+<div class="alert-overlay" *ngIf="currentAlert" @overlayAnimation (click)="onOverlayClick($event)">
+    <div class="alert" @modalAnimation role="alertdialog" aria-modal="true">
+        <!-- Close button -->
+        <button
+            *ngIf="currentAlert.config.showCloseButton"
+            class="alert__close"
+            (click)="close()"
+            aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+
+        <!-- Icon -->
+        <div class="alert__icon" [ngClass]="getIconClass()">
+            <!-- Success icon -->
+            <svg *ngIf="currentAlert.config.type === 'success'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+
+            <!-- Error icon -->
+            <svg *ngIf="currentAlert.config.type === 'error'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+
+            <!-- Warning icon -->
+            <svg *ngIf="currentAlert.config.type === 'warning'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 9V13M12 17H12.01M10.29 3.86L1.82 18C1.64 18.3 1.55 18.64 1.55 19C1.55 19.36 1.64 19.7 1.82 20C2 20.3 2.26 20.56 2.56 20.74C2.86 20.92 3.21 21.01 3.56 21H20.44C20.79 21.01 21.14 20.92 21.44 20.74C21.74 20.56 22 20.3 22.18 20C22.36 19.7 22.45 19.36 22.45 19C22.45 18.64 22.36 18.3 22.18 18L13.71 3.86C13.53 3.56 13.27 3.32 12.97 3.15C12.67 2.98 12.34 2.89 12 2.89C11.66 2.89 11.33 2.98 11.03 3.15C10.73 3.32 10.47 3.56 10.29 3.86Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+
+            <!-- Info icon -->
+            <svg *ngIf="currentAlert.config.type === 'info'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 16V12M12 8H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+
+            <!-- Confirm icon -->
+            <svg *ngIf="currentAlert.config.type === 'confirm'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M12 8V12M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+
+        <!-- Title -->
+        <h2 class="alert__title" *ngIf="currentAlert.config.title">
+            {{ currentAlert.config.title }}
+        </h2>
+
+        <!-- Message -->
+        <p class="alert__message">
+            {{ currentAlert.config.message }}
+        </p>
+
+        <!-- Buttons -->
+        <div class="alert__buttons">
+            <button
+                *ngFor="let button of currentAlert.config.buttons"
+                class="alert__button"
+                [ngClass]="getButtonClass(button)"
+                (click)="onButtonClick(button)">
+                {{ button.text }}
+            </button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,47 @@
+<div class="ui-dropdown">
+  <!-- Trigger -->
+  <div class="ui-dropdown__trigger" (click)="toggle()">
+    <ng-content select="[dropdownTrigger]"></ng-content>
+
+    <!-- Default trigger if no content projected -->
+    <button *ngIf="triggerLabel" class="ui-dropdown__default-trigger" type="button">
+      {{ triggerLabel }}
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" width="16" height="16">
+        <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Menu -->
+  <div
+    *ngIf="isOpen()"
+    [ngClass]="dropdownClasses()"
+    [style.width]="width"
+    [@dropdownAnimation]
+    role="menu"
+  >
+    <ng-container *ngFor="let item of items; trackBy: trackByItemId">
+      <!-- Divider -->
+      <div *ngIf="item.divider" class="ui-dropdown__divider"></div>
+
+      <!-- Menu item -->
+      <button
+        *ngIf="!item.divider"
+        class="ui-dropdown__item"
+        [class.ui-dropdown__item--disabled]="item.disabled"
+        [class.ui-dropdown__item--danger]="item.danger"
+        [disabled]="item.disabled"
+        (click)="selectItem(item)"
+        role="menuitem"
+      >
+        <span *ngIf="item.icon" class="ui-dropdown__item-icon">
+          <!-- Icon placeholder - could use ui-icon here -->
+        </span>
+        <span class="ui-dropdown__item-label">{{ item.label }}</span>
+      </button>
+    </ng-container>
+
+    <!-- Custom content slot -->
+    <ng-content></ng-content>
+  </div>
+</div>

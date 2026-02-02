@@ -1,0 +1,12 @@
+<div class="table-footer">
+  <span class="table-footer__info">{{ infoText }}</span>
+
+  @if (showPagination && totalItems > itemsPerPage) {
+    <ui-pagination
+      [currentPage]="currentPage"
+      [totalItems]="totalItems"
+      [itemsPerPage]="itemsPerPage"
+      (pageChange)="onPageChange($event)"
+    ></ui-pagination>
+  }
+</div>

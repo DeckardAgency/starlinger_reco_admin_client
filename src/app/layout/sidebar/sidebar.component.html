@@ -1,0 +1,672 @@
+<div class="sidebar" [class.sidebar--collapsed]="isCollapsed()">
+  <div class="sidebar__content">
+    <nav class="sidebar__nav">
+      <ul class="sidebar__list">
+        <!-- ============================================== -->
+        <!-- SUPER ADMIN NAVIGATION -->
+        <!-- ============================================== -->
+        @if (isSuperAdmin) {
+        <!-- Dashboard with collapse toggle -->
+        <li class="sidebar__item sidebar__top">
+          <a routerLink="/admin/dashboard" routerLinkActive="sidebar__link--active" class="sidebar__link">
+            <span class="icon-home sidebar__icon">
+              <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 14.667V8h4v6.667M2 6l6-4.667L14 6v7.333a1.334 1.334 0 0 1-1.333 1.334H3.333A1.334 1.334 0 0 1 2 13.333V6Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="sidebar__link-text">Dashboard</span>
+          </a>
+          <button class="sidebar__toggle" (click)="toggleSidebar()">
+            <span class="icon-collapse sidebar__icon" [class.sidebar__icon--rotated]="isCollapsed()">
+              <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 2v12m4.667-4-2-2 2-2M3.333 2h9.334C13.403 2 14 2.597 14 3.333v9.334c0 .736-.597 1.333-1.333 1.333H3.333A1.333 1.333 0 0 1 2 12.667V3.333C2 2.597 2.597 2 3.333 2Z" stroke="#232323" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </button>
+        </li>
+
+        <!-- Customer hub -->
+        <li class="sidebar__section">
+          <div class="sidebar__section-header" (click)="toggleSection('customer')">
+            <h2 class="sidebar__section-title">Customer hub</h2>
+            <span class="sidebar__section-title-short">CH</span>
+            <span class="sidebar__section-chevron" [class.sidebar__section-chevron--expanded]="isSectionExpanded('customer')">
+              <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6l4 4 4-4" stroke="#3f3f46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </div>
+          @if (isSectionExpanded('customer') || isCollapsed()) {
+            <ul class="sidebar__sub-list" @expandCollapse>
+              <li class="sidebar__item">
+                <a routerLink="/admin/accounts/list" [class.sidebar__link--active]="isRouteActive('accounts')" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M12.6668 14V12.6667C12.6668 11.9594 12.3859 11.2811 11.8858 10.781C11.3857 10.281 10.7074 10 10.0002 10H6.00016C5.29292 10 4.61464 10.281 4.11454 10.781C3.61445 11.2811 3.3335 11.9594 3.3335 12.6667V14M10.6668 4.66667C10.6668 6.13943 9.47292 7.33333 8.00016 7.33333C6.5274 7.33333 5.3335 6.13943 5.3335 4.66667C5.3335 3.19391 6.5274 2 8.00016 2C9.47292 2 10.6668 3.19391 10.6668 4.66667Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Accounts</span>
+                </a>
+              </li>
+              <li class="sidebar__item">
+                <a routerLink="/admin/contacts/list" [class.sidebar__link--active]="isRouteActive('contacts')" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M10.6667 12.0002C10.6667 11.2929 10.3857 10.6146 9.88562 10.1145C9.38552 9.61445 8.70724 9.3335 8 9.3335M8 9.3335C7.29276 9.3335 6.61448 9.61445 6.11438 10.1145C5.61428 10.6146 5.33333 11.2929 5.33333 12.0002M8 9.3335C9.10457 9.3335 10 8.43807 10 7.3335C10 6.22893 9.10457 5.3335 8 5.3335C6.89543 5.3335 6 6.22893 6 7.3335C6 8.43807 6.89543 9.3335 8 9.3335ZM5.33333 1.3335V2.66683M10.6667 1.3335V2.66683M3.33333 2.66683H12.6667C13.403 2.66683 14 3.26378 14 4.00016V13.3335C14 14.0699 13.403 14.6668 12.6667 14.6668H3.33333C2.59695 14.6668 2 14.0699 2 13.3335V4.00016C2 3.26378 2.59695 2.66683 3.33333 2.66683Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Contacts</span>
+                </a>
+              </li>
+            </ul>
+          }
+        </li>
+
+        <!-- Actions hub -->
+        <li class="sidebar__section">
+          <div class="sidebar__section-header" (click)="toggleSection('actions')">
+            <h2 class="sidebar__section-title">Actions hub</h2>
+            <span class="sidebar__section-title-short">AH</span>
+            <span class="sidebar__section-chevron" [class.sidebar__section-chevron--expanded]="isSectionExpanded('actions')">
+              <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6l4 4 4-4" stroke="#3f3f46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </div>
+          @if (isSectionExpanded('actions') || isCollapsed()) {
+            <ul class="sidebar__sub-list" @expandCollapse>
+              <li class="sidebar__item">
+                <a routerLink="/admin/shop-orders/list" [class.sidebar__link--active]="isRouteActive('shop-orders')" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <g clip-path="url(#clip0_store)">
+                        <path d="M1.3335 4.66683L4.2735 1.72683C4.39753 1.60205 4.54504 1.50305 4.70752 1.43555C4.86999 1.36804 5.04422 1.33336 5.22016 1.3335H10.7802C10.9561 1.33336 11.1303 1.36804 11.2928 1.43555C11.4553 1.50305 11.6028 1.60205 11.7268 1.72683L14.6668 4.66683M1.3335 4.66683H14.6668M1.3335 4.66683V6.66683C1.3335 7.02045 1.47397 7.35959 1.72402 7.60964C1.97407 7.85969 2.31321 8.00016 2.66683 8.00016M14.6668 4.66683V6.66683C14.6668 7.02045 14.5264 7.35959 14.2763 7.60964C14.0263 7.85969 13.6871 8.00016 13.3335 8.00016M2.66683 8.00016V13.3335C2.66683 13.6871 2.80731 14.0263 3.05735 14.2763C3.3074 14.5264 3.64654 14.6668 4.00016 14.6668H12.0002C12.3538 14.6668 12.6929 14.5264 12.943 14.2763C13.193 14.0263 13.3335 13.6871 13.3335 13.3335V8.00016M2.66683 8.00016C3.05634 7.97872 3.42834 7.83133 3.72683 7.58016C3.80638 7.52268 3.90202 7.49174 4.00016 7.49174C4.09831 7.49174 4.19395 7.52268 4.2735 7.58016C4.57198 7.83133 4.94399 7.97872 5.3335 8.00016C5.72301 7.97872 6.09501 7.83133 6.3935 7.58016C6.47304 7.52268 6.56869 7.49174 6.66683 7.49174C6.76497 7.49174 6.86062 7.52268 6.94016 7.58016C7.23865 7.83133 7.61065 7.97872 8.00016 8.00016C8.38967 7.97872 8.76168 7.83133 9.06016 7.58016C9.13971 7.52268 9.23535 7.49174 9.3335 7.49174C9.43164 7.49174 9.52728 7.52268 9.60683 7.58016C9.90532 7.83133 10.2773 7.97872 10.6668 8.00016C11.0563 7.97872 11.4283 7.83133 11.7268 7.58016C11.8064 7.52268 11.902 7.49174 12.0002 7.49174C12.0983 7.49174 12.194 7.52268 12.2735 7.58016C12.572 7.83133 12.944 7.97872 13.3335 8.00016M10.0002 14.6668V12.0002C10.0002 11.6465 9.85969 11.3074 9.60964 11.0574C9.35959 10.8073 9.02045 10.6668 8.66683 10.6668H7.3335C6.97987 10.6668 6.64074 10.8073 6.39069 11.0574C6.14064 11.3074 6.00016 11.6465 6.00016 12.0002V14.6668" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </g>
+                      <defs>
+                        <clipPath id="clip0_store">
+                          <rect width="16" height="16" fill="white"/>
+                        </clipPath>
+                      </defs>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Shop orders</span>
+                </a>
+              </li>
+            </ul>
+          }
+        </li>
+
+        <!-- Product hub -->
+        <li class="sidebar__section">
+          <div class="sidebar__section-header" (click)="toggleSection('product')">
+            <h2 class="sidebar__section-title">Product hub</h2>
+            <span class="sidebar__section-title-short">PH</span>
+            <span class="sidebar__section-chevron" [class.sidebar__section-chevron--expanded]="isSectionExpanded('product')">
+              <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6l4 4 4-4" stroke="#3f3f46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </div>
+          @if (isSectionExpanded('product') || isCollapsed()) {
+            <ul class="sidebar__sub-list" @expandCollapse>
+              <li class="sidebar__item">
+                <a routerLink="/admin/products/list" [class.sidebar__link--active]="isRouteActive('products')" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M5 2.84652L11 6.27985M2.20003 4.6665L8.00003 7.99984M8.00003 7.99984L13.8 4.6665M8.00003 7.99984L8 14.6665M14 5.33311C13.9998 5.09929 13.938 4.86965 13.821 4.66721C13.704 4.46478 13.5358 4.29668 13.3333 4.17977L8.66667 1.51311C8.46397 1.39608 8.23405 1.33447 8 1.33447C7.76595 1.33447 7.53603 1.39608 7.33333 1.51311L2.66667 4.17977C2.46418 4.29668 2.29599 4.46478 2.17897 4.66721C2.06196 4.86965 2.00024 5.09929 2 5.33311V10.6664C2.00024 10.9003 2.06196 11.1299 2.17897 11.3323C2.29599 11.5348 2.46418 11.7029 2.66667 11.8198L7.33333 14.4864C7.53603 14.6035 7.76595 14.6651 8 14.6651C8.23405 14.6651 8.46397 14.6035 8.66667 14.4864L13.3333 11.8198C13.5358 11.7029 13.704 11.5348 13.821 11.3323C13.938 11.1299 13.9998 10.9003 14 10.6664V5.33311Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Products</span>
+                </a>
+              </li>
+              <li class="sidebar__item">
+                <a routerLink="/admin/product-groups/list" [class.sidebar__link--active]="isRouteActive('product-groups')" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M2 4.66667C2 3.95942 2.28095 3.28115 2.78105 2.78105C3.28115 2.28095 3.95942 2 4.66667 2H6C6.35362 2 6.69276 2.14048 6.94281 2.39052C7.19286 2.64057 7.33333 2.97971 7.33333 3.33333V6C7.33333 6.35362 7.19286 6.69276 6.94281 6.94281C6.69276 7.19286 6.35362 7.33333 6 7.33333H3.33333C2.97971 7.33333 2.64057 7.19286 2.39052 6.94281C2.14048 6.69276 2 6.35362 2 6V4.66667ZM8.66667 3.33333C8.66667 2.97971 8.80714 2.64057 9.05719 2.39052C9.30724 2.14048 9.64638 2 10 2H11.3333C12.0406 2 12.7189 2.28095 13.219 2.78105C13.719 3.28115 14 3.95942 14 4.66667V6C14 6.35362 13.8595 6.69276 13.6095 6.94281C13.3594 7.19286 13.0203 7.33333 12.6667 7.33333H10C9.64638 7.33333 9.30724 7.19286 9.05719 6.94281C8.80714 6.69276 8.66667 6.35362 8.66667 6V3.33333ZM2 10C2 9.64638 2.14048 9.30724 2.39052 9.05719C2.64057 8.80714 2.97971 8.66667 3.33333 8.66667H6C6.35362 8.66667 6.69276 8.80714 6.94281 9.05719C7.19286 9.30724 7.33333 9.64638 7.33333 10V12.6667C7.33333 13.0203 7.19286 13.3594 6.94281 13.6095C6.69276 13.8595 6.35362 14 6 14H4.66667C3.95942 14 3.28115 13.719 2.78105 13.219C2.28095 12.7189 2 12.0406 2 11.3333V10ZM8.66667 10C8.66667 9.64638 8.80714 9.30724 9.05719 9.05719C9.30724 8.80714 9.64638 8.66667 10 8.66667H12.6667C13.0203 8.66667 13.3594 8.80714 13.6095 9.05719C13.8595 9.30724 14 9.64638 14 10V11.3333C14 12.0406 13.719 12.7189 13.219 13.219C12.7189 13.719 12.0406 14 11.3333 14H10C9.64638 14 9.30724 13.8595 9.05719 13.6095C8.80714 13.3594 8.66667 13.0203 8.66667 12.6667V10Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Categories</span>
+                </a>
+              </li>
+              <li class="sidebar__item">
+                <a routerLink="/admin/discounts/list" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M10 6L6 10M6 6H6.00667M10 10H10.0067M3.33333 2H12.6667C13.403 2 14 2.59695 14 3.33333V12.6667C14 13.403 13.403 14 12.6667 14H3.33333C2.59695 14 2 13.403 2 12.6667V3.33333C2 2.59695 2.59695 2 3.33333 2Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Discounts</span>
+                </a>
+              </li>
+            </ul>
+          }
+        </li>
+
+        <!-- Ecommerce hub -->
+        <li class="sidebar__section">
+          <div class="sidebar__section-header" (click)="toggleSection('ecommerce')">
+            <h2 class="sidebar__section-title">Ecommerce hub</h2>
+            <span class="sidebar__section-title-short">EH</span>
+            <span class="sidebar__section-chevron" [class.sidebar__section-chevron--expanded]="isSectionExpanded('ecommerce')">
+              <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6l4 4 4-4" stroke="#3f3f46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </div>
+          @if (isSectionExpanded('ecommerce') || isCollapsed()) {
+            <ul class="sidebar__sub-list" @expandCollapse>
+              <li class="sidebar__item">
+                <a routerLink="/admin/payment-types/list" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M4 10.6665C4 11.3738 4.28095 12.0521 4.78105 12.5522C5.28115 13.0523 5.95942 13.3332 6.66667 13.3332H7.33333C7.86377 13.3332 8.37247 13.1225 8.74755 12.7474C9.12262 12.3723 9.33333 11.8636 9.33333 11.3332C9.33333 10.8028 9.12262 10.2941 8.74755 9.91899C8.37247 9.54391 7.86377 9.33317 7.33333 9.33317H6C5.46957 9.33317 4.96086 9.12245 4.58579 8.74738C4.21071 8.37231 4 7.8636 4 7.33317C4 6.80274 4.21071 6.29403 4.58579 5.91896C4.96086 5.54388 5.46957 5.33317 6 5.33317H6.66667C7.37391 5.33317 8.05219 5.61412 8.55229 6.11422C9.05238 6.61432 9.33333 7.29259 9.33333 7.99984M6.66667 4.6665V5.33317M6.66667 13.3332V13.9998M14 4.6665C14 6.13926 12.8061 7.33317 11.3333 7.33317C9.86057 7.33317 8.66667 6.13926 8.66667 4.6665C8.66667 3.19374 9.86057 1.99984 11.3333 1.99984C12.8061 1.99984 14 3.19374 14 4.6665Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Payment types</span>
+                </a>
+              </li>
+              <li class="sidebar__item">
+                <a routerLink="/admin/warehouses/list" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M2.66667 6.11088L8 2.66642L13.3333 6.11088M2.66667 6.11088V13.3331H13.3333V6.11088M2.66667 6.11088L8 9.5553L13.3333 6.11088M5.33333 13.3331V9.33309H10.6667V13.3331" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Warehouse</span>
+                </a>
+              </li>
+              <li class="sidebar__item">
+                <a routerLink="/admin/delivery-types/list" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M10 3.33317H1.33333V10.6665H10V3.33317Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M10 5.99984H12.6667L14.6667 7.99984V10.6665H10V5.99984Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3.66667 13.3332C4.40305 13.3332 5 12.7362 5 11.9998C5 11.2635 4.40305 10.6665 3.66667 10.6665C2.93029 10.6665 2.33333 11.2635 2.33333 11.9998C2.33333 12.7362 2.93029 13.3332 3.66667 13.3332Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M12.3333 13.3332C13.0697 13.3332 13.6667 12.7362 13.6667 11.9998C13.6667 11.2635 13.0697 10.6665 12.3333 10.6665C11.597 10.6665 11 11.2635 11 11.9998C11 12.7362 11.597 13.3332 12.3333 13.3332Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Delivery types</span>
+                </a>
+              </li>
+              <li class="sidebar__item">
+                <a routerLink="/admin/delivery-prices/list" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M2.66667 2.6665V13.3332L4.66667 11.9998L6.66667 13.3332L8 11.9998L9.33333 13.3332L11.3333 11.9998L13.3333 13.3332V2.6665L11.3333 3.99984L9.33333 2.6665L8 3.99984L6.66667 2.6665L4.66667 3.99984L2.66667 2.6665Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M9.33333 6.6665H6C5.63181 6.6665 5.33333 6.96498 5.33333 7.33317V8.6665C5.33333 9.03469 5.63181 9.33317 6 9.33317H9.33333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M5.33333 7.99984H10" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Delivery prices</span>
+                </a>
+              </li>
+              <li class="sidebar__item">
+                <a routerLink="/admin/tax-types/list" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M10 6L6 10M6 6H6.00667M10 10H10.0067M3.33333 2H12.6667C13.403 2 14 2.59695 14 3.33333V12.6667C14 13.403 13.403 14 12.6667 14H3.33333C2.59695 14 2 13.403 2 12.6667V3.33333C2 2.59695 2.59695 2 3.33333 2Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Tax types</span>
+                </a>
+              </li>
+              <li class="sidebar__item">
+                <a routerLink="/admin/countries/list" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M2.66667 10.0002C2.66667 10.0002 3.33333 9.3335 5.33333 9.3335C7.33333 9.3335 8.66667 10.6668 10.6667 10.6668C12.6667 10.6668 13.3333 10.0002 13.3333 10.0002V2.00016C13.3333 2.00016 12.6667 2.66683 10.6667 2.66683C8.66667 2.66683 7.33333 1.3335 5.33333 1.3335C3.33333 1.3335 2.66667 2.00016 2.66667 2.00016V10.0002ZM2.66667 10.0002V14.6668" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Country</span>
+                </a>
+              </li>
+              <li class="sidebar__item">
+                <a routerLink="/admin/fuel-surcharges/list" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M2.66667 14V4C2.66667 3.64638 2.80714 3.30724 3.05719 3.05719C3.30724 2.80714 3.64638 2.66667 4 2.66667H8.66667C9.02029 2.66667 9.35943 2.80714 9.60948 3.05719C9.85953 3.30724 10 3.64638 10 4V14M2.66667 14H10M2.66667 14H1.33333M10 14H14.6667M10 8H10.6667C11.0203 8 11.3594 8.14048 11.6095 8.39052C11.8595 8.64057 12 8.97971 12 9.33333V11.3333C12 11.687 12.1405 12.0261 12.3905 12.2761C12.6406 12.5262 12.9797 12.6667 13.3333 12.6667C13.687 12.6667 14.0261 12.5262 14.2761 12.2761C14.5262 12.0261 14.6667 11.687 14.6667 11.3333V6L12.6667 4M4 6H8.66667V9.33333H4V6Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Fuel surcharge</span>
+                </a>
+              </li>
+              <li class="sidebar__item">
+                <a routerLink="/admin/packaging-prices/list" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M13.3333 5.33333L8 8M8 8L2.66667 5.33333M8 8V14M14 10.6667V5.33333C13.9998 5.09953 13.938 4.86988 13.821 4.66741C13.704 4.46494 13.5359 4.29675 13.3333 4.18L8.66667 1.51333C8.46383 1.39623 8.23378 1.33438 8 1.33438C7.76622 1.33438 7.53617 1.39623 7.33333 1.51333L2.66667 4.18C2.46414 4.29675 2.29599 4.46494 2.17897 4.66741C2.06195 4.86988 2.0002 5.09953 2 5.33333V10.6667C2.0002 10.9005 2.06195 11.1301 2.17897 11.3326C2.29599 11.5351 2.46414 11.7033 2.66667 11.82L7.33333 14.4867C7.53617 14.6038 7.76622 14.6656 8 14.6656C8.23378 14.6656 8.46383 14.6038 8.66667 14.4867L13.3333 11.82C13.5359 11.7033 13.704 11.5351 13.821 11.3326C13.938 11.1301 13.9998 10.9005 14 10.6667Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Packaging price</span>
+                </a>
+              </li>
+            </ul>
+          }
+        </li>
+
+        <!-- User hub -->
+        <li class="sidebar__section">
+          <div class="sidebar__section-header" (click)="toggleSection('user')">
+            <h2 class="sidebar__section-title">User hub</h2>
+            <span class="sidebar__section-title-short">UH</span>
+            <span class="sidebar__section-chevron" [class.sidebar__section-chevron--expanded]="isSectionExpanded('user')">
+              <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 6l4 4 4-4" stroke="#3f3f46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </div>
+          @if (isSectionExpanded('user') || isCollapsed()) {
+            <ul class="sidebar__sub-list" @expandCollapse>
+              <li class="sidebar__item">
+                <a routerLink="/admin/users/list" [class.sidebar__link--active]="isRouteActive('users')" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M10.6668 14V12.6667C10.6668 11.9594 10.3859 11.2811 9.88578 10.781C9.38568 10.281 8.70741 10 8.00016 10H4.00016C3.29292 10 2.61464 10.281 2.11454 10.781C1.61445 11.2811 1.3335 11.9594 1.3335 12.6667V14M14.6668 13.9999V12.6666C14.6664 12.0757 14.4697 11.5018 14.1077 11.0348C13.7457 10.5678 13.2389 10.2343 12.6668 10.0866M10.6668 2.08659C11.2404 2.23346 11.7489 2.56706 12.1119 3.0348C12.475 3.50254 12.6721 4.07781 12.6721 4.66992C12.6721 5.26204 12.475 5.83731 12.1119 6.30505C11.7489 6.77279 11.2404 7.10639 10.6668 7.25326M8.66683 4.66667C8.66683 6.13943 7.47292 7.33333 6.00016 7.33333C4.5274 7.33333 3.3335 6.13943 3.3335 4.66667C3.3335 3.19391 4.5274 2 6.00016 2C7.47292 2 8.66683 3.19391 8.66683 4.66667Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Users</span>
+                </a>
+              </li>
+              <li class="sidebar__item">
+                <a routerLink="/admin/roles" routerLinkActive="sidebar__link--active" class="sidebar__link">
+                  <span class="sidebar__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M9.33317 1.33325V3.99992C9.33317 4.35354 9.47365 4.69268 9.72369 4.94273C9.97374 5.19278 10.3129 5.33325 10.6665 5.33325H13.3332M5.99984 9.99992L7.33317 11.3333L9.99984 8.66659M9.99984 1.33325H3.99984C3.64622 1.33325 3.30708 1.47373 3.05703 1.72378C2.80698 1.97382 2.6665 2.31296 2.6665 2.66659V13.3333C2.6665 13.6869 2.80698 14.026 3.05703 14.2761C3.30708 14.5261 3.64622 14.6666 3.99984 14.6666H11.9998C12.3535 14.6666 12.6926 14.5261 12.9426 14.2761C13.1927 14.026 13.3332 13.6869 13.3332 13.3333V4.66659L9.99984 1.33325Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Roles</span>
+                </a>
+              </li>
+            </ul>
+          }
+        </li>
+        }
+
+        <!-- ============================================== -->
+        <!-- CUSTOMER ADMIN NAVIGATION -->
+        <!-- ============================================== -->
+        @if (isCustomerAdmin) {
+          <!-- Collapse toggle only (no dashboard for customer admin) -->
+          <li class="sidebar__item sidebar__top">
+            <div class="sidebar__link" style="visibility: hidden; flex: 1;">
+              <!-- Spacer -->
+            </div>
+            <button class="sidebar__toggle" (click)="toggleSidebar()">
+              <span class="icon-collapse sidebar__icon" [class.sidebar__icon--rotated]="isCollapsed()">
+                <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 2v12m4.667-4-2-2 2-2M3.333 2h9.334C13.403 2 14 2.597 14 3.333v9.334c0 .736-.597 1.333-1.333 1.333H3.333A1.333 1.333 0 0 1 2 12.667V3.333C2 2.597 2.597 2 3.333 2Z" stroke="#232323" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </button>
+          </li>
+
+          <!-- Actions hub -->
+          <li class="sidebar__section">
+            <div class="sidebar__section-header" (click)="toggleSection('actions')">
+              <h2 class="sidebar__section-title">Actions hub</h2>
+              <span class="sidebar__section-title-short">AH</span>
+              <span class="sidebar__section-chevron" [class.sidebar__section-chevron--expanded]="isSectionExpanded('actions')">
+                <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 6l4 4 4-4" stroke="#3f3f46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </div>
+            @if (isSectionExpanded('actions') || isCollapsed()) {
+              <ul class="sidebar__sub-list" @expandCollapse>
+                <!-- History (main orders list) -->
+                <li class="sidebar__item">
+                  <a routerLink="/customer-admin/orders" [class.sidebar__link--active]="isRouteActive('customer-admin/orders') && !isRouteActive('drafts') && !isRouteActive('archive') && !isRouteActive('bin')" class="sidebar__link">
+                    <span class="sidebar__icon">
+                      <!-- Store icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <g clip-path="url(#clip0_store_ca)">
+                          <path d="M1.3335 4.66683L4.2735 1.72683C4.39753 1.60205 4.54504 1.50305 4.70752 1.43555C4.86999 1.36804 5.04422 1.33336 5.22016 1.3335H10.7802C10.9561 1.33336 11.1303 1.36804 11.2928 1.43555C11.4553 1.50305 11.6028 1.60205 11.7268 1.72683L14.6668 4.66683M1.3335 4.66683H14.6668M1.3335 4.66683V6.66683C1.3335 7.02045 1.47397 7.35959 1.72402 7.60964C1.97407 7.85969 2.31321 8.00016 2.66683 8.00016M14.6668 4.66683V6.66683C14.6668 7.02045 14.5264 7.35959 14.2763 7.60964C14.0263 7.85969 13.6871 8.00016 13.3335 8.00016M2.66683 8.00016V13.3335C2.66683 13.6871 2.80731 14.0263 3.05735 14.2763C3.3074 14.5264 3.64654 14.6668 4.00016 14.6668H12.0002C12.3538 14.6668 12.6929 14.5264 12.943 14.2763C13.193 14.0263 13.3335 13.6871 13.3335 13.3335V8.00016M2.66683 8.00016C3.05634 7.97872 3.42834 7.83133 3.72683 7.58016C3.80638 7.52268 3.90202 7.49174 4.00016 7.49174C4.09831 7.49174 4.19395 7.52268 4.2735 7.58016C4.57198 7.83133 4.94399 7.97872 5.3335 8.00016C5.72301 7.97872 6.09501 7.83133 6.3935 7.58016C6.47304 7.52268 6.56869 7.49174 6.66683 7.49174C6.76497 7.49174 6.86062 7.52268 6.94016 7.58016C7.23865 7.83133 7.61065 7.97872 8.00016 8.00016C8.38967 7.97872 8.76168 7.83133 9.06016 7.58016C9.13971 7.52268 9.23535 7.49174 9.3335 7.49174C9.43164 7.49174 9.52728 7.52268 9.60683 7.58016C9.90532 7.83133 10.2773 7.97872 10.6668 8.00016C11.0563 7.97872 11.4283 7.83133 11.7268 7.58016C11.8064 7.52268 11.902 7.49174 12.0002 7.49174C12.0983 7.49174 12.194 7.52268 12.2735 7.58016C12.572 7.83133 12.944 7.97872 13.3335 8.00016M10.0002 14.6668V12.0002C10.0002 11.6465 9.85969 11.3074 9.60964 11.0574C9.35959 10.8073 9.02045 10.6668 8.66683 10.6668H7.3335C6.97987 10.6668 6.64074 10.8073 6.39069 11.0574C6.14064 11.3074 6.00016 11.6465 6.00016 12.0002V14.6668" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </g>
+                        <defs>
+                          <clipPath id="clip0_store_ca">
+                            <rect width="16" height="16" fill="white"/>
+                          </clipPath>
+                        </defs>
+                      </svg>
+                    </span>
+                    <span class="sidebar__link-text">History</span>
+                  </a>
+                </li>
+                <!-- Drafts -->
+                <li class="sidebar__item">
+                  <a routerLink="/customer-admin/orders/drafts" [class.sidebar__link--active]="isRouteActive('drafts')" class="sidebar__link">
+                    <span class="sidebar__icon">
+                      <!-- Upload icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M14 10V12.6667C14 13.0203 13.8595 13.3594 13.6095 13.6095C13.3594 13.8595 13.0203 14 12.6667 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V10M11.3333 5.33333L8 2M8 2L4.66667 5.33333M8 2V10" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
+                    <span class="sidebar__link-text">Drafts</span>
+                  </a>
+                </li>
+                <!-- Archive -->
+                <li class="sidebar__item">
+                  <a routerLink="/customer-admin/orders/archive" [class.sidebar__link--active]="isRouteActive('archive')" class="sidebar__link">
+                    <span class="sidebar__icon">
+                      <!-- Archive icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M13.3333 5.33333V13.3333C13.3333 13.6869 13.1928 14.0261 12.9428 14.2761C12.6927 14.5262 12.3536 14.6667 12 14.6667H4C3.64638 14.6667 3.30724 14.5262 3.05719 14.2761C2.80714 14.0261 2.66667 13.6869 2.66667 13.3333V5.33333M6.66667 8H9.33333M1.33333 2.66667H14.6667V5.33333H1.33333V2.66667Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
+                    <span class="sidebar__link-text">Archive</span>
+                  </a>
+                </li>
+                <!-- Bin -->
+                <li class="sidebar__item">
+                  <a routerLink="/customer-admin/orders/bin" [class.sidebar__link--active]="isRouteActive('bin')" class="sidebar__link">
+                    <span class="sidebar__icon">
+                      <!-- Trash icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4H3.33333H14M12.6667 4V13.3333C12.6667 13.687 12.5262 14.0261 12.2761 14.2761C12.0261 14.5262 11.687 14.6667 11.3333 14.6667H4.66667C4.31304 14.6667 3.97391 14.5262 3.72386 14.2761C3.47381 14.0261 3.33333 13.687 3.33333 13.3333V4M5.33333 4V2.66667C5.33333 2.31304 5.47381 1.97391 5.72386 1.72386C5.97391 1.47381 6.31304 1.33333 6.66667 1.33333H9.33333C9.68696 1.33333 10.0261 1.47381 10.2761 1.72386C10.5262 1.97391 10.6667 2.31304 10.6667 2.66667V4M6.66667 7.33333V11.3333M9.33333 7.33333V11.3333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
+                    <span class="sidebar__link-text">Bin</span>
+                  </a>
+                </li>
+              </ul>
+            }
+          </li>
+
+          <!-- User hub -->
+          <li class="sidebar__section">
+            <div class="sidebar__section-header" (click)="toggleSection('user')">
+              <h2 class="sidebar__section-title">User hub</h2>
+              <span class="sidebar__section-title-short">UH</span>
+              <span class="sidebar__section-chevron" [class.sidebar__section-chevron--expanded]="isSectionExpanded('user')">
+                <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 6l4 4 4-4" stroke="#3f3f46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </div>
+            @if (isSectionExpanded('user') || isCollapsed()) {
+              <ul class="sidebar__sub-list" @expandCollapse>
+                <li class="sidebar__item">
+                  <a routerLink="/customer-admin/users" [class.sidebar__link--active]="isRouteActive('customer-admin/users')" class="sidebar__link">
+                    <span class="sidebar__icon">
+                      <!-- User icon -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M12.6667 14V12.6667C12.6667 11.9594 12.3857 11.2811 11.8856 10.781C11.3855 10.281 10.7072 10 10 10H6C5.29275 10 4.61448 10.281 4.11438 10.781C3.61428 11.2811 3.33333 11.9594 3.33333 12.6667V14M10.6667 4.66667C10.6667 6.13943 9.47276 7.33333 8 7.33333C6.52724 7.33333 5.33333 6.13943 5.33333 4.66667C5.33333 3.19391 6.52724 2 8 2C9.47276 2 10.6667 3.19391 10.6667 4.66667Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
+                    <span class="sidebar__link-text">Users</span>
+                  </a>
+                </li>
+              </ul>
+            }
+          </li>
+        }
+
+        <!-- ============================================== -->
+        <!-- CUSTOMER NAVIGATION -->
+        <!-- ============================================== -->
+        @if (isCustomer) {
+          <!-- Dashboard with collapse toggle -->
+          <li class="sidebar__item sidebar__top">
+            <a routerLink="/customer/dashboard" routerLinkActive="sidebar__link--active" class="sidebar__link">
+              <span class="icon-home sidebar__icon">
+                <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 14.667V8h4v6.667M2 6l6-4.667L14 6v7.333a1.334 1.334 0 0 1-1.333 1.334H3.333A1.334 1.334 0 0 1 2 13.333V6Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span class="sidebar__link-text">Dashboard</span>
+            </a>
+            <button class="sidebar__toggle" (click)="toggleSidebar()">
+              <span class="icon-collapse sidebar__icon" [class.sidebar__icon--rotated]="isCollapsed()">
+                <svg width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 2v12m4.667-4-2-2 2-2M3.333 2h9.334C13.403 2 14 2.597 14 3.333v9.334c0 .736-.597 1.333-1.333 1.333H3.333A1.333 1.333 0 0 1 2 12.667V3.333C2 2.597 2.597 2 3.333 2Z" stroke="#232323" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+            </button>
+          </li>
+
+          <!-- Actions hub -->
+          <li class="sidebar__section">
+            <div class="sidebar__section-header">
+              <h2 class="sidebar__section-title sidebar__section-title--red">Actions hub</h2>
+              <span class="sidebar__section-title-short">AH</span>
+            </div>
+            <ul class="sidebar__sub-list">
+              <!-- Shop with submenu -->
+              <li class="sidebar__item sidebar__item--expandable">
+                <div class="sidebar__link" (click)="toggleSection('shop')">
+                  <span class="sidebar__icon">
+                    <!-- Store icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <g clip-path="url(#clip0_store_cust)">
+                        <path d="M1.3335 4.66683L4.2735 1.72683C4.39753 1.60205 4.54504 1.50305 4.70752 1.43555C4.86999 1.36804 5.04422 1.33336 5.22016 1.3335H10.7802C10.9561 1.33336 11.1303 1.36804 11.2928 1.43555C11.4553 1.50305 11.6028 1.60205 11.7268 1.72683L14.6668 4.66683M1.3335 4.66683H14.6668M1.3335 4.66683V6.66683C1.3335 7.02045 1.47397 7.35959 1.72402 7.60964C1.97407 7.85969 2.31321 8.00016 2.66683 8.00016M14.6668 4.66683V6.66683C14.6668 7.02045 14.5264 7.35959 14.2763 7.60964C14.0263 7.85969 13.6871 8.00016 13.3335 8.00016M2.66683 8.00016V13.3335C2.66683 13.6871 2.80731 14.0263 3.05735 14.2763C3.3074 14.5264 3.64654 14.6668 4.00016 14.6668H12.0002C12.3538 14.6668 12.6929 14.5264 12.943 14.2763C13.193 14.0263 13.3335 13.6871 13.3335 13.3335V8.00016M2.66683 8.00016C3.05634 7.97872 3.42834 7.83133 3.72683 7.58016C3.80638 7.52268 3.90202 7.49174 4.00016 7.49174C4.09831 7.49174 4.19395 7.52268 4.2735 7.58016C4.57198 7.83133 4.94399 7.97872 5.3335 8.00016C5.72301 7.97872 6.09501 7.83133 6.3935 7.58016C6.47304 7.52268 6.56869 7.49174 6.66683 7.49174C6.76497 7.49174 6.86062 7.52268 6.94016 7.58016C7.23865 7.83133 7.61065 7.97872 8.00016 8.00016C8.38967 7.97872 8.76168 7.83133 9.06016 7.58016C9.13971 7.52268 9.23535 7.49174 9.3335 7.49174C9.43164 7.49174 9.52728 7.52268 9.60683 7.58016C9.90532 7.83133 10.2773 7.97872 10.6668 8.00016C11.0563 7.97872 11.4283 7.83133 11.7268 7.58016C11.8064 7.52268 11.902 7.49174 12.0002 7.49174C12.0983 7.49174 12.194 7.52268 12.2735 7.58016C12.572 7.83133 12.944 7.97872 13.3335 8.00016M10.0002 14.6668V12.0002C10.0002 11.6465 9.85969 11.3074 9.60964 11.0574C9.35959 10.8073 9.02045 10.6668 8.66683 10.6668H7.3335C6.97987 10.6668 6.64074 10.8073 6.39069 11.0574C6.14064 11.3074 6.00016 11.6465 6.00016 12.0002V14.6668" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </g>
+                      <defs>
+                        <clipPath id="clip0_store_cust">
+                          <rect width="16" height="16" fill="white"/>
+                        </clipPath>
+                      </defs>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">Shop</span>
+                </div>
+                @if (isSectionExpanded('shop') || isCollapsed()) {
+                  <ul class="sidebar__nested-list" @expandCollapse>
+                    <li class="sidebar__nested-item">
+                      <a routerLink="/customer/shop/products" routerLinkActive="sidebar__link--active" class="sidebar__nested-link">
+                        <span class="sidebar__icon">
+                          <!-- Package icon -->
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M5 2.84652L11 6.27985M2.20003 4.6665L8.00003 7.99984M8.00003 7.99984L13.8 4.6665M8.00003 7.99984L8 14.6665M14 5.33311C13.9998 5.09929 13.938 4.86965 13.821 4.66721C13.704 4.46478 13.5358 4.29668 13.3333 4.17977L8.66667 1.51311C8.46397 1.39608 8.23405 1.33447 8 1.33447C7.76595 1.33447 7.53603 1.39608 7.33333 1.51311L2.66667 4.17977C2.46418 4.29668 2.29599 4.46478 2.17897 4.66721C2.06196 4.86965 2.00024 5.09929 2 5.33311V10.6664C2.00024 10.9003 2.06196 11.1299 2.17897 11.3323C2.29599 11.5348 2.46418 11.7029 2.66667 11.8198L7.33333 14.4864C7.53603 14.6035 7.76595 14.6651 8 14.6651C8.23405 14.6651 8.46397 14.6035 8.66667 14.4864L13.3333 11.8198C13.5358 11.7029 13.704 11.5348 13.821 11.3323C13.938 11.1299 13.9998 10.9003 14 10.6664V5.33311Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </span>
+                        <span class="sidebar__link-text">All products</span>
+                      </a>
+                    </li>
+                    <li class="sidebar__nested-item">
+                      <a routerLink="/customer/shop/groups" routerLinkActive="sidebar__link--active" class="sidebar__nested-link">
+                        <span class="sidebar__icon">
+                          <!-- Group icon -->
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M2.66667 4.66667C2.66667 4.31305 2.80714 3.97391 3.05719 3.72386C3.30724 3.47381 3.64638 3.33333 4 3.33333H5.33333C5.68696 3.33333 6.02609 3.47381 6.27614 3.72386C6.52619 3.97391 6.66667 4.31305 6.66667 4.66667V6C6.66667 6.35362 6.52619 6.69276 6.27614 6.94281C6.02609 7.19286 5.68696 7.33333 5.33333 7.33333H4C3.64638 7.33333 3.30724 7.19286 3.05719 6.94281C2.80714 6.69276 2.66667 6.35362 2.66667 6V4.66667Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M9.33333 4.66667C9.33333 4.31305 9.47381 3.97391 9.72386 3.72386C9.97391 3.47381 10.313 3.33333 10.6667 3.33333H12C12.3536 3.33333 12.6928 3.47381 12.9428 3.72386C13.1929 3.97391 13.3333 4.31305 13.3333 4.66667V6C13.3333 6.35362 13.1929 6.69276 12.9428 6.94281C12.6928 7.19286 12.3536 7.33333 12 7.33333H10.6667C10.313 7.33333 9.97391 7.19286 9.72386 6.94281C9.47381 6.69276 9.33333 6.35362 9.33333 6V4.66667Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2.66667 10C2.66667 9.64638 2.80714 9.30724 3.05719 9.05719C3.30724 8.80714 3.64638 8.66667 4 8.66667H5.33333C5.68696 8.66667 6.02609 8.80714 6.27614 9.05719C6.52619 9.30724 6.66667 9.64638 6.66667 10V11.3333C6.66667 11.687 6.52619 12.0261 6.27614 12.2761C6.02609 12.5262 5.68696 12.6667 5.33333 12.6667H4C3.64638 12.6667 3.30724 12.5262 3.05719 12.2761C2.80714 12.0261 2.66667 11.687 2.66667 11.3333V10Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M9.33333 10C9.33333 9.64638 9.47381 9.30724 9.72386 9.05719C9.97391 8.80714 10.313 8.66667 10.6667 8.66667H12C12.3536 8.66667 12.6928 8.80714 12.9428 9.05719C13.1929 9.30724 13.3333 9.64638 13.3333 10V11.3333C13.3333 11.687 13.1929 12.0261 12.9428 12.2761C12.6928 12.5262 12.3536 12.6667 12 12.6667H10.6667C10.313 12.6667 9.97391 12.5262 9.72386 12.2761C9.47381 12.0261 9.33333 11.687 9.33333 11.3333V10Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </span>
+                        <span class="sidebar__link-text">Product groups</span>
+                      </a>
+                    </li>
+                  </ul>
+                }
+              </li>
+
+              <!-- My Inquiries with submenu -->
+              <li class="sidebar__item sidebar__item--expandable">
+                <div class="sidebar__link" (click)="toggleSection('inquiries')">
+                  <span class="sidebar__icon">
+                    <!-- Folder icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M14.6667 12.6667C14.6667 13.0203 14.5262 13.3594 14.2761 13.6095C14.0261 13.8595 13.687 14 13.3333 14H2.66667C2.31305 14 1.97391 13.8595 1.72386 13.6095C1.47381 13.3594 1.33333 13.0203 1.33333 12.6667V3.33333C1.33333 2.97971 1.47381 2.64057 1.72386 2.39052C1.97391 2.14048 2.31305 2 2.66667 2H6L7.33333 4H13.3333C13.687 4 14.0261 4.14048 14.2761 4.39052C14.5262 4.64057 14.6667 4.97971 14.6667 5.33333V12.6667Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-text">My Inquiries</span>
+                </div>
+                @if (isSectionExpanded('inquiries') || isCollapsed()) {
+                  <ul class="sidebar__nested-list" @expandCollapse>
+                    <li class="sidebar__nested-item">
+                      <a routerLink="/customer/inquiries/active" routerLinkActive="sidebar__link--active" class="sidebar__nested-link">
+                        <span class="sidebar__icon">
+                          <!-- FileWarning icon -->
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M9.33317 1.33325H3.99984C3.64622 1.33325 3.30708 1.47373 3.05703 1.72378C2.80698 1.97382 2.6665 2.31296 2.6665 2.66659V13.3333C2.6665 13.6869 2.80698 14.026 3.05703 14.2761C3.30708 14.5261 3.64622 14.6666 3.99984 14.6666H11.9998C12.3535 14.6666 12.6926 14.5261 12.9426 14.2761C13.1927 14.026 13.3332 13.6869 13.3332 13.3333V5.33325L9.33317 1.33325Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M8 5.33325V7.99992" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M8 10.6667H8.00667" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </span>
+                        <span class="sidebar__link-text">Active</span>
+                      </a>
+                    </li>
+                    <li class="sidebar__nested-item">
+                      <a routerLink="/customer/inquiries/history" routerLinkActive="sidebar__link--active" class="sidebar__nested-link">
+                        <span class="sidebar__icon">
+                          <!-- FileCheck icon -->
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M9.33317 1.33325H3.99984C3.64622 1.33325 3.30708 1.47373 3.05703 1.72378C2.80698 1.97382 2.6665 2.31296 2.6665 2.66659V13.3333C2.6665 13.6869 2.80698 14.026 3.05703 14.2761C3.30708 14.5261 3.64622 14.6666 3.99984 14.6666H11.9998C12.3535 14.6666 12.6926 14.5261 12.9426 14.2761C13.1927 14.026 13.3332 13.6869 13.3332 13.3333V5.33325L9.33317 1.33325Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M5.99984 9.99992L7.33317 11.3333L9.99984 8.66659" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </span>
+                        <span class="sidebar__link-text">History</span>
+                      </a>
+                    </li>
+                    <li class="sidebar__nested-item">
+                      <a routerLink="/customer/inquiries/drafts" routerLinkActive="sidebar__link--active" class="sidebar__nested-link">
+                        <span class="sidebar__icon">
+                          <!-- FilePen icon -->
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M9.33317 1.33325H3.99984C3.64622 1.33325 3.30708 1.47373 3.05703 1.72378C2.80698 1.97382 2.6665 2.31296 2.6665 2.66659V13.3333C2.6665 13.6869 2.80698 14.026 3.05703 14.2761C3.30708 14.5261 3.64622 14.6666 3.99984 14.6666H11.9998C12.3535 14.6666 12.6926 14.5261 12.9426 14.2761C13.1927 14.026 13.3332 13.6869 13.3332 13.3333V5.33325L9.33317 1.33325Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M10.3333 9.00008L7.33333 12.0001H5.33333V10.0001L8.33333 7.00008L10.3333 9.00008Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M8.33333 7L10.3333 9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                        </span>
+                        <span class="sidebar__link-text">Drafts</span>
+                      </a>
+                    </li>
+                  </ul>
+                }
+              </li>
+            </ul>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    <!-- Support & Documentation section -->
+    <div class="sidebar__support-section">
+      <ul class="sidebar__list">
+        <li class="sidebar__item">
+          <a [routerLink]="getSupportLink()" routerLinkActive="sidebar__link--active" class="sidebar__link">
+            <span class="sidebar__icon">
+              <!-- LifeBuoy icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 10.6668C9.47276 10.6668 10.6667 9.47292 10.6667 8.00016C10.6667 6.5274 9.47276 5.3335 8 5.3335C6.52724 5.3335 5.33333 6.5274 5.33333 8.00016C5.33333 9.47292 6.52724 10.6668 8 10.6668Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4.11334 4.11328L6.11334 6.11328" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9.88666 9.88672L11.8867 11.8867" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9.88666 6.11328L11.8867 4.11328" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4.11334 11.8867L6.11334 9.88672" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="sidebar__link-text">Support</span>
+          </a>
+        </li>
+        <li class="sidebar__item">
+          <a [routerLink]="getDocumentationLink()" routerLinkActive="sidebar__link--active" class="sidebar__link">
+            <span class="sidebar__icon">
+              <!-- BookOpen icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M1.33333 2.6665C1.33333 2.6665 2.66667 1.33317 4.66667 1.33317C6.66667 1.33317 8 2.6665 8 2.6665C8 2.6665 9.33333 1.33317 11.3333 1.33317C13.3333 1.33317 14.6667 2.6665 14.6667 2.6665V13.3332C14.6667 13.3332 13.3333 11.9998 11.3333 11.9998C9.33333 11.9998 8 13.3332 8 13.3332C8 13.3332 6.66667 11.9998 4.66667 11.9998C2.66667 11.9998 1.33333 13.3332 1.33333 13.3332V2.6665Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 2.6665V13.3332" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span class="sidebar__link-text">Documentation</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- User footer -->
+    <div class="sidebar__footer">
+      <ul class="sidebar__list">
+        @if (authService.isAuthenticated()) {
+          <li class="sidebar__item">
+            <div class="sidebar__user">
+              <div class="sidebar__user-row" (click)="toggleUserDropdown($event)" role="button">
+                <span class="icon-user sidebar__icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M12.6667 14V12.6667C12.6667 11.9594 12.3857 11.2811 11.8856 10.781C11.3855 10.281 10.7072 10 10 10H6C5.29275 10 4.61448 10.281 4.11438 10.781C3.61428 11.2811 3.33333 11.9594 3.33333 12.6667V14M10.6667 4.66667C10.6667 6.13943 9.47276 7.33333 8 7.33333C6.52724 7.33333 5.33333 6.13943 5.33333 4.66667C5.33333 3.19391 6.52724 2 8 2C9.47276 2 10.6667 3.19391 10.6667 4.66667Z" stroke="#3F3F46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <div class="sidebar__user-info">
+                  <span class="sidebar__user-name">{{ userFullName }}</span>
+                  <span class="sidebar__user-role">{{ userRole }}</span>
+                </div>
+                <span class="sidebar__user-icon-arrow" [class.sidebar__user-icon-arrow--rotated]="isUserDropdownOpen()">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M4 6L8 10L12 6" stroke="#3F3F46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </div>
+
+              @if (isUserDropdownOpen()) {
+                <div class="sidebar__user-dropdown" @fadeInOut>
+                  <!-- Customer Admin specific dropdown items -->
+                  @if (isCustomerAdmin) {
+                    <div class="sidebar__user-switch-user" (click)="navigateToCompany()" role="button">
+                      <span>
+                        <!-- Building icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <path d="M2 14H14M3.33333 14V4L8.66667 2V14M8.66667 14H12.6667V6.66667L8.66667 5.33333M5.33333 5.33333V5.34M5.33333 7.33333V7.34M5.33333 9.33333V9.34M5.33333 11.3333V11.34M10.6667 8.66667V8.67333M10.6667 10.6667V10.6733" stroke="#09090B" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </span>
+                      My Company
+                    </div>
+                    <div class="sidebar__user-switch-user" (click)="navigateToSettings()" role="button">
+                      <span>
+                        <!-- Cog icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <path d="M8 10C9.10457 10 10 9.10457 10 8C10 6.89543 9.10457 6 8 6C6.89543 6 6 6.89543 6 8C6 9.10457 6.89543 10 8 10Z" stroke="#09090B" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M12.9333 10C12.8445 10.2012 12.818 10.4234 12.8573 10.6388C12.8965 10.8543 12.9997 11.0534 13.1533 11.2133L13.1933 11.2533C13.3172 11.377 13.4156 11.524 13.4827 11.6858C13.5498 11.8475 13.5844 12.0209 13.5844 12.196C13.5844 12.3711 13.5498 12.5445 13.4827 12.7063C13.4156 12.868 13.3172 13.015 13.1933 13.1387C13.0697 13.2626 12.9226 13.361 12.7609 13.4281C12.5991 13.4952 12.4257 13.5298 12.2507 13.5298C12.0756 13.5298 11.9022 13.4952 11.7404 13.4281C11.5787 13.361 11.4316 13.2626 11.308 13.1387L11.268 13.0987C11.108 12.945 10.909 12.8418 10.6935 12.8026C10.478 12.7634 10.2559 12.7899 10.0547 12.8787C9.85764 12.9633 9.68946 13.1063 9.57389 13.2877C9.45832 13.4692 9.40046 13.6809 9.40733 13.8953V14C9.40733 14.3536 9.26686 14.6927 9.01681 14.9428C8.76676 15.1928 8.42762 15.3333 8.074 15.3333C7.72038 15.3333 7.38124 15.1928 7.13119 14.9428C6.88114 14.6927 6.74067 14.3536 6.74067 14V13.9427C6.73336 13.7226 6.66789 13.508 6.54447 13.3278C6.42104 13.1476 6.24552 13.0099 6.042 12.9333C5.84083 12.8445 5.61871 12.818 5.40327 12.8573C5.18782 12.8965 4.98875 12.9997 4.82867 13.1533L4.78867 13.1933C4.66502 13.3172 4.51798 13.4156 4.35625 13.4827C4.19451 13.5498 4.02111 13.5844 3.846 13.5844C3.67089 13.5844 3.49749 13.5498 3.33575 13.4827C3.17401 13.4156 3.02698 13.3172 2.90333 13.1933C2.77943 13.0697 2.68102 12.9226 2.61391 12.7609C2.54681 12.5991 2.51223 12.4257 2.51223 12.2507C2.51223 12.0756 2.54681 11.9022 2.61391 11.7404C2.68102 11.5787 2.77943 11.4316 2.90333 11.308L2.94333 11.268C3.09696 11.108 3.20018 10.909 3.23937 10.6935C3.27857 10.478 3.25211 10.2559 3.16333 10.0547C3.07877 9.85764 2.93574 9.68946 2.75431 9.57389C2.57289 9.45832 2.36118 9.40046 2.14667 9.40733H2C1.64638 9.40733 1.30724 9.26686 1.05719 9.01681C0.807143 8.76676 0.666668 8.42762 0.666668 8.074C0.666668 7.72038 0.807143 7.38124 1.05719 7.13119C1.30724 6.88114 1.64638 6.74067 2 6.74067H2.05733C2.27744 6.73336 2.49201 6.66789 2.67222 6.54447C2.85243 6.42104 2.99012 6.24552 3.06667 6.042C3.15544 5.84083 3.18191 5.61871 3.14271 5.40327C3.10351 5.18782 3.0003 4.98875 2.84667 4.82867L2.80667 4.78867C2.68277 4.66502 2.58435 4.51798 2.51725 4.35625C2.45015 4.19451 2.41557 4.02111 2.41557 3.846C2.41557 3.67089 2.45015 3.49749 2.51725 3.33575C2.58435 3.17401 2.68277 3.02698 2.80667 2.90333C2.93031 2.77943 3.07735 2.68102 3.23909 2.61391C3.40083 2.54681 3.57422 2.51223 3.74933 2.51223C3.92444 2.51223 4.09784 2.54681 4.25958 2.61391C4.42132 2.68102 4.56835 2.77943 4.692 2.90333L4.732 2.94333C4.89208 3.09696 5.09115 3.20018 5.3066 3.23937C5.52204 3.27857 5.74416 3.25211 5.94533 3.16333H6C6.19707 3.07877 6.36525 2.93574 6.48082 2.75431C6.59639 2.57289 6.65425 2.36118 6.64733 2.14667V2C6.64733 1.64638 6.78781 1.30724 7.03786 1.05719C7.28791 0.807143 7.62705 0.666668 7.98067 0.666668C8.33429 0.666668 8.67343 0.807143 8.92348 1.05719C9.17353 1.30724 9.314 1.64638 9.314 2V2.05733C9.30708 2.27185 9.36493 2.48356 9.4805 2.66498C9.59607 2.84641 9.76425 2.98943 9.96133 3.074C10.1625 3.16278 10.3846 3.18924 10.6001 3.15004C10.8155 3.11085 11.0146 3.00763 11.1747 2.854L11.2147 2.814C11.3383 2.6901 11.4854 2.59168 11.6471 2.52458C11.8088 2.45747 11.9822 2.4229 12.1573 2.4229C12.3325 2.4229 12.5059 2.45747 12.6676 2.52458C12.8293 2.59168 12.9764 2.6901 13.1 2.814C13.2239 2.93765 13.3223 3.08469 13.3894 3.24643C13.4565 3.40817 13.4911 3.58156 13.4911 3.75667C13.4911 3.93178 13.4565 4.10517 13.3894 4.26691C13.3223 4.42865 13.2239 4.57569 13.1 4.69933L13.06 4.73933C12.9064 4.89942 12.8032 5.09848 12.764 5.31393C12.7248 5.52937 12.7512 5.75149 12.84 5.95267V6C12.9246 6.19707 13.0676 6.36525 13.249 6.48082C13.4305 6.59639 13.6422 6.65425 13.8567 6.64733H14C14.3536 6.64733 14.6928 6.78781 14.9428 7.03786C15.1929 7.28791 15.3333 7.62705 15.3333 7.98067C15.3333 8.33429 15.1929 8.67343 14.9428 8.92348C14.6928 9.17353 14.3536 9.314 14 9.314H13.9427C13.7281 9.32092 13.5164 9.37878 13.335 9.49435C13.1536 9.60992 13.0106 9.7781 12.926 9.97517L12.9333 10Z" stroke="#09090B" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </span>
+                      Settings
+                    </div>
+                    <div class="sidebar__user-switch-user" (click)="switchUser()" role="button">
+                      <span>
+                        <!-- RefreshCcw icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <path d="M1.33333 6.66667C1.33333 6.66667 2.66889 4.84548 3.75736 3.75736C4.84583 2.66924 6.34315 2 8 2C11.3137 2 14 4.68629 14 8C14 11.3137 11.3137 14 8 14C5.28022 14 2.9977 12.2091 2.25469 9.72727M1.33333 6.66667V2.66667M1.33333 6.66667H5.33333" stroke="#09090B" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </span>
+                      Switch user
+                    </div>
+                  }
+                  <!-- Customer specific dropdown items -->
+                  @if (isCustomer) {
+                    <div class="sidebar__user-switch-user" (click)="switchUser()" role="button">
+                      <span>
+                        <!-- RefreshCcw icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <path d="M1.33333 6.66667C1.33333 6.66667 2.66889 4.84548 3.75736 3.75736C4.84583 2.66924 6.34315 2 8 2C11.3137 2 14 4.68629 14 8C14 11.3137 11.3137 14 8 14C5.28022 14 2.9977 12.2091 2.25469 9.72727M1.33333 6.66667V2.66667M1.33333 6.66667H5.33333" stroke="#09090B" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </span>
+                      Switch user
+                    </div>
+                    <div class="sidebar__user-switch-user" (click)="navigateToCustomerSettings()" role="button">
+                      <span>
+                        <!-- Cog icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <path d="M8 10C9.10457 10 10 9.10457 10 8C10 6.89543 9.10457 6 8 6C6.89543 6 6 6.89543 6 8C6 9.10457 6.89543 10 8 10Z" stroke="#09090B" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M12.9333 10C12.8445 10.2012 12.818 10.4234 12.8573 10.6388C12.8965 10.8543 12.9997 11.0534 13.1533 11.2133L13.1933 11.2533C13.3172 11.377 13.4156 11.524 13.4827 11.6858C13.5498 11.8475 13.5844 12.0209 13.5844 12.196C13.5844 12.3711 13.5498 12.5445 13.4827 12.7063C13.4156 12.868 13.3172 13.015 13.1933 13.1387C13.0697 13.2626 12.9226 13.361 12.7609 13.4281C12.5991 13.4952 12.4257 13.5298 12.2507 13.5298C12.0756 13.5298 11.9022 13.4952 11.7404 13.4281C11.5787 13.361 11.4316 13.2626 11.308 13.1387L11.268 13.0987C11.108 12.945 10.909 12.8418 10.6935 12.8026C10.478 12.7634 10.2559 12.7899 10.0547 12.8787C9.85764 12.9633 9.68946 13.1063 9.57389 13.2877C9.45832 13.4692 9.40046 13.6809 9.40733 13.8953V14C9.40733 14.3536 9.26686 14.6927 9.01681 14.9428C8.76676 15.1928 8.42762 15.3333 8.074 15.3333C7.72038 15.3333 7.38124 15.1928 7.13119 14.9428C6.88114 14.6927 6.74067 14.3536 6.74067 14V13.9427C6.73336 13.7226 6.66789 13.508 6.54447 13.3278C6.42104 13.1476 6.24552 13.0099 6.042 12.9333C5.84083 12.8445 5.61871 12.818 5.40327 12.8573C5.18782 12.8965 4.98875 12.9997 4.82867 13.1533L4.78867 13.1933C4.66502 13.3172 4.51798 13.4156 4.35625 13.4827C4.19451 13.5498 4.02111 13.5844 3.846 13.5844C3.67089 13.5844 3.49749 13.5498 3.33575 13.4827C3.17401 13.4156 3.02698 13.3172 2.90333 13.1933C2.77943 13.0697 2.68102 12.9226 2.61391 12.7609C2.54681 12.5991 2.51223 12.4257 2.51223 12.2507C2.51223 12.0756 2.54681 11.9022 2.61391 11.7404C2.68102 11.5787 2.77943 11.4316 2.90333 11.308L2.94333 11.268C3.09696 11.108 3.20018 10.909 3.23937 10.6935C3.27857 10.478 3.25211 10.2559 3.16333 10.0547C3.07877 9.85764 2.93574 9.68946 2.75431 9.57389C2.57289 9.45832 2.36118 9.40046 2.14667 9.40733H2C1.64638 9.40733 1.30724 9.26686 1.05719 9.01681C0.807143 8.76676 0.666668 8.42762 0.666668 8.074C0.666668 7.72038 0.807143 7.38124 1.05719 7.13119C1.30724 6.88114 1.64638 6.74067 2 6.74067H2.05733C2.27744 6.73336 2.49201 6.66789 2.67222 6.54447C2.85243 6.42104 2.99012 6.24552 3.06667 6.042C3.15544 5.84083 3.18191 5.61871 3.14271 5.40327C3.10351 5.18782 3.0003 4.98875 2.84667 4.82867L2.80667 4.78867C2.68277 4.66502 2.58435 4.51798 2.51725 4.35625C2.45015 4.19451 2.41557 4.02111 2.41557 3.846C2.41557 3.67089 2.45015 3.49749 2.51725 3.33575C2.58435 3.17401 2.68277 3.02698 2.80667 2.90333C2.93031 2.77943 3.07735 2.68102 3.23909 2.61391C3.40083 2.54681 3.57422 2.51223 3.74933 2.51223C3.92444 2.51223 4.09784 2.54681 4.25958 2.61391C4.42132 2.68102 4.56835 2.77943 4.692 2.90333L4.732 2.94333C4.89208 3.09696 5.09115 3.20018 5.3066 3.23937C5.52204 3.27857 5.74416 3.25211 5.94533 3.16333H6C6.19707 3.07877 6.36525 2.93574 6.48082 2.75431C6.59639 2.57289 6.65425 2.36118 6.64733 2.14667V2C6.64733 1.64638 6.78781 1.30724 7.03786 1.05719C7.28791 0.807143 7.62705 0.666668 7.98067 0.666668C8.33429 0.666668 8.67343 0.807143 8.92348 1.05719C9.17353 1.30724 9.314 1.64638 9.314 2V2.05733C9.30708 2.27185 9.36493 2.48356 9.4805 2.66498C9.59607 2.84641 9.76425 2.98943 9.96133 3.074C10.1625 3.16278 10.3846 3.18924 10.6001 3.15004C10.8155 3.11085 11.0146 3.00763 11.1747 2.854L11.2147 2.814C11.3383 2.6901 11.4854 2.59168 11.6471 2.52458C11.8088 2.45747 11.9822 2.4229 12.1573 2.4229C12.3325 2.4229 12.5059 2.45747 12.6676 2.52458C12.8293 2.59168 12.9764 2.6901 13.1 2.814C13.2239 2.93765 13.3223 3.08469 13.3894 3.24643C13.4565 3.40817 13.4911 3.58156 13.4911 3.75667C13.4911 3.93178 13.4565 4.10517 13.3894 4.26691C13.3223 4.42865 13.2239 4.57569 13.1 4.69933L13.06 4.73933C12.9064 4.89942 12.8032 5.09848 12.764 5.31393C12.7248 5.52937 12.7512 5.75149 12.84 5.95267V6C12.9246 6.19707 13.0676 6.36525 13.249 6.48082C13.4305 6.59639 13.6422 6.65425 13.8567 6.64733H14C14.3536 6.64733 14.6928 6.78781 14.9428 7.03786C15.1929 7.28791 15.3333 7.62705 15.3333 7.98067C15.3333 8.33429 15.1929 8.67343 14.9428 8.92348C14.6928 9.17353 14.3536 9.314 14 9.314H13.9427C13.7281 9.32092 13.5164 9.37878 13.335 9.49435C13.1536 9.60992 13.0106 9.7781 12.926 9.97517L12.9333 10Z" stroke="#09090B" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </span>
+                      Settings
+                    </div>
+                  }
+                  <div class="sidebar__user-logout" (click)="logout()" role="button">
+                    <span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6M10.6667 11.3333L14 8M14 8L10.6667 4.66667M14 8H6" stroke="#09090B" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
+                    Logout
+                  </div>
+                </div>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+</div>

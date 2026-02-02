@@ -1,0 +1,59 @@
+@use '../../../ui-kit/admin-shared' as admin;
+
+:host {
+  @include admin.admin-host;
+  min-height: 100%;
+}
+
+.payment-types-page {
+  @include admin.admin-page;
+  min-height: 100%;
+}
+
+.page-content {
+  @include admin.list-page-content;
+}
+
+.table-container {
+  @include admin.tabs-table-container;
+}
+
+@include admin.tabs-table-data-table;
+
+// Page-specific table styling
+::ng-deep .data-table {
+  background: #f4f4f5;
+
+  &__header-row,
+  &__header-cell {
+    background: white;
+  }
+
+  &__row {
+    &:hover {
+      background: white;
+    }
+  }
+}
+
+// Toggle cell for Active column
+:host ::ng-deep {
+  .toggle-cell {
+    @include admin.toggle-cell;
+  }
+
+  .toggle {
+    @include admin.inline-toggle;
+  }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .page-content {
+    padding-bottom: 76px;
+  }
+
+  ::ng-deep .list-header__right .btn--primary {
+    display: none;
+  }
+}

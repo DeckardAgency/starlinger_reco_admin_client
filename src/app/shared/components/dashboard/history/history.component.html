@@ -1,0 +1,59 @@
+<section class="history">
+  <ui-section-header
+    title="History"
+    [icon]="historyIcon"
+    viewAllLink="/history"
+  ></ui-section-header>
+
+  <div class="history__table-container">
+    <ui-tabs
+      [tabs]="tabs"
+      [activeTab]="activeTab()"
+      (tabChange)="onTabChange($event)"
+      variant="underline"
+    ></ui-tabs>
+
+    @if (isLoading()) {
+      <div class="loading-state">Loading history...</div>
+    } @else {
+      <ui-data-table
+        [columns]="columns()"
+        [data]="filteredData"
+        [sortColumn]="sortColumn()"
+        [sortDirection]="sortDirection()"
+        (sort)="onSort($event)"
+        emptyMessage="No history data"
+      ></ui-data-table>
+    }
+  </div>
+</section>
+
+<ng-template #typeCell let-row>
+  <ui-badge [variant]="getTypeBadgeVariant(row.type)" size="sm">
+    {{ getTypeLabel(row.type) }}
+  </ui-badge>
+</ng-template>
+
+<ng-template #customerCell let-row>
+  <div class="history__customer">
+    <ui-avatar [name]="row.customerName" size="sm"></ui-avatar>
+    <span class="history__customer-name">{{ row.customerName }}</span>
+  </div>
+</ng-template>
+
+<ng-template #statusCell let-row>
+  <ui-badge [variant]="getStatusBadgeVariant(row.status)" size="sm">
+    {{ getStatusLabel(row.status) }}
+  </ui-badge>
+</ng-template>
+
+<ng-template #actionsCell let-row>
+  <ui-table-actions-dropdown
+    [actions]="tableActions"
+    [row]="row"
+    [isOpen]="openMenuRowId() === row.inquiryId"
+    (toggle)="toggleMenu(row.inquiryId)"
+    (actionClick)="onActionClick($event)"
+    (close)="closeMenu()"
+  ></ui-table-actions-dropdown>
+</ng-template>

@@ -1,0 +1,57 @@
+@use '../../../ui-kit/admin-shared' as admin;
+
+// =============================================================================
+// Base Layout
+// =============================================================================
+:host {
+  @include admin.admin-host;
+  min-height: 100%;
+}
+
+.country-detail-page {
+  @include admin.detail-page;
+  min-height: 100%;
+}
+
+.page-content {
+  @include admin.detail-page-content;
+
+  @media (max-width: 768px) {
+    padding-bottom: 80px;
+  }
+}
+
+// =============================================================================
+// Form Card
+// =============================================================================
+.form-card {
+  @include admin.form-card;
+
+  &__title {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: #232323;
+    margin: 0 0 16px 0;
+  }
+
+  &__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+@include admin.detail-form-styles;
+
+// =============================================================================
+// Select with Pill Styling
+// =============================================================================
+.select-with-pill {
+  @include admin.select-with-pill;
+}
+
+::ng-deep .select-with-pill .select-field {
+  @include admin.select-with-pill-field;
+}

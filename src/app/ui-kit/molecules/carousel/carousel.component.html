@@ -1,0 +1,81 @@
+<div
+  class="ui-carousel"
+  (mouseenter)="onMouseEnter()"
+  (mouseleave)="onMouseLeave()"
+>
+  <!-- Track container -->
+  <div class="ui-carousel__viewport" [style.aspect-ratio]="aspectRatio">
+    <div
+      #track
+      class="ui-carousel__track"
+      [class.ui-carousel__track--animating]="!isDragging"
+      [style.transform]="'translateX(' + translateX + '%)'"
+      [style.gap.px]="gap"
+      (touchstart)="onTouchStart($event)"
+      (touchmove)="onTouchMove($event)"
+      (touchend)="onTouchEnd()"
+      (mousedown)="onMouseDown($event)"
+    >
+      <div
+        *ngFor="let slide of slides; let i = index; trackBy: trackBySlide"
+        class="ui-carousel__slide"
+        [style.flex]="'0 0 calc(' + (100 / slidesToShow) + '% - ' + (gap * (slidesToShow - 1) / slidesToShow) + 'px)'"
+        (click)="onSlideClick(slide)"
+      >
+        <!-- Custom template -->
+        <ng-container *ngIf="slideTemplate">
+          <ng-container *ngTemplateOutlet="slideTemplate; context: { $implicit: slide, index: i }"></ng-container>
+        </ng-container>
+
+        <!-- Default slide (image) -->
+        <ng-container *ngIf="!slideTemplate && slide.imageUrl">
+          <img
+            [src]="slide.imageUrl"
+            [alt]="slide.alt || slide.title || 'Slide ' + (i + 1)"
+            class="ui-carousel__image"
+            draggable="false"
+          />
+          <div *ngIf="slide.title || slide.description" class="ui-carousel__caption">
+            <h4 *ngIf="slide.title" class="ui-carousel__title">{{ slide.title }}</h4>
+            <p *ngIf="slide.description" class="ui-carousel__description">{{ slide.description }}</p>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation arrows -->
+  <button
+    *ngIf="showNavigationArrows"
+    type="button"
+    class="ui-carousel__arrow ui-carousel__arrow--prev"
+    [class.ui-carousel__arrow--disabled]="!infiniteLoop && currentIndex === 0"
+    (click)="previous()"
+    aria-label="Previous slide"
+  >
+    <ui-icon name="chevron-left" size="md"></ui-icon>
+  </button>
+
+  <button
+    *ngIf="showNavigationArrows"
+    type="button"
+    class="ui-carousel__arrow ui-carousel__arrow--next"
+    [class.ui-carousel__arrow--disabled]="!infiniteLoop && currentIndex >= slides.length - slidesToShow"
+    (click)="next()"
+    aria-label="Next slide"
+  >
+    <ui-icon name="chevron-right" size="md"></ui-icon>
+  </button>
+
+  <!-- Dots navigation -->
+  <div *ngIf="showNavigationDots" class="ui-carousel__dots">
+    <button
+      *ngFor="let dot of dotsCount; trackBy: trackByIndex"
+      type="button"
+      class="ui-carousel__dot"
+      [class.ui-carousel__dot--active]="dot === currentIndex"
+      (click)="goToSlide(dot)"
+      [attr.aria-label]="'Go to slide ' + (dot + 1)"
+    ></button>
+  </div>
+</div>

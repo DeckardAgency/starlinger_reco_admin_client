@@ -1,0 +1,23 @@
+<label [ngClass]="checkboxClasses">
+  <input
+    type="checkbox"
+    class="ui-checkbox__input"
+    [checked]="_checked()"
+    [disabled]="disabled"
+    [name]="name"
+    [indeterminate]="indeterminate"
+    (change)="onCheckboxChange($event)"
+  />
+  <span class="ui-checkbox__box">
+    <!-- Checkmark icon -->
+    <svg *ngIf="_checked() && !indeterminate" class="ui-checkbox__icon" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <!-- Indeterminate icon -->
+    <svg *ngIf="indeterminate" class="ui-checkbox__icon" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2.5 6H9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </span>
+  <span *ngIf="label" class="ui-checkbox__label">{{ label }}</span>
+  <ng-content></ng-content>
+</label>

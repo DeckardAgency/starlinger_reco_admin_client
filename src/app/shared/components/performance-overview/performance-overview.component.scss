@@ -1,0 +1,273 @@
+.performance-overview {
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 40px;
+    margin-bottom: 0;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #232323;
+      line-height: 1;
+    }
+  }
+
+  &__date-range {
+    form {
+      width: 100%;
+    }
+
+    ::ng-deep .date-picker-button {
+      background-color: #fff;
+      border: 1px solid #e4e4e7;
+      border-radius: 6px;
+      padding: 8px 16px;
+      height: 40px;
+      font-size: 14px;
+      color: #71717a;
+
+      &:hover:not(:disabled) {
+        border-color: #d1d5db;
+        background-color: #f9fafb;
+      }
+    }
+
+    // Desktop only - position calendar to the right
+    @media screen and (min-width: 769px) {
+      ::ng-deep .calendar-wrapper {
+        right: 40px;
+        left: auto;
+      }
+    }
+
+    ::ng-deep .date-picker-icon {
+      color: #71717a;
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e4e4e7;
+  }
+
+  &__card {
+    background: #fff;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    min-height: 120px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+      border-color: #d1d5db;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+  }
+
+  &__card-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #09090b;
+    line-height: 1;
+  }
+
+  &__help-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: help;
+  }
+
+  &__card-value {
+    font-size: 36px;
+    font-weight: 500;
+    color: #dc2626;
+    line-height: 1;
+    text-align: center;
+
+    &--currency {
+      font-size: 32px;
+    }
+  }
+
+  &__card-percentage {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #09090b;
+    line-height: 1;
+
+    &--up {
+      color: #09090b;
+    }
+
+    &--down {
+      color: #09090b;
+    }
+
+    &--neutral {
+      color: #71717a;
+    }
+  }
+
+  // Skeleton loading styles
+  &__card--skeleton {
+    pointer-events: none;
+    
+    .skeleton {
+      background: linear-gradient(
+        90deg,
+        #f0f0f0 25%,
+        #e0e0e0 50%,
+        #f0f0f0 75%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite ease-in-out;
+      border-radius: 4px;
+    }
+
+    .skeleton--label {
+      width: 100px;
+      height: 16px;
+    }
+
+    .skeleton--value {
+      width: 60px;
+      height: 36px;
+      border-radius: 6px;
+    }
+
+    .skeleton--percentage {
+      width: 80px;
+      height: 16px;
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  // Error state
+  &__error {
+    text-align: center;
+    padding: 2rem;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    margin-top: 16px;
+
+    p {
+      color: #dc2626;
+      margin-bottom: 1rem;
+      font-size: 14px;
+    }
+  }
+
+  // Responsive
+  @media (max-width: 1200px) {
+    &__grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  @media (max-width: 1024px) {
+    &__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    &__header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      height: auto;
+    }
+
+    &__date-range {
+      width: 100%;
+    }
+
+    &__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    &__card {
+      padding: 12px;
+      min-height: 100px;
+      gap: 12px;
+    }
+
+    &__card-label {
+      font-size: 14px;
+    }
+
+    &__card-value {
+      font-size: 28px;
+
+      &--currency {
+        font-size: 24px;
+      }
+    }
+
+    &__card-percentage {
+      font-size: 14px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    &__grid {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      gap: 12px;
+      padding-bottom: 8px;
+
+      // Hide scrollbar
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    &__card {
+      flex: 0 0 auto;
+      width: 225px;
+      max-width: 225px;
+      scroll-snap-align: start;
+    }
+  }
+}
+
+

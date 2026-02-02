@@ -1,0 +1,147 @@
+.ui-breadcrumbs {
+  // =============================================================================
+  // Page Header Variant (64px height, used in detail pages)
+  // =============================================================================
+  &--page-header {
+    display: flex;
+    align-items: center;
+    height: 64px;
+    padding: 0 16px;
+    background: #f4f4f5;
+    border-bottom: 1px solid #e4e4e7;
+
+    .ui-breadcrumbs__list {
+      gap: 8px;
+    }
+
+    .ui-breadcrumbs__link--home {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      color: #232323;
+      padding: 0; // Remove internal padding for alignment
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+    }
+
+    .ui-breadcrumbs__separator--after-home {
+      width: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ui-breadcrumbs__link {
+      color: #71717a;
+      font-weight: 400;
+
+      &:hover {
+        color: #232323;
+      }
+    }
+
+    .ui-breadcrumbs__current {
+      color: #232323;
+      font-weight: 400;
+    }
+
+    .ui-breadcrumbs__separator {
+      color: #71717a;
+
+      svg {
+        width: 24px;
+        height: 24px;
+      }
+    }
+
+    .ui-breadcrumbs__item {
+      gap: 10px;
+    }
+  }
+
+  // =============================================================================
+  // Base Styles
+  // =============================================================================
+  &__list {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__link {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    color: #71717A;
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: #18181B;
+    }
+
+    &:focus {
+      outline: none;
+    }
+
+    &--home {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border-radius: 4px;
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      &:hover {
+        background-color: #F4F4F5;
+      }
+    }
+  }
+
+  &__current {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
+    color: #18181B;
+  }
+
+  &__separator {
+    display: flex;
+    align-items: center;
+    color: #A1A1AA;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &--slash {
+      font-size: 14px;
+      margin: 0 4px;
+    }
+  }
+}

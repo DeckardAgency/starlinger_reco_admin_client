@@ -1,0 +1,138 @@
+<div class="calendar-container"
+     [class.calendar-container--single-month]="monthsToShow === 1"
+     role="dialog"
+     aria-label="Date picker"
+     [attr.aria-modal]="true"
+     (mouseup)="$event.stopPropagation()"
+     (keydown)="handleKeyDown($event)">
+
+    <div class="calendar-grid" [class.calendar-grid--single-month]="monthsToShow === 1">
+        <!-- First month -->
+        <div class="month">
+            <div class="month-header">
+                <button class="nav-button"
+                        (click)="prevMonth()"
+                        aria-label="Previous month">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <span class="month-title" id="month-title-1">{{ firstMonthName() }}</span>
+            </div>
+
+            <div class="weekdays" role="row">
+                <div class="weekday" *ngFor="let day of daysOfWeek()" role="columnheader" [attr.aria-label]="day">{{ day }}</div>
+            </div>
+
+            <div class="days"
+                 role="grid"
+                 aria-labelledby="month-title-1"
+                 (mouseleave)="onCalendarMouseLeave()">
+                <div *ngFor="let day of firstMonthDays(); trackBy: trackByDate"
+                     role="gridcell"
+                     [attr.tabindex]="day.isCurrentMonth && !day.isDisabled ? 0 : -1"
+                     [attr.aria-label]="day.date | date:'fullDate'"
+                     [attr.aria-selected]="day.isSelected || day.isRangeStart || day.isRangeEnd || day.isInRange ? 'true' : 'false'"
+                     [attr.aria-disabled]="day.isDisabled ? 'true' : 'false'"
+                     [attr.data-month-index]="0"
+                     [attr.data-date]="day.date.getTime()"
+                     [class.current-month]="day.isCurrentMonth"
+                     [class.other-month]="!day.isCurrentMonth"
+                     [class.today]="day.isToday"
+                     [class.selected]="day.isSelected"
+                     [class.in-range]="day.isInRange"
+                     [class.range-start]="day.isRangeStart && day.isCurrentMonth"
+                     [class.range-end]="day.isRangeEnd && day.isCurrentMonth"
+                     [class.active-range-start]="day.isActiveRangeStart && day.isCurrentMonth"
+                     [class.hovered]="day.isHovered"
+                     [class.disabled]="day.isDisabled"
+                     (click)="day.isCurrentMonth && !day.isDisabled && selectDate(day.date)"
+                     (mouseenter)="day.isCurrentMonth && !day.isDisabled && onDateHover(day.date)"
+                     class="day">
+                    {{ day.date.getDate() }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Second month - only show if monthsToShow is 2 -->
+        <div class="month" *ngIf="monthsToShow === 2">
+            <div class="month-header">
+                <span class="month-title" id="month-title-2">{{ secondMonthName() }}</span>
+                <button class="nav-button"
+                        (click)="nextMonthClick()"
+                        aria-label="Next month">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="weekdays" role="row">
+                <div class="weekday" *ngFor="let day of daysOfWeek()" role="columnheader" [attr.aria-label]="day">{{ day }}</div>
+            </div>
+
+            <div class="days"
+                 role="grid"
+                 aria-labelledby="month-title-2"
+                 (mouseleave)="onCalendarMouseLeave()">
+                <div *ngFor="let day of secondMonthDays(); trackBy: trackByDate"
+                     role="gridcell"
+                     [attr.tabindex]="day.isCurrentMonth && !day.isDisabled ? 0 : -1"
+                     [attr.aria-label]="day.date | date:'fullDate'"
+                     [attr.aria-selected]="day.isSelected || day.isRangeStart || day.isRangeEnd || day.isInRange ? 'true' : 'false'"
+                     [attr.aria-disabled]="day.isDisabled ? 'true' : 'false'"
+                     [attr.data-month-index]="1"
+                     [attr.data-date]="day.date.getTime()"
+                     [class.current-month]="day.isCurrentMonth"
+                     [class.other-month]="!day.isCurrentMonth"
+                     [class.today]="day.isToday"
+                     [class.selected]="day.isSelected"
+                     [class.in-range]="day.isInRange"
+                     [class.range-start]="day.isRangeStart && day.isCurrentMonth"
+                     [class.range-end]="day.isRangeEnd && day.isCurrentMonth"
+                     [class.active-range-start]="day.isActiveRangeStart && day.isCurrentMonth"
+                     [class.hovered]="day.isHovered"
+                     [class.disabled]="day.isDisabled"
+                     (click)="day.isCurrentMonth && !day.isDisabled && selectDate(day.date)"
+                     (mouseenter)="day.isCurrentMonth && !day.isDisabled && onDateHover(day.date)"
+                     class="day">
+                    {{ day.date.getDate() }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current selection status for screen readers -->
+    <div class="sr-only" aria-live="polite">
+        <span *ngIf="!isRange && selectedDate">
+            Selected date: {{ selectedDate | date:'fullDate' }}
+        </span>
+        <span *ngIf="isRange && startDate && endDate">
+            Selected range: From {{ startDate | date:'fullDate' }} to {{ endDate | date:'fullDate' }}
+        </span>
+        <span *ngIf="isRange && startDate && !endDate">
+            Start date selected: {{ startDate | date:'fullDate' }}. Please select an end date.
+        </span>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="action-buttons">
+        <button class="clear-button"
+                (click)="clearSelection()"
+                aria-label="Clear selection">
+            <span class="button-text">Clear</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <button class="apply-button"
+                (click)="applySelection()"
+                [attr.aria-disabled]="(!isRange && !selectedDate) || (isRange && (!startDate || !endDate && !hoverDate())) ? true : null"
+                aria-label="Apply selection">
+            <span class="button-text">Apply</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M13.3334 4L6.00008 11.3333L2.66675 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+    </div>
+</div>

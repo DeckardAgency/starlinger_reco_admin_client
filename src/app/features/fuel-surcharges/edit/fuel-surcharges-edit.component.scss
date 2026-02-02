@@ -1,0 +1,34 @@
+@use '../../../ui-kit/admin-shared' as admin;
+
+:host {
+  @include admin.admin-host;
+}
+
+.fuel-surcharge-detail-page {
+  @include admin.detail-page;
+}
+
+.page-content {
+  @include admin.detail-page-content;
+
+  @media (max-width: 768px) {
+    padding-bottom: 80px;
+  }
+}
+
+.form-card {
+  @include admin.form-card;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@include admin.detail-form-styles;
+
+.select-with-pill {
+  @include admin.select-with-pill;
+}
+
+::ng-deep .select-with-pill .select-field {
+  @include admin.select-with-pill-field;
+}

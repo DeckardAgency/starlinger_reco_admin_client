@@ -1,0 +1,14 @@
+<div class="app" [class.app--auth-page]="isAuthPage" [class.app--404-page]="is404Page">
+  <ng-container *ngIf="!isAuthPage">
+    <app-top-bar></app-top-bar>
+    <app-sidebar></app-sidebar>
+    <app-mobile-menu></app-mobile-menu>
+  </ng-container>
+
+  <main
+    class="app__main"
+    [class.app__main--collapsed]="sidebarService.isCollapsed()"
+    [class.app__main--full]="isAuthPage">
+    <router-outlet></router-outlet>
+  </main>
+</div>

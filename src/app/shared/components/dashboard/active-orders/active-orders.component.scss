@@ -1,0 +1,50 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.active-orders {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+
+  ui-section-header {
+    width: 100%;
+  }
+
+  &__cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    width: 100%;
+
+    // Small tablet - 2 per row
+    @media screen and (max-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    // Mobile - horizontal slider
+    @media screen and (max-width: 480px) {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      gap: 12px;
+      padding-bottom: 8px;
+
+      // Hide scrollbar
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      ui-order-card {
+        flex: 0 0 auto;
+        width: calc(100vw - 80px);
+        scroll-snap-align: start;
+      }
+    }
+  }
+}

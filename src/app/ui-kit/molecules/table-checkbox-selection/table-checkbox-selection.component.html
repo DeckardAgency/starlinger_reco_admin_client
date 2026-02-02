@@ -1,0 +1,28 @@
+<div class="checkbox-cell" [class.checkbox-cell--header]="isHeader">
+  @if (isHeader) {
+    <!-- Header with dropdown -->
+    <button class="checkbox-btn" (click)="onToggle($event)" type="button">
+      <ui-icon name="more-vertical" size="sm" color="#71717A"></ui-icon>
+    </button>
+
+    @if (isDropdownOpen) {
+      <div class="header-dropdown" (click)="$event.stopPropagation()">
+        <button class="header-dropdown__item" (click)="onSelectAll($event)" type="button">
+          <span>Select all</span>
+        </button>
+        <button class="header-dropdown__item" (click)="onSelectNone($event)" type="button">
+          <span>None</span>
+        </button>
+      </div>
+    }
+  } @else {
+    <!-- Row checkbox -->
+    <button class="checkbox-btn" (click)="onToggle($event)" type="button">
+      @if (checked) {
+        <ui-icon name="checkbox-checked" size="sm" color="#dc2626"></ui-icon>
+      } @else {
+        <ui-icon name="checkbox-unchecked" size="sm" color="#232323"></ui-icon>
+      }
+    </button>
+  }
+</div>

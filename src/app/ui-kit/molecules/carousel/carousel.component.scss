@@ -1,0 +1,161 @@
+.ui-carousel {
+  position: relative;
+  width: 100%;
+  user-select: none;
+
+  // Viewport
+  &__viewport {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 8px;
+    background-color: #F4F4F5;
+  }
+
+  // Track
+  &__track {
+    display: flex;
+    height: 100%;
+    will-change: transform;
+
+    &--animating {
+      transition: transform 0.3s ease-out;
+    }
+  }
+
+  // Slide
+  &__slide {
+    flex-shrink: 0;
+    position: relative;
+    height: 100%;
+    cursor: pointer;
+  }
+
+  // Image
+  &__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  // Caption
+  &__caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+    color: #FFFFFF;
+  }
+
+  &__title {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  &__description {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.9;
+  }
+
+  // Navigation arrows
+  &__arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #18181B;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+    z-index: 10;
+
+    &:hover:not(&--disabled) {
+      background-color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    &--prev {
+      left: 12px;
+    }
+
+    &--next {
+      right: 12px;
+    }
+
+    &--disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  // Dots
+  &__dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: none;
+    background-color: #D4D4D8;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover:not(&--active) {
+      background-color: #A1A1AA;
+    }
+
+    &--active {
+      width: 24px;
+      background-color: #DC2626;
+      border-radius: 4px;
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 640px) {
+  .ui-carousel {
+    &__arrow {
+      width: 32px;
+      height: 32px;
+
+      &--prev {
+        left: 8px;
+      }
+
+      &--next {
+        right: 8px;
+      }
+    }
+
+    &__caption {
+      padding: 12px;
+    }
+
+    &__title {
+      font-size: 14px;
+    }
+
+    &__description {
+      font-size: 12px;
+    }
+  }
+}

@@ -1,0 +1,23 @@
+<label [ngClass]="containerClasses">
+  <span *ngIf="label && labelPosition === 'left'" class="ui-toggle__label">
+    {{ label }}
+  </span>
+
+  <button
+    type="button"
+    role="switch"
+    [ngClass]="switchClasses"
+    [attr.aria-checked]="_checked()"
+    [disabled]="disabled"
+    [name]="name"
+    (click)="onToggle()"
+  >
+    <span class="ui-toggle__thumb"></span>
+  </button>
+
+  <span *ngIf="label && labelPosition === 'right'" class="ui-toggle__label">
+    {{ label }}
+  </span>
+
+  <ng-content></ng-content>
+</label>

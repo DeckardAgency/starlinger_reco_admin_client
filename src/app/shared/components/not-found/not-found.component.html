@@ -1,0 +1,30 @@
+<div class="not-found">
+  <div class="not-found__content">
+    <!-- Sad Face Icon -->
+    <div class="not-found__icon">
+      <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="48" cy="48" r="36" stroke="#232323" stroke-width="3"/>
+        <circle cx="36" cy="40" r="3" fill="#232323"/>
+        <circle cx="60" cy="40" r="3" fill="#232323"/>
+        <path d="M33 62C36.5 56 41.5 53 48 53C54.5 53 59.5 56 63 62" stroke="#232323" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <!-- 404 Text -->
+    <h1 class="not-found__code">404</h1>
+
+    <!-- Title and Description -->
+    <div class="not-found__text">
+      <h2 class="not-found__title">Page not found</h2>
+      <p class="not-found__description">
+        The Page you are looking for doesn't exist or an other error occured.
+      </p>
+    </div>
+
+    <!-- Back to Dashboard Button -->
+    <button class="not-found__btn" (click)="goToDashboard()">
+      <span>Back to Dashboard</span>
+      <ui-icon name="chevron-right" size="sm" color="white"></ui-icon>
+    </button>
+  </div>
+</div>

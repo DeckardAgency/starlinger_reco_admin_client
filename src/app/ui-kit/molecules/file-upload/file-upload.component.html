@@ -1,0 +1,84 @@
+<div class="ui-file-upload">
+  <!-- Label -->
+  <label *ngIf="label" class="ui-file-upload__label">{{ label }}</label>
+
+  <!-- Dropzone -->
+  <div
+    [ngClass]="dropzoneClasses()"
+    (click)="openFilePicker()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+  >
+    <input
+      #fileInput
+      type="file"
+      class="ui-file-upload__input"
+      [accept]="accept"
+      [multiple]="multiple"
+      [disabled]="disabled"
+      (change)="onFileSelect($event)"
+    />
+
+    <div class="ui-file-upload__content">
+      <!-- Upload icon -->
+      <div class="ui-file-upload__icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="40" height="40">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5M12 3L7 8M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <p class="ui-file-upload__text">
+        <span class="ui-file-upload__text--primary">Click to upload</span>
+        <span class="ui-file-upload__text--secondary">or drag and drop</span>
+      </p>
+
+      <p *ngIf="hint" class="ui-file-upload__hint">{{ hint }}</p>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <span *ngIf="error" class="ui-file-upload__error">{{ error }}</span>
+
+  <!-- File list -->
+  <div *ngIf="files().length > 0" class="ui-file-upload__files">
+    <div
+      *ngFor="let file of files(); trackBy: trackByFileId"
+      class="ui-file-upload__file"
+    >
+      <!-- Preview -->
+      <div class="ui-file-upload__file-preview">
+        <img *ngIf="file.previewUrl" [src]="file.previewUrl" [alt]="file.file.name" />
+        <svg *ngIf="!file.previewUrl" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="24" height="24">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <!-- Info -->
+      <div class="ui-file-upload__file-info">
+        <p class="ui-file-upload__file-name">{{ file.file.name }}</p>
+        <p class="ui-file-upload__file-size">{{ formatFileSize(file.file.size) }}</p>
+      </div>
+
+      <!-- Status -->
+      <div class="ui-file-upload__file-status">
+        <svg *ngIf="file.status === 'success'" class="ui-file-upload__file-status--success" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M6.5 10l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <!-- Remove button -->
+      <button
+        class="ui-file-upload__file-remove"
+        (click)="removeFile(file); $event.stopPropagation()"
+        aria-label="Remove file"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" width="16" height="16">
+          <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>

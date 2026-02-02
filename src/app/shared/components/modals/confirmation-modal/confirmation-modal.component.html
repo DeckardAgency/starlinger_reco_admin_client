@@ -1,0 +1,62 @@
+<div class="modal-overlay" *ngIf="isOpen" @modalOverlay (click)="onClose()">
+    <div class="modal" @modalContent (click)="$event.stopPropagation()">
+        <div class="modal__header" [ngClass]="'modal__header--' + buttonStyle">
+            <h2 class="modal__title">
+
+                {{ title }}
+            </h2>
+            <button class="modal__close" (click)="onClose()" [disabled]="loading">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M15 5L5 15M5 5L15 15" stroke="#71717A" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="modal__body">
+            <p class="modal__message" [innerHTML]="message"></p>
+
+            <!-- Type-to-confirm input -->
+            <div class="form-group" *ngIf="confirmationType !== 'simple'">
+                <label class="form-label" for="confirmationInput">
+                    {{ inputLabel }}
+                </label>
+                <input
+                    type="text"
+                    id="confirmationInput"
+                    class="form-input"
+                    [formControl]="confirmationInputControl"
+                    [placeholder]="inputPlaceholder"
+                    [class.form-input--error]="hasError()"
+                    autocomplete="off"
+                    (keyup.enter)="onConfirm()"
+                >
+                <span class="form-error" *ngIf="hasError()">
+                    {{ getErrorMessage() }}
+                </span>
+                <span class="form-hint" *ngIf="confirmationType === 'type-email' && !hasError()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    Type the exact email address: <strong>{{ confirmationText }}</strong>
+                </span>
+            </div>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--secondary" (click)="onClose()" [disabled]="loading">
+                {{ cancelButtonText }}
+            </button>
+            <button
+                class="btn"
+                [ngClass]="'btn--' + buttonStyle"
+                (click)="onConfirm()"
+                [disabled]="isConfirmDisabled"
+            >
+                <span *ngIf="loading" class="btn__spinner"></span>
+                {{ loading ? 'Processing...' : confirmButtonText }}
+            </button>
+        </div>
+    </div>
+</div>

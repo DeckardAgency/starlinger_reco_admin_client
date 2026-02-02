@@ -1,0 +1,79 @@
+.ui-favorite-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+
+  // Default variant (white background with shadow)
+  &--default {
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    color: #71717a;
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+  }
+
+  // Outline variant (transparent with border)
+  &--outline {
+    background: transparent;
+    border: 1px solid #e4e4e7;
+    border-radius: 50%;
+    color: #71717a;
+
+    &:hover:not(:disabled) {
+      border-color: #d4d4d8;
+      background: #f4f4f5;
+    }
+  }
+
+  // Ghost variant (no background, no border)
+  &--ghost {
+    background: transparent;
+    border-radius: 4px;
+    color: #71717a;
+
+    &:hover:not(:disabled) {
+      background: #f4f4f5;
+    }
+  }
+
+  // Sizes
+  &--sm {
+    width: 28px;
+    height: 28px;
+  }
+
+  &--md {
+    width: 36px;
+    height: 36px;
+  }
+
+  &--lg {
+    width: 44px;
+    height: 44px;
+  }
+
+  // Active state
+  &--active {
+    color: #dc2626;
+
+    ui-icon {
+      ::ng-deep svg path {
+        fill: #dc2626;
+        stroke: #dc2626;
+      }
+    }
+  }
+
+  // Disabled state
+  &--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

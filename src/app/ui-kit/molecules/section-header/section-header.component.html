@@ -1,0 +1,13 @@
+<div class="section-header">
+  <div class="section-header__title-wrap">
+    <div *ngIf="sanitizedIcon" class="section-header__icon" [innerHTML]="sanitizedIcon"></div>
+    <h2 class="section-header__title">{{ title }}</h2>
+  </div>
+  <a *ngIf="viewAllLink" [routerLink]="viewAllLink" class="section-header__view-all">
+    <span class="section-header__view-all-desktop">{{ viewAllLabel }}</span>
+    <span class="section-header__view-all-mobile">{{ mobileViewAllLabel }}</span>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+</div>

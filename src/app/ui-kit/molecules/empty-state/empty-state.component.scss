@@ -1,0 +1,119 @@
+.ui-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #D4D4D8;
+    margin-bottom: 16px;
+  }
+
+  &__title {
+    margin: 0;
+    font-weight: 600;
+    color: #18181B;
+  }
+
+  &__description {
+    margin: 8px 0 0;
+    color: #71717A;
+    max-width: 400px;
+  }
+
+  &__action {
+    margin-top: 24px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #FFFFFF;
+    background-color: #DC2626;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-family: inherit;
+
+    &:hover {
+      background-color: #B91C1C;
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+    }
+  }
+
+  &__content {
+    margin-top: 16px;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  // Sizes
+  &--sm {
+    padding: 24px 16px;
+
+    .ui-empty-state__icon svg {
+      width: 40px;
+      height: 40px;
+    }
+
+    .ui-empty-state__title {
+      font-size: 16px;
+    }
+
+    .ui-empty-state__description {
+      font-size: 13px;
+    }
+
+    .ui-empty-state__action {
+      padding: 8px 16px;
+      font-size: 13px;
+    }
+  }
+
+  &--md {
+    .ui-empty-state__icon svg {
+      width: 56px;
+      height: 56px;
+    }
+
+    .ui-empty-state__title {
+      font-size: 18px;
+    }
+
+    .ui-empty-state__description {
+      font-size: 14px;
+    }
+  }
+
+  &--lg {
+    padding: 64px 32px;
+
+    .ui-empty-state__icon svg {
+      width: 72px;
+      height: 72px;
+    }
+
+    .ui-empty-state__title {
+      font-size: 24px;
+    }
+
+    .ui-empty-state__description {
+      font-size: 16px;
+    }
+
+    .ui-empty-state__action {
+      padding: 12px 24px;
+      font-size: 16px;
+    }
+  }
+}

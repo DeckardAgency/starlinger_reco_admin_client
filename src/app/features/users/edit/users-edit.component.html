@@ -1,0 +1,162 @@
+<div class="user-detail-page">
+  <!-- Page Header with Breadcrumb -->
+  <ui-breadcrumbs
+    variant="page-header"
+    separator="chevron"
+    [items]="[
+      { label: 'Users', route: '/admin/users' },
+      { label: isEditMode() ? 'Edit' : 'Add' }
+    ]"
+  ></ui-breadcrumbs>
+
+  <!-- Detail Header -->
+  <ui-detail-header
+    [title]="isEditMode() ? 'Edit user' : 'Add user'"
+    [isEditMode]="isEditMode()"
+    [showSaveAndContinue]="true"
+    [showDiscard]="false"
+    (back)="goBack()"
+    (save)="onSave()"
+    (saveAndContinue)="onSave()"
+  ></ui-detail-header>
+
+  <!-- Loading / Error -->
+  @if (isLoading()) {
+    <div class="page-content">
+      <p class="loading-message">Loading user…</p>
+    </div>
+  } @else if (loadError()) {
+    <div class="page-content">
+      <p class="error-message">{{ loadError() }}</p>
+      <button type="button" (click)="goBack()">Back to users</button>
+    </div>
+  } @else {
+  <!-- Page Content -->
+  <div class="page-content">
+    <div class="form-cards">
+      <!-- Left Column -->
+      <div class="form-column form-column--left">
+        <!-- User Details Card -->
+        <div class="form-card">
+          <h2 class="form-card__title">User details</h2>
+          <div class="form-card__content">
+            <!-- First Name -->
+            <ui-form-field label="First name" layout="horizontal">
+              <input
+                type="text"
+                [value]="user().firstName"
+                (input)="onFirstNameChange($event)"
+                placeholder="Enter first name"
+              />
+            </ui-form-field>
+
+            <!-- Last Name -->
+            <ui-form-field label="Last name" layout="horizontal">
+              <input
+                type="text"
+                [value]="user().lastName"
+                (input)="onLastNameChange($event)"
+                placeholder="Enter last name"
+              />
+            </ui-form-field>
+
+            <!-- Username -->
+            <ui-form-field label="Username" layout="horizontal">
+              <input
+                type="text"
+                [value]="user().username"
+                (input)="onUsernameChange($event)"
+                placeholder="Enter username"
+              />
+            </ui-form-field>
+
+            <!-- Email -->
+            <ui-form-field label="Email" layout="horizontal">
+              <input
+                type="email"
+                [value]="user().email"
+                (input)="onEmailChange($event)"
+                placeholder="Enter email"
+              />
+            </ui-form-field>
+          </div>
+        </div>
+
+        <!-- Password Card -->
+        <div class="form-card">
+          <h2 class="form-card__title">Password</h2>
+          <div class="form-card__content">
+            <!-- Password -->
+            <ui-form-field label="Password" layout="horizontal">
+              <div class="input-with-icon">
+                <input
+                  [type]="showPassword() ? 'text' : 'password'"
+                  [value]="password()"
+                  (input)="onPasswordChange($event)"
+                  placeholder="Enter password"
+                />
+                <button class="input-icon-btn" (click)="togglePasswordVisibility()" type="button">
+                  <ui-icon [name]="showPassword() ? 'eye-off' : 'eye'" size="md" color="#71717A"></ui-icon>
+                </button>
+              </div>
+            </ui-form-field>
+
+            <!-- Repeat Password -->
+            <ui-form-field label="Repeat password" layout="horizontal">
+              <div class="input-with-icon">
+                <input
+                  [type]="showRepeatPassword() ? 'text' : 'password'"
+                  [value]="repeatPassword()"
+                  (input)="onRepeatPasswordChange($event)"
+                  placeholder="Repeat password"
+                />
+                <button class="input-icon-btn" (click)="toggleRepeatPasswordVisibility()" type="button">
+                  <ui-icon [name]="showRepeatPassword() ? 'eye-off' : 'eye'" size="md" color="#71717A"></ui-icon>
+                </button>
+              </div>
+            </ui-form-field>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="form-column form-column--right">
+        <!-- Roles Card -->
+        <div class="form-card form-card--roles">
+          <h2 class="form-card__title">Core user Role</h2>
+          <div class="form-card__content">
+            <div class="role-list">
+              <div
+                class="role-item"
+                *ngFor="let role of roleOptions"
+                (click)="selectRole(role.id)"
+                [class.role-item--selected]="isRoleSelected(role.id)"
+              >
+                <div class="role-item__header">
+                  <div class="role-item__checkbox">
+                    <input
+                      type="checkbox"
+                      class="role-checkbox"
+                      [checked]="isRoleSelected(role.id)"
+                      (click)="$event.stopPropagation()"
+                      (change)="selectRole(role.id)"
+                    />
+                  </div>
+                  <span class="role-item__name">Role → {{ role.name }}</span>
+                </div>
+                <p class="role-item__description">{{ role.description }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Sticky Footer -->
+  <ui-mobile-footer
+    (primaryClick)="onSave()"
+    (secondaryClick)="onSave()"
+  ></ui-mobile-footer>
+  }
+</div>

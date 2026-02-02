@@ -1,0 +1,85 @@
+<div class="payment-types-page" (click)="closeDropdown()">
+  <ui-breadcrumbs variant="page-header" separator="line" [items]="[{ label: 'Payment types' }]"></ui-breadcrumbs>
+
+  <main class="page-content">
+    <ui-list-header
+      title="Payment types"
+      icon="hand-coins"
+      [count]="totalItems()"
+      addButtonLabel="Add payment type"
+      [showSearch]="true"
+      [showBulkDeleteButton]="true"
+      [isBulkDeleteDisabled]="!hasSelected()"
+      [searchQuery]="searchQuery()"
+      (searchQueryChange)="onSearchChange($event)"
+      (add)="onAddPaymentType()"
+      (bulkDelete)="onBulkDelete()"
+    ></ui-list-header>
+
+    <div class="table-container">
+      <ui-data-table
+        [columns]="columns"
+        [data]="filteredPaymentTypes()"
+        [sortColumn]="sortColumn()"
+        [sortDirection]="sortDirection()"
+        (sort)="onSortChange($event)"
+      ></ui-data-table>
+    </div>
+
+    <ui-table-footer
+      [showingFrom]="1"
+      [showingTo]="filteredPaymentTypes().length"
+      [totalItems]="totalItems()"
+    ></ui-table-footer>
+  </main>
+</div>
+
+<!-- Checkbox Header Template -->
+<ng-template #checkboxHeaderTemplate>
+  <ui-table-checkbox-selection
+    [isHeader]="true"
+    [isDropdownOpen]="isHeaderDropdownOpen()"
+    (dropdownToggle)="onHeaderDropdownToggle($event)"
+    (selectAll)="onSelectAll()"
+    (selectNone)="onSelectNone()"
+  ></ui-table-checkbox-selection>
+</ng-template>
+
+<!-- Checkbox Template -->
+<ng-template #checkboxTemplate let-row>
+  <ui-table-checkbox-selection
+    [isHeader]="false"
+    [checked]="row.selected"
+    (change)="togglePaymentTypeSelection(row)"
+  ></ui-table-checkbox-selection>
+</ng-template>
+
+<!-- Active Template -->
+<ng-template #activeTemplate let-row>
+  <div class="toggle-cell">
+    <ui-toggle
+      [checked]="row.active"
+      (toggleChange)="toggleActive(row, $event)">
+    </ui-toggle>
+  </div>
+</ng-template>
+
+<!-- Actions Template -->
+<ng-template #actionsTemplate let-row>
+  <ui-table-actions-dropdown
+    [isOpen]="openDropdownId() === row.id"
+    [row]="row"
+    [actions]="tableActions"
+    (toggle)="toggleDropdown(row.id)"
+    (actionClick)="onActionClick($event)"
+    (close)="closeDropdown()"
+  ></ui-table-actions-dropdown>
+</ng-template>
+
+<!-- Mobile Footer -->
+<ui-mobile-footer
+  primaryLabel="Add payment type"
+  primaryIcon="plus"
+  [showSecondary]="false"
+  (primaryClick)="onAddPaymentType()"
+></ui-mobile-footer>

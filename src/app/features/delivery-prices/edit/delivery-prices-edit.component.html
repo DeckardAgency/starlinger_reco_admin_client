@@ -1,0 +1,91 @@
+<div class="delivery-price-detail-page">
+  <ui-breadcrumbs
+    variant="page-header"
+    separator="chevron"
+    [items]="[
+      { label: 'Delivery prices', route: '/admin/delivery-prices' },
+      { label: isEditMode() ? 'Edit' : 'Add' }
+    ]"
+  ></ui-breadcrumbs>
+
+  <ui-detail-header
+    [title]="isEditMode() ? 'Edit delivery price' : 'New delivery price'"
+    [isEditMode]="isEditMode()"
+    [showSaveAndContinue]="true"
+    [showDiscard]="false"
+    (back)="onBack()"
+    (save)="onSave()"
+    (saveAndContinue)="onSaveAndContinue()"
+  ></ui-detail-header>
+
+  <div class="detail-content">
+    <div class="form-card">
+      <h2 class="form-card__title">Delivery price details</h2>
+      <div class="form-card__content">
+        <ui-form-field label="Name" layout="horizontal">
+          <input type="text" [value]="deliveryPrice().name" (input)="onNameChange($event)" placeholder="Enter name">
+        </ui-form-field>
+
+        <ui-form-field label="DHL zone" layout="horizontal">
+          <div class="select-with-pill">
+            <span class="select-placeholder" *ngIf="!deliveryPrice().dhlZone">Select</span>
+            <div class="pill" *ngIf="deliveryPrice().dhlZone">
+              <button class="pill__remove" (click)="removeDhlZone(); $event.stopPropagation()">
+                <ui-icon name="close" size="xs" color="white"></ui-icon>
+              </button>
+              <span>{{ deliveryPrice().dhlZone }}</span>
+            </div>
+            <select class="select-field" [(ngModel)]="selectedDhlZone" (change)="onDhlZoneChange()">
+              <option value="" disabled selected>Select</option>
+              <option *ngFor="let opt of dhlZoneOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+            <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+          </div>
+        </ui-form-field>
+
+        <ui-form-field label="Delivery type" layout="horizontal">
+          <div class="select-with-pill">
+            <span class="select-placeholder" *ngIf="!deliveryPrice().deliveryType">Select</span>
+            <div class="pill" *ngIf="deliveryPrice().deliveryType">
+              <button class="pill__remove" (click)="removeDeliveryType(); $event.stopPropagation()">
+                <ui-icon name="close" size="xs" color="white"></ui-icon>
+              </button>
+              <span>{{ deliveryPrice().deliveryType }}</span>
+            </div>
+            <select class="select-field" [(ngModel)]="selectedDeliveryType" (change)="onDeliveryTypeChange()">
+              <option value="" disabled selected>Select</option>
+              <option *ngFor="let opt of deliveryTypeOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+            <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+          </div>
+        </ui-form-field>
+
+        <ui-form-field label="Size from" layout="horizontal">
+          <input type="number" [value]="deliveryPrice().sizeFrom" (input)="onSizeFromChange($event)" placeholder="0">
+        </ui-form-field>
+
+        <ui-form-field label="Size to" layout="horizontal">
+          <input type="number" [value]="deliveryPrice().sizeTo" (input)="onSizeToChange($event)" placeholder="0">
+        </ui-form-field>
+
+        <ui-form-field label="Price base" layout="horizontal">
+          <input type="text" [value]="formatNumber(deliveryPrice().priceBase)" (input)="onPriceBaseChange($event)" placeholder="0,00">
+        </ui-form-field>
+
+        <ui-form-field label="Step starts at" layout="horizontal">
+          <input type="number" [value]="deliveryPrice().stepStartsAt" (input)="onStepStartsAtChange($event)" placeholder="0">
+        </ui-form-field>
+
+        <ui-form-field label="For every next size" layout="horizontal">
+          <input type="number" [value]="deliveryPrice().forEveryNextSize" (input)="onForEveryNextSizeChange($event)" placeholder="0">
+        </ui-form-field>
+
+        <ui-form-field label="Price base step" layout="horizontal">
+          <input type="text" [value]="formatNumber(deliveryPrice().priceBaseStep)" (input)="onPriceBaseStepChange($event)" placeholder="0,00">
+        </ui-form-field>
+      </div>
+    </div>
+  </div>
+
+  <ui-mobile-footer (primaryClick)="onSave()" (secondaryClick)="onSaveAndContinue()"></ui-mobile-footer>
+</div>

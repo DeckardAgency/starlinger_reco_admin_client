@@ -1,0 +1,278 @@
+<div class="shop-order-detail">
+  @if (isLoading()) {
+    <div class="page-content">
+      <p class="loading-message">Loading order…</p>
+    </div>
+  } @else if (loadError()) {
+    <div class="page-content">
+      <p class="error-message">{{ loadError() }}</p>
+      <button type="button" class="btn btn--outline" (click)="goBack()">Back to shop orders</button>
+    </div>
+  } @else {
+  <!-- Page Header with Breadcrumb -->
+  <ui-breadcrumbs
+    [items]="breadcrumbItems"
+    [showHome]="true"
+    homeRoute="/admin/dashboard"
+    variant="page-header">
+  </ui-breadcrumbs>
+
+  <!-- Main Content -->
+  <div class="page-content">
+    <!-- Section Header -->
+    <div class="section-header">
+      <div class="section-header__left">
+        <button class="btn btn--icon btn--outline" (click)="goBack()">
+          <ui-icon name="arrow-back" size="sm"></ui-icon>
+        </button>
+        <div class="section-header__title-group">
+          <ui-icon name="file-text" size="md" color="#71717A" class="section-header__icon"></ui-icon>
+          <h1 class="section-header__title">Inquiry ID: #{{ order().id }}</h1>
+          <ui-badge [variant]="getStatusBadgeVariant(order().status)">
+            {{ order().status === 'new' ? 'New' : order().status }}
+          </ui-badge>
+        </div>
+      </div>
+      <div class="section-header__actions">
+        <button class="btn btn--outline" (click)="onExport()">
+          <ui-icon name="download" size="sm"></ui-icon>
+          <span>Export</span>
+        </button>
+        <button class="btn btn--outline" (click)="onPrint()">
+          <ui-icon name="printer" size="sm"></ui-icon>
+          <span>Print</span>
+        </button>
+        <button class="btn btn--primary" (click)="onSave()">
+          <span>Save</span>
+          <ui-icon name="save" size="sm"></ui-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Order Info Row -->
+    <div class="order-info-row">
+      <div class="order-info-row__left">
+        <span class="order-info-row__label">Internal reference number: </span>
+        <span class="order-info-row__value">{{ order().internalRef }}</span>
+      </div>
+      <div class="order-info-row__right">
+        <div class="order-info-row__item">
+          <span class="order-info-row__label">Date created:&nbsp;</span>
+          <span class="order-info-row__value">{{ order().dateCreated }}</span>
+        </div>
+        <div class="order-info-row__item">
+          <span class="order-info-row__label">Parts ordered:&nbsp;</span>
+          <span class="order-info-row__value">{{ order().partsOrdered }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Cards -->
+    <div class="form-cards">
+      <!-- Basic Information Card -->
+      <div class="card">
+        <h2 class="card__title">Basic information</h2>
+
+        <div class="card__toggle">
+          <ui-toggle
+            label="Enable sale"
+            labelPosition="left"
+            [checked]="order().enableSale"
+            (toggleChange)="onEnableSaleChange($event)">
+          </ui-toggle>
+        </div>
+
+        <div class="card__fields">
+          <ui-form-field label="Account" layout="horizontal">
+            <input type="text" [value]="order().account" readonly>
+          </ui-form-field>
+
+          <ui-form-field label="Contact" layout="horizontal">
+            <input type="text" [value]="order().contact" readonly>
+          </ui-form-field>
+
+          <ui-form-field label="Contact" layout="horizontal">
+            <div class="select-with-pill">
+              <span class="select-placeholder" *ngIf="!selectedContact">Select contact</span>
+              <div class="pill" *ngIf="selectedContact">
+                <button class="pill__remove" (click)="removeContact(); $event.stopPropagation()">
+                  <ui-icon name="x" size="xs" color="#fafafa"></ui-icon>
+                </button>
+                <span>{{ getContactLabel() }}</span>
+              </div>
+              <select class="select-field" [(ngModel)]="selectedContact" (change)="onContactChange()">
+                <option value="" disabled>Select contact</option>
+                <option *ngFor="let opt of contactOptions" [value]="opt.value">{{ opt.label }}</option>
+              </select>
+              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+            </div>
+          </ui-form-field>
+
+          <ui-form-field label="Billing address" layout="horizontal">
+            <div class="select-with-pill">
+              <span class="select-placeholder" *ngIf="!selectedBillingAddress">Select address</span>
+              <div class="pill" *ngIf="selectedBillingAddress">
+                <button class="pill__remove" (click)="removeBillingAddress(); $event.stopPropagation()">
+                  <ui-icon name="x" size="xs" color="#fafafa"></ui-icon>
+                </button>
+                <span>{{ getBillingAddressLabel() }}</span>
+              </div>
+              <select class="select-field" [(ngModel)]="selectedBillingAddress" (change)="onBillingAddressChange()">
+                <option value="" disabled>Select address</option>
+                <option *ngFor="let opt of billingAddressOptions" [value]="opt.value">{{ opt.label }}</option>
+              </select>
+              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+            </div>
+          </ui-form-field>
+
+          <ui-form-field label="Status" layout="horizontal">
+            <div class="select-with-pill">
+              <span class="select-placeholder" *ngIf="!selectedStatus">Select status</span>
+              <div class="pill" *ngIf="selectedStatus">
+                <button class="pill__remove" (click)="removeStatus(); $event.stopPropagation()">
+                  <ui-icon name="x" size="xs" color="#fafafa"></ui-icon>
+                </button>
+                <span>{{ getStatusLabel() }}</span>
+              </div>
+              <select class="select-field" [(ngModel)]="selectedStatus" (change)="onStatusChange()">
+                <option value="" disabled>Select status</option>
+                <option *ngFor="let opt of statusOptions" [value]="opt.value">{{ opt.label }}</option>
+              </select>
+              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+            </div>
+          </ui-form-field>
+
+          <ui-form-field label="Date" layout="horizontal">
+            <input type="text" [value]="order().date" disabled class="input--disabled">
+          </ui-form-field>
+        </div>
+      </div>
+
+      <!-- Order Address Card -->
+      <div class="card">
+        <h2 class="card__title">Order address</h2>
+
+        <div class="card__fields">
+          <ui-form-field label="Payment type" layout="horizontal">
+            <div class="select-with-pill">
+              <span class="select-placeholder" *ngIf="!selectedPaymentType">Select payment type</span>
+              <div class="pill" *ngIf="selectedPaymentType">
+                <button class="pill__remove" (click)="removePaymentType(); $event.stopPropagation()">
+                  <ui-icon name="x" size="xs" color="#fafafa"></ui-icon>
+                </button>
+                <span>{{ getPaymentTypeLabel() }}</span>
+              </div>
+              <select class="select-field" [(ngModel)]="selectedPaymentType" (change)="onPaymentTypeChange()">
+                <option value="" disabled>Select payment type</option>
+                <option *ngFor="let opt of paymentTypeOptions" [value]="opt.value">{{ opt.label }}</option>
+              </select>
+              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+            </div>
+          </ui-form-field>
+
+          <ui-form-field label="Delivery type" layout="horizontal">
+            <div class="select-with-pill">
+              <span class="select-placeholder" *ngIf="!selectedDeliveryType">Select delivery type</span>
+              <div class="pill" *ngIf="selectedDeliveryType">
+                <button class="pill__remove" (click)="removeDeliveryType(); $event.stopPropagation()">
+                  <ui-icon name="x" size="xs" color="#fafafa"></ui-icon>
+                </button>
+                <span>{{ getDeliveryTypeLabel() }}</span>
+              </div>
+              <select class="select-field" [(ngModel)]="selectedDeliveryType" (change)="onDeliveryTypeChange()">
+                <option value="" disabled>Select delivery type</option>
+                <option *ngFor="let opt of deliveryTypeOptions" [value]="opt.value">{{ opt.label }}</option>
+              </select>
+              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+            </div>
+          </ui-form-field>
+
+          <ui-form-field label="Price without tax" layout="horizontal">
+            <input type="text" [value]="formatCurrency(order().priceWithoutTax)" disabled class="input--disabled">
+          </ui-form-field>
+
+          <ui-form-field label="Total price" layout="horizontal">
+            <input type="text" [value]="formatCurrency(order().totalPrice)" disabled class="input--disabled">
+          </ui-form-field>
+
+          <ui-form-field label="Price tax" layout="horizontal">
+            <input type="text" [value]="formatCurrency(order().priceTax)" disabled class="input--disabled">
+          </ui-form-field>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products Ordered Section -->
+    <div class="products-section">
+      <div class="products-section__header">
+        <ui-icon name="package" size="md" color="#71717A"></ui-icon>
+        <h2 class="products-section__title">Products ordered</h2>
+      </div>
+
+      <!-- Machine Groups -->
+      <div class="machine-groups">
+        <div class="machine-group" *ngFor="let group of order().machineGroups">
+          <div class="machine-group__header">
+            <div class="machine-group__title">
+              <ui-icon name="clipboard-list" size="md"></ui-icon>
+              <span>{{ group.name }}</span>
+            </div>
+            <button class="machine-group__toggle" (click)="toggleMachineGroup(group.id)">
+              <span>{{ group.isExpanded ? 'Close' : 'Open' }}</span>
+              <ui-icon [name]="group.isExpanded ? 'chevron-up' : 'chevron-down'" size="sm"></ui-icon>
+            </button>
+          </div>
+
+          <div class="machine-group__content" *ngIf="group.isExpanded">
+            <ui-data-table
+              [columns]="productsColumns"
+              [data]="group.products"
+              class="products-table">
+            </ui-data-table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Summary -->
+      <div class="order-summary">
+        <div class="order-summary__row">
+          <span class="order-summary__label">Total price</span>
+          <span class="order-summary__value">{{ formatCurrency(order().orderTotal) }}</span>
+        </div>
+        <div class="order-summary__row order-summary__row--highlight">
+          <span class="order-summary__label">Amount paid</span>
+          <span class="order-summary__value">{{ formatCurrency(order().amountPaid) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log Messages Section -->
+    <div class="log-section">
+      <div class="log-section__header">
+        <ui-icon name="clipboard-list" size="md" color="#71717A"></ui-icon>
+        <h2 class="log-section__title">Log messages</h2>
+      </div>
+
+      <ui-data-table
+        [columns]="logColumns"
+        [data]="order().logMessages"
+        [showHeaders]="false"
+        class="log-table">
+      </ui-data-table>
+    </div>
+  </div>
+  }
+</div>
+
+<!-- Templates for custom cell rendering -->
+<ng-template #unitPriceTemplate let-row>
+  <span class="text-right">{{ formatCurrency(row.unitPrice) }}</span>
+</ng-template>
+
+<ng-template #priceTemplate let-row>
+  <span class="text-right">{{ formatCurrency(row.price) }}</span>
+</ng-template>
+
+<ng-template #logStatusTemplate let-row>
+  <ui-badge [variant]="row.statusVariant">{{ row.status }}</ui-badge>
+</ng-template>

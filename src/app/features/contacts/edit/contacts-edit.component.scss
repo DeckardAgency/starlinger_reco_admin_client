@@ -1,0 +1,119 @@
+@use '../../../ui-kit/admin-shared' as admin;
+
+// =============================================================================
+// Base Layout
+// =============================================================================
+:host {
+  @include admin.admin-host;
+  min-height: 100%;
+}
+
+.contact-detail-page {
+  @include admin.detail-page;
+  flex: 1;
+  min-height: 100%;
+}
+
+.page-content {
+  @include admin.detail-page-content;
+  flex: 1;
+
+  @media (max-width: 768px) {
+    padding-bottom: 80px;
+  }
+}
+
+// =============================================================================
+// Form Cards
+// =============================================================================
+.form-cards {
+  @include admin.detail-form-cards;
+}
+
+.form-card {
+  @include admin.form-card;
+  flex: 1;
+
+  &__title {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: #232323;
+    margin: 0 0 16px 0;
+  }
+
+  &__toggles {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    min-height: 40px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e4e4e7;
+
+    // Align toggle labels with form field labels
+    ::ng-deep .ui-toggle__label {
+      min-width: 100px;
+      color: #71717a;
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: flex-start;
+      height: auto;
+      gap: 12px;
+
+      ::ng-deep .ui-toggle {
+        width: 100%;
+
+        &__label {
+          min-width: 100px;
+        }
+      }
+    }
+  }
+
+  &__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+@include admin.detail-form-styles;
+
+// =============================================================================
+// Select with Pill Styling
+// =============================================================================
+.select-with-pill {
+  @include admin.select-with-pill;
+}
+
+::ng-deep .select-with-pill .select-field {
+  @include admin.select-with-pill-field;
+}
+
+.select-field {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+
+  input {
+    padding-right: 36px;
+    cursor: pointer;
+  }
+
+  .select-chevron {
+    position: absolute;
+    right: 12px;
+    pointer-events: none;
+    color: #71717a;
+  }
+}
+
+.select-chevron {
+  flex-shrink: 0;
+  color: #71717a;
+}

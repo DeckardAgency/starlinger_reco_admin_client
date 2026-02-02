@@ -1,0 +1,62 @@
+<ui-card variant="outlined" padding="lg" class="order-card">
+  <div class="order-card__content">
+    <div class="order-card__row">
+      <div class="order-card__icon-wrap">
+        <svg width="18" height="19" viewBox="0 0 18 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M11.5833 12.415L13.25 14.0817L16.5833 10.7484M15.75 7.41496V5.74829C15.7497 5.45602 15.6725 5.16897 15.5263 4.91593C15.38 4.66289 15.1698 4.45276 14.9167 4.30662L9.08333 0.973291C8.82997 0.82701 8.54256 0.75 8.25 0.75C7.95744 0.75 7.67003 0.82701 7.41667 0.973291L1.58333 4.30662C1.33022 4.45276 1.11998 4.66289 0.973718 4.91593C0.827452 5.16897 0.7503 5.45602 0.75 5.74829V12.415C0.7503 12.7072 0.827452 12.9943 0.973718 13.2473C1.11998 13.5004 1.33022 13.7105 1.58333 13.8566L7.41667 17.19C7.67003 17.3362 7.95744 17.4132 8.25 17.4132C8.54256 17.4132 8.82997 17.3362 9.08333 17.19L10.75 16.24M4.5 2.64006L12 6.93172M0.991699 4.91504L8.25003 9.08171M8.25003 9.08171L15.5084 4.91504M8.25003 9.08171L8.25 17.415" stroke="#71717A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="order-card__text">{{ data.type === 'order' ? 'Order' : 'Inquiry' }} {{ data.id }}</span>
+    </div>
+
+    <div class="order-card__row order-card__row--single">
+      <div class="order-card__icon-wrap">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3.33334 18.3334H15C15.442 18.3334 15.866 18.1578 16.1785 17.8453C16.4911 17.5327 16.6667 17.1088 16.6667 16.6667V5.83341L12.5 1.66675H5.00001C4.55798 1.66675 4.13405 1.84234 3.82149 2.1549C3.50893 2.46746 3.33334 2.89139 3.33334 3.33341V6.66675M11.6667 1.66675V5.00008C11.6667 5.44211 11.8423 5.86603 12.1548 6.17859C12.4674 6.49115 12.8913 6.66675 13.3333 6.66675H16.6667M8.33334 10.0001H10V15.0001M8.33334 15.0001H11.6667M3.33334 10.0001C4.25381 10.0001 5.00001 10.7463 5.00001 11.6667V13.3334C5.00001 14.2539 4.25381 15.0001 3.33334 15.0001C2.41286 15.0001 1.66667 14.2539 1.66667 13.3334V11.6667C1.66667 10.7463 2.41286 10.0001 3.33334 10.0001Z" stroke="#71717A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="order-card__info">
+        <span class="order-card__label">Internal reference number</span>
+        <span class="order-card__text">{{ data.internalReference }}</span>
+      </div>
+    </div>
+
+    <div class="order-card__row order-card__row--double">
+      <div class="order-card__col">
+        <div class="order-card__icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6.66667 1.66675V5.00008M13.3333 1.66675V5.00008M2.5 8.33341H17.5M6.66667 11.6667H6.675M10 11.6667H10.0083M13.3333 11.6667H13.3417M6.66667 15.0001H6.675M10 15.0001H10.0083M13.3333 15.0001H13.3417M4.16667 3.33341H15.8333C16.7538 3.33341 17.5 4.07961 17.5 5.00008V16.6667C17.5 17.5872 16.7538 18.3334 15.8333 18.3334H4.16667C3.24619 18.3334 2.5 17.5872 2.5 16.6667V5.00008C2.5 4.07961 3.24619 3.33341 4.16667 3.33341Z" stroke="#71717A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="order-card__info">
+          <span class="order-card__label">Date created</span>
+          <span class="order-card__text">{{ data.dateCreated }}</span>
+        </div>
+      </div>
+
+      <div class="order-card__col">
+        <div class="order-card__icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.5 13.3332V6.6665C17.4997 6.37423 17.4225 6.08718 17.2763 5.83414C17.13 5.5811 16.9198 5.37097 16.6667 5.22484L10.8333 1.8915C10.58 1.74522 10.2926 1.66821 10 1.66821C9.70744 1.66821 9.42003 1.74522 9.16667 1.8915L3.33333 5.22484C3.08022 5.37097 2.86998 5.5811 2.72372 5.83414C2.57745 6.08718 2.5003 6.37423 2.5 6.6665V13.3332C2.5003 13.6254 2.57745 13.9125 2.72372 14.1655C2.86998 14.4186 3.08022 14.6287 3.33333 14.7748L9.16667 18.1082C9.42003 18.2545 9.70744 18.3315 10 18.3315C10.2926 18.3315 10.58 18.2545 10.8333 18.1082L16.6667 14.7748C16.9198 14.6287 17.13 14.4186 17.2763 14.1655C17.4225 13.9125 17.4997 13.6254 17.5 13.3332Z" stroke="#71717A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10 13.3333C11.8409 13.3333 13.3333 11.8409 13.3333 9.99992C13.3333 8.15897 11.8409 6.66659 10 6.66659C8.15905 6.66659 6.66667 8.15897 6.66667 9.99992C6.66667 11.8409 8.15905 13.3333 10 13.3333Z" stroke="#71717A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="order-card__info">
+          <span class="order-card__label">Parts ordered</span>
+          <span class="order-card__text">{{ data.partsOrdered }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="order-card__footer">
+      <ui-badge [variant]="getStatusVariant(data.status)" size="sm" [rounded]="true">
+        {{ getStatusLabel(data.status) }}
+      </ui-badge>
+      <ui-button variant="outline" size="md" [iconOnly]="true" [routerLink]="getDetailLink()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 12L10 8L6 4" stroke="#232323" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </ui-button>
+    </div>
+  </div>
+</ui-card>

@@ -1,0 +1,24 @@
+<div [ngClass]="containerClasses">
+  <span *ngIf="label" class="ui-price-display__label">{{ label }}</span>
+
+  <div class="ui-price-display__values">
+    <!-- Original price (crossed out) -->
+    <span *ngIf="hasDiscount" class="ui-price-display__original">
+      <ng-container *ngIf="currencyPosition === 'before'">{{ currency }} </ng-container>
+      {{ formattedOriginalValue }}
+      <ng-container *ngIf="currencyPosition === 'after'"> {{ currency }}</ng-container>
+    </span>
+
+    <!-- Current price -->
+    <span class="ui-price-display__current">
+      <ng-container *ngIf="currencyPosition === 'before'">{{ currency }} </ng-container>
+      {{ formattedValue }}
+      <ng-container *ngIf="currencyPosition === 'after'"> {{ currency }}</ng-container>
+    </span>
+
+    <!-- Discount badge -->
+    <span *ngIf="hasDiscount" class="ui-price-display__discount">
+      -{{ discountPercentage }}%
+    </span>
+  </div>
+</div>

@@ -1,0 +1,286 @@
+<div class="account-detail-page" (click)="closeDropdown()">
+  @if (isLoading()) {
+    <div class="page-content">
+      <p class="loading-message">Loading account…</p>
+    </div>
+  } @else if (loadError()) {
+    <div class="page-content">
+      <p class="error-message">{{ loadError() }}</p>
+      <button type="button" class="btn btn--outline" (click)="goBack()">Back to accounts</button>
+    </div>
+  } @else {
+  <!-- Page Header with Breadcrumb -->
+  <ui-breadcrumbs
+    variant="page-header"
+    separator="chevron"
+    [items]="[
+      { label: 'Accounts', route: '/admin/accounts' },
+      { label: isEditMode() ? 'Edit' : 'Add' }
+    ]"
+  ></ui-breadcrumbs>
+
+  <!-- Detail Header -->
+  <ui-detail-header
+    [title]="isEditMode() ? 'Account detail' : 'New account'"
+    [isEditMode]="isEditMode()"
+    [showSaveAndContinue]="true"
+    [showDiscard]="false"
+    (back)="goBack()"
+    (save)="onSave()"
+    (saveAndContinue)="onSaveAndContinue()"
+  ></ui-detail-header>
+
+  <!-- Main Content -->
+  <div class="page-content">
+    <!-- Form Cards -->
+    <div class="form-cards">
+      <!-- Basic Information Card -->
+      <div class="card">
+        <h2 class="card__title">Basic information</h2>
+
+        <div class="card__toggles">
+          <ui-toggle
+            label="Is active"
+            labelPosition="left"
+            [checked]="isActive()"
+            (toggleChange)="onActiveChange($event)">
+          </ui-toggle>
+          <ui-toggle
+            label="Legal entity"
+            labelPosition="left"
+            [checked]="isLegalEntity()"
+            (toggleChange)="onLegalEntityChange($event)">
+          </ui-toggle>
+        </div>
+
+        <div class="card__fields">
+          <ui-form-field label="Title" layout="horizontal">
+            <input type="text" [value]="account().name" placeholder="Company title">
+          </ui-form-field>
+
+          <ui-form-field label="Account type" layout="horizontal">
+            <div class="select-with-pills">
+              <div class="pill-tags">
+                <span class="pill" *ngFor="let type of account().accountType">
+                  <button class="pill__remove" (click)="removeAccountType(type); $event.stopPropagation()">
+                    <ui-icon name="x" size="xs" color="#fafafa"></ui-icon>
+                  </button>
+                  <span>{{ type }}</span>
+                </span>
+              </div>
+              <select class="select-field" [(ngModel)]="selectedAccountType" (change)="onAccountTypeSelect()">
+                <option value="" disabled selected>Add type...</option>
+                <option *ngFor="let opt of accountTypeOptions" [value]="opt.value">{{ opt.label }}</option>
+              </select>
+              <ui-icon name="chevron-down" size="sm" color="currentColor" class="select-chevron"></ui-icon>
+            </div>
+          </ui-form-field>
+
+          <ui-form-field label="Code" layout="horizontal">
+            <input type="text" [value]="account().code" placeholder="Code">
+          </ui-form-field>
+
+          <ui-form-field label="OIB" layout="horizontal">
+            <input type="text" [value]="account().oib" placeholder="OIB">
+          </ui-form-field>
+
+          <ui-form-field label="Purchase limit" layout="horizontal">
+            <input type="text" [value]="formatCurrency(account().purchaseLimit)" placeholder="Purchase limit">
+          </ui-form-field>
+
+          <ui-form-field label="Amount spent" layout="horizontal">
+            <input type="text" [value]="formatCurrency(account().amountSpent)" placeholder="Amount spent">
+          </ui-form-field>
+        </div>
+      </div>
+
+      <!-- Contact Information Card -->
+      <div class="card">
+        <h2 class="card__title">Contact information</h2>
+
+        <div class="card__fields">
+          <ui-form-field label="Phone" layout="horizontal">
+            <input type="text" [value]="account().phone" placeholder="Phone">
+          </ui-form-field>
+
+          <ui-form-field label="Other phone" layout="horizontal">
+            <input type="text" [value]="account().otherPhone || '–'" placeholder="Other phone">
+          </ui-form-field>
+
+          <ui-form-field label="Email" layout="horizontal">
+            <input type="text" [value]="account().email" placeholder="Email">
+          </ui-form-field>
+
+          <ui-form-field label="Other email" layout="horizontal">
+            <input type="text" [value]="account().otherEmail || '–'" placeholder="Other email">
+          </ui-form-field>
+
+          <ui-form-field label="Fax" layout="horizontal">
+            <input type="text" [value]="account().fax || '–'" placeholder="Fax">
+          </ui-form-field>
+
+          <ui-form-field label="Web" layout="horizontal">
+            <input type="text" [value]="account().web" placeholder="Web">
+          </ui-form-field>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs Section -->
+    <div class="tabs-section">
+      <div class="tabs-container">
+        <div class="tabs-header">
+          <ui-tabs
+            [tabs]="tabs"
+            [activeTab]="activeTab()"
+            variant="underline"
+            [fullWidth]="true"
+            (tabChange)="onTabChange($event)">
+          </ui-tabs>
+        </div>
+
+        <!-- Add Button Row -->
+        <div class="tabs-action-row" *ngIf="activeTab() === 'contacts' || activeTab() === 'addresses'">
+          <button class="btn btn--outline btn--full-width" (click)="onAddContact()">
+            <span>{{ addButtonText() }}</span>
+            <ui-icon name="plus" size="sm"></ui-icon>
+          </button>
+        </div>
+
+        <!-- Contacts Table -->
+        <div class="table-wrapper" *ngIf="activeTab() === 'contacts'">
+          <ui-data-table
+            [columns]="contactsColumns"
+            [data]="contacts()"
+            emptyMessage="No results"
+          ></ui-data-table>
+        </div>
+
+        <!-- Addresses Table -->
+        <div class="table-wrapper" *ngIf="activeTab() === 'addresses'">
+          <ui-data-table
+            [columns]="addressesColumns"
+            [data]="addresses()"
+            emptyMessage="No results"
+          ></ui-data-table>
+        </div>
+
+        <!-- Shop Orders Table -->
+        <div class="table-wrapper" *ngIf="activeTab() === 'shop-orders'">
+          <ui-data-table
+            [columns]="shopOrdersColumns"
+            [data]="shopOrders()"
+            emptyMessage="No results"
+          ></ui-data-table>
+        </div>
+
+        <!-- Manual Entries Table -->
+        <div class="table-wrapper" *ngIf="activeTab() === 'manual-entries'">
+          <ui-data-table
+            [columns]="manualEntriesColumns"
+            [data]="manualEntries()"
+            emptyMessage="No results"
+          ></ui-data-table>
+        </div>
+
+        <!-- Machines Table -->
+        <div class="table-wrapper" *ngIf="activeTab() === 'machines'">
+          <ui-data-table
+            [columns]="machinesColumns"
+            [data]="machines()"
+            emptyMessage="No results"
+          ></ui-data-table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <ui-table-footer
+      [showingFrom]="1"
+      [showingTo]="currentTabCount()"
+      [totalItems]="currentTabCount()"
+    ></ui-table-footer>
+  </div>
+
+  <!-- Mobile Sticky Footer -->
+  <ui-mobile-footer
+    (primaryClick)="onSave()"
+    (secondaryClick)="onSaveAndContinue()"
+  ></ui-mobile-footer>
+  }
+</div>
+
+<!-- Templates for Contacts Table -->
+<ng-template #contactBillingTemplate let-row>
+  <ui-badge [variant]="row.isBilling ? 'success' : 'danger'">
+    {{ row.isBilling ? 'Yes' : 'No' }}
+  </ui-badge>
+</ng-template>
+
+<ng-template #contactActionsTemplate let-row>
+  <ui-table-actions-dropdown
+    [isOpen]="openDropdownId() === row.id"
+    [row]="row"
+    [actions]="contactActions"
+    (toggle)="toggleDropdown(row.id)"
+    (actionClick)="onContactActionClick($event)"
+    (close)="closeDropdown()"
+  ></ui-table-actions-dropdown>
+</ng-template>
+
+<!-- Templates for Addresses Table -->
+<ng-template #addressBillingTemplate let-row>
+  <ui-badge [variant]="row.isBilling ? 'success' : 'danger'">
+    {{ row.isBilling ? 'Yes' : 'No' }}
+  </ui-badge>
+</ng-template>
+
+<ng-template #addressDeliveryTemplate let-row>
+  <ui-badge [variant]="row.isDelivery ? 'success' : 'danger'">
+    {{ row.isDelivery ? 'Yes' : 'No' }}
+  </ui-badge>
+</ng-template>
+
+<ng-template #addressActionsTemplate let-row>
+  <ui-table-actions-dropdown
+    [isOpen]="openDropdownId() === row.id"
+    [row]="row"
+    [actions]="addressActions"
+    (toggle)="toggleDropdown(row.id)"
+    (actionClick)="onAddressActionClick($event)"
+    (close)="closeDropdown()"
+  ></ui-table-actions-dropdown>
+</ng-template>
+
+<!-- Templates for Orders Tables -->
+<ng-template #orderTypeTemplate let-row>
+  <ui-badge [variant]="row.type === 'order' ? 'success' : 'info'">
+    {{ row.type === 'order' ? 'Order' : 'Manual' }}
+  </ui-badge>
+</ng-template>
+
+<ng-template #orderCustomerTemplate let-row>
+  <div class="customer-cell">
+    <ui-avatar [name]="row.customer.name" [src]="row.customer.avatar" size="sm"></ui-avatar>
+    <span class="customer-name">{{ row.customer.name }}</span>
+  </div>
+</ng-template>
+
+<ng-template #orderStatusTemplate let-row>
+  <ui-badge [variant]="getStatusVariant(row.status)">
+    {{ getStatusLabel(row.status) }}
+  </ui-badge>
+</ng-template>
+
+<ng-template #orderActionsTemplate let-row>
+  <button class="actions-trigger">
+    <ui-icon name="more-vertical" size="sm"></ui-icon>
+  </button>
+</ng-template>
+
+<!-- Templates for Machines Table -->
+<ng-template #machineActionsTemplate let-row>
+  <button class="actions-trigger">
+    <ui-icon name="more-vertical" size="sm"></ui-icon>
+  </button>
+</ng-template>

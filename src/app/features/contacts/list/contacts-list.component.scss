@@ -1,0 +1,58 @@
+@use '../../../ui-kit/admin-shared' as admin;
+
+:host {
+  @include admin.admin-host;
+}
+
+.contacts-page {
+  @include admin.admin-page;
+}
+
+.page-content {
+  @include admin.list-page-content;
+}
+
+// Table container
+.table-container {
+  @include admin.tabs-table-container;
+}
+
+// Table styling
+@include admin.tabs-table-data-table;
+
+// Page-specific table styling (alternating row colors)
+::ng-deep .data-table {
+  background: #f4f4f5;
+
+  &__header-row,
+  &__header-cell {
+    background: white;
+  }
+
+  &__row {
+    &:hover {
+      background: white;
+    }
+  }
+}
+
+.table-cell-text {
+  overflow: hidden;
+  color: #232323;
+  text-overflow: ellipsis;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .page-content {
+    padding-bottom: 76px;
+  }
+
+  ::ng-deep .list-header__right .btn--primary {
+    display: none;
+  }
+}

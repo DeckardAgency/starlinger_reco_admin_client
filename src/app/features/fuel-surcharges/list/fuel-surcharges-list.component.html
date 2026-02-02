@@ -1,0 +1,78 @@
+<div class="fuel-surcharges-page" (click)="closeDropdown()">
+  <ui-breadcrumbs variant="page-header" separator="line" [items]="[{ label: 'Fuel surcharges' }]"></ui-breadcrumbs>
+
+  <main class="page-content">
+    <ui-list-header
+      title="Fuel surcharge"
+      icon="fuel"
+      addButtonLabel="Add option"
+      [showSearch]="true"
+      [showExportButton]="true"
+      [searchQuery]="searchQuery()"
+      (searchQueryChange)="onSearchChange($event)"
+      (add)="onAddFuelSurcharge()"
+      (export)="onExport()"
+    ></ui-list-header>
+
+    <div class="table-container">
+      <ui-data-table
+        [columns]="columns"
+        [data]="filteredFuelSurcharges()"
+        [sortColumn]="sortColumn()"
+        [sortDirection]="sortDirection()"
+        (sort)="onSortChange($event)"
+      ></ui-data-table>
+    </div>
+
+    <ui-table-footer
+      [showingFrom]="1"
+      [showingTo]="filteredFuelSurcharges().length"
+      [totalItems]="totalItems()"
+    ></ui-table-footer>
+  </main>
+</div>
+
+<!-- Checkbox Header Template -->
+<ng-template #checkboxHeaderTemplate>
+  <ui-table-checkbox-selection
+    [isHeader]="true"
+    [isDropdownOpen]="isHeaderDropdownOpen()"
+    (dropdownToggle)="onHeaderDropdownToggle($event)"
+    (selectAll)="onSelectAll()"
+    (selectNone)="onSelectNone()"
+  ></ui-table-checkbox-selection>
+</ng-template>
+
+<!-- Checkbox Template -->
+<ng-template #checkboxTemplate let-row>
+  <ui-table-checkbox-selection
+    [isHeader]="false"
+    [checked]="row.selected"
+    (change)="toggleFuelSurchargeSelection(row)"
+  ></ui-table-checkbox-selection>
+</ng-template>
+
+<!-- Fuel Surcharge Template -->
+<ng-template #fuelSurchargeTemplate let-row>
+  <span>{{ formatFuelSurcharge(row.fuelSurcharge) }}</span>
+</ng-template>
+
+<!-- Actions Template -->
+<ng-template #actionsTemplate let-row>
+  <ui-table-actions-dropdown
+    [isOpen]="openDropdownId() === row.id"
+    [row]="row"
+    [actions]="tableActions"
+    (toggle)="toggleDropdown(row.id)"
+    (actionClick)="onActionClick($event)"
+    (close)="closeDropdown()"
+  ></ui-table-actions-dropdown>
+</ng-template>
+
+<!-- Mobile Footer -->
+<ui-mobile-footer
+  primaryLabel="Add option"
+  primaryIcon="plus"
+  [showSecondary]="false"
+  (primaryClick)="onAddFuelSurcharge()"
+></ui-mobile-footer>

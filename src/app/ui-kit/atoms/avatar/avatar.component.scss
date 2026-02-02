@@ -1,0 +1,64 @@
+.ui-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background-color: #E4E4E7;
+  color: #52525B;
+  font-weight: 500;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  &--circle {
+    border-radius: 50%;
+  }
+
+  &--square {
+    border-radius: 8px;
+  }
+
+  &__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &__initials {
+    text-transform: uppercase;
+    user-select: none;
+  }
+
+  &__status {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 25%;
+    height: 25%;
+    min-width: 8px;
+    min-height: 8px;
+    border-radius: 50%;
+    border: 2px solid #FFFFFF;
+
+    &--online {
+      background-color: #16A34A;
+    }
+
+    &--offline {
+      background-color: #A1A1AA;
+    }
+
+    &--away {
+      background-color: #F59E0B;
+    }
+
+    &--busy {
+      background-color: #DC2626;
+    }
+  }
+
+  // Adjust status position for square avatars
+  &--square &__status {
+    bottom: -2px;
+    right: -2px;
+  }
+}

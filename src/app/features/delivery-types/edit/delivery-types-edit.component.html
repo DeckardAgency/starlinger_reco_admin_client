@@ -1,0 +1,183 @@
+<div class="delivery-type-detail-page" (click)="closeDropdowns()">
+  <!-- Page Header with Breadcrumb -->
+  <ui-breadcrumbs
+    variant="page-header"
+    separator="chevron"
+    [items]="[
+      { label: 'Delivery types', route: '/admin/delivery-types' },
+      { label: isEditMode() ? 'Edit' : 'Add' }
+    ]"
+  ></ui-breadcrumbs>
+
+  <!-- Detail Header -->
+  <ui-detail-header
+    [title]="isEditMode() ? 'Edit delivery type' : 'New delivery type'"
+    [isEditMode]="isEditMode()"
+    [showSaveAndContinue]="true"
+    [showDiscard]="false"
+    (back)="onBack()"
+    (save)="onSave()"
+    (saveAndContinue)="onSaveAndContinue()"
+  ></ui-detail-header>
+
+  <!-- Delivery Type Details Card -->
+  <div class="detail-content">
+    <div class="form-card">
+      <h2 class="form-card__title">Delivery type details</h2>
+      <div class="form-card__content">
+        <!-- Toggles Row -->
+        <div class="toggles-row">
+          <ui-toggle
+            label="Active"
+            labelPosition="left"
+            [checked]="deliveryType().active"
+            (toggleChange)="toggleActive()">
+          </ui-toggle>
+          <ui-toggle
+            label="Ready for Shop"
+            labelPosition="left"
+            [checked]="deliveryType().readyForShop"
+            (toggleChange)="toggleReadyForShop()">
+          </ui-toggle>
+          <ui-toggle
+            label="Express"
+            labelPosition="left"
+            [checked]="deliveryType().express"
+            (toggleChange)="toggleExpress()">
+          </ui-toggle>
+          <ui-toggle
+            label="Enable Free Delivery"
+            labelPosition="left"
+            [checked]="deliveryType().enableFreeDelivery"
+            (toggleChange)="toggleEnableFreeDelivery()">
+          </ui-toggle>
+        </div>
+
+        <!-- Form Fields -->
+        <ui-form-field label="Name" layout="horizontal">
+          <input type="text" [value]="deliveryType().name" (input)="onNameChange($event)" placeholder="Enter name">
+        </ui-form-field>
+
+        <ui-form-field label="Gross factor" layout="horizontal">
+          <input type="text" [value]="formatNumber(deliveryType().grossFactor)" (input)="onGrossFactorChange($event)" placeholder="1,00">
+        </ui-form-field>
+
+        <ui-form-field label="Order" layout="horizontal">
+          <input type="text" [value]="deliveryType().order" (input)="onOrderChange($event)" placeholder="0">
+        </ui-form-field>
+      </div>
+    </div>
+
+    <!-- Tabs Section -->
+    <div class="tabs-section">
+      <div class="tabs-container">
+        <!-- Tab Headers -->
+        <div class="tabs-header">
+          <ui-tabs
+            [tabs]="tabs"
+            [activeTab]="activeTab()"
+            variant="underline"
+            (tabChange)="setActiveTab($event)">
+          </ui-tabs>
+          <div class="tabs-header__spacer"></div>
+          @if (activeTab() === 'documents') {
+            <button class="btn btn--outline" (click)="onAddDocument()">
+              <span>Add document</span>
+              <ui-icon name="plus" size="sm"></ui-icon>
+            </button>
+          }
+        </div>
+
+        <!-- Tab Content: Short Description -->
+        @if (activeTab() === 'description') {
+          <div class="tab-content tab-content--description">
+            <app-text-editor
+              [initialContent]="deliveryType().shortDescription"
+              placeholder="Start typing."
+              (contentChange)="onShortDescriptionChange($event)"
+            ></app-text-editor>
+          </div>
+        }
+
+        <!-- Tab Content: Documents -->
+        @if (activeTab() === 'documents') {
+          <div class="tab-content tab-content--table">
+            <ui-data-table
+              [columns]="documentColumns"
+              [data]="deliveryType().documents"
+            ></ui-data-table>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Templates -->
+  <ng-template #checkboxHeaderTemplate>
+    <ui-table-checkbox-selection
+      [isHeader]="true"
+      [isDropdownOpen]="isHeaderDropdownOpen()"
+      (dropdownToggle)="onHeaderDropdownToggle($event)"
+      (selectAll)="onSelectAllDocuments()"
+      (selectNone)="onSelectNoneDocuments()"
+    ></ui-table-checkbox-selection>
+  </ng-template>
+
+  <ng-template #checkboxTemplate let-row>
+    <ui-table-checkbox-selection
+      [isHeader]="false"
+      [checked]="row.selected"
+      (change)="toggleDocumentSelection(row)"
+    ></ui-table-checkbox-selection>
+  </ng-template>
+
+  <ng-template #actionsTemplate let-row>
+    <ui-table-actions-dropdown
+      [isOpen]="activeDocActionId() === row.id"
+      [row]="row"
+      [actions]="documentActions"
+      (toggle)="toggleDocumentActions(row.id)"
+      (actionClick)="onDocumentActionClick($event)"
+      (close)="closeDocActionsDropdown()"
+    ></ui-table-actions-dropdown>
+  </ng-template>
+
+  <!-- Rename Modal -->
+  <ui-modal
+    [isOpen]="isRenameModalOpen()"
+    (isOpenChange)="isRenameModalOpen.set($event)"
+    [showClose]="false"
+    size="sm"
+  >
+    <div class="rename-modal">
+      <div class="rename-modal__header">
+        <h3 class="rename-modal__title">Rename</h3>
+        <button class="rename-modal__close" (click)="cancelRename()">
+          <ui-icon name="close" size="md"></ui-icon>
+        </button>
+      </div>
+      <div class="rename-modal__body">
+        <input
+          type="text"
+          class="rename-modal__input"
+          [value]="renameValue()"
+          (input)="onRenameInputChange($event)"
+          (keyup.enter)="confirmRename()"
+        />
+      </div>
+      <div class="rename-modal__footer">
+        <button class="btn btn--ghost" (click)="cancelRename()">Cancel</button>
+        <button class="btn btn--primary" (click)="confirmRename()">
+          <span>OK</span>
+          <ui-icon name="check" size="sm" color="white"></ui-icon>
+        </button>
+      </div>
+    </div>
+  </ui-modal>
+
+  <!-- Mobile Sticky Footer -->
+  <ui-mobile-footer
+    (primaryClick)="onSave()"
+    (secondaryClick)="onSaveAndContinue()"
+  ></ui-mobile-footer>
+</div>

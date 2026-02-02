@@ -1,0 +1,154 @@
+<div class="contact-detail-page">
+  <!-- Page Header with Breadcrumb -->
+  <ui-breadcrumbs
+    variant="page-header"
+    separator="chevron"
+    [items]="[
+      { label: 'Contacts', route: '/admin/contacts' },
+      { label: isEditMode() ? 'Edit' : 'Add' }
+    ]"
+  ></ui-breadcrumbs>
+
+  <!-- Detail Header -->
+  <ui-detail-header
+    [title]="isEditMode() ? 'Contact detail' : 'New contact'"
+    [isEditMode]="isEditMode()"
+    [showSaveAndContinue]="true"
+    [showDiscard]="false"
+    (back)="onBack()"
+    (save)="onSave()"
+    (saveAndContinue)="onSaveAndContinue()"
+  ></ui-detail-header>
+
+  <!-- Loading / Error -->
+  @if (isLoading()) {
+    <div class="page-content">
+      <p class="loading-message">Loading contact…</p>
+    </div>
+  } @else if (loadError()) {
+    <div class="page-content">
+      <p class="error-message">{{ loadError() }}</p>
+      <button type="button" (click)="onBack()">Back to contacts</button>
+    </div>
+  } @else {
+  <!-- Form Cards -->
+  <div class="page-content">
+    <div class="form-cards">
+      <!-- Basic Information Card -->
+      <div class="form-card">
+        <h2 class="form-card__title">Basic information</h2>
+
+        <div class="form-card__toggles">
+          <ui-toggle
+            label="Billing"
+            labelPosition="left"
+            [checked]="isBilling()"
+            (toggleChange)="onBillingChange($event)">
+          </ui-toggle>
+          <ui-toggle
+            label="Is active"
+            labelPosition="left"
+            [checked]="isActive()"
+            (toggleChange)="onActiveChange($event)">
+          </ui-toggle>
+        </div>
+
+        <div class="form-card__fields">
+          <ui-form-field label="Account" layout="horizontal">
+            <div class="select-with-pill">
+              <span class="pill" *ngIf="contact().account">
+                <ui-icon name="close" size="xs"></ui-icon>
+                <span>{{ contact().account }}</span>
+              </span>
+              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+            </div>
+          </ui-form-field>
+
+          <ui-form-field label="Person title" layout="horizontal">
+            <div class="select-with-pill">
+              <span class="pill" *ngIf="contact().personTitle">
+                <ui-icon name="close" size="xs"></ui-icon>
+                <span>{{ contact().personTitle }}</span>
+              </span>
+              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+            </div>
+          </ui-form-field>
+
+          <ui-form-field label="First name" layout="horizontal">
+            <input type="text" [value]="contact().firstName" placeholder="First name">
+          </ui-form-field>
+
+          <ui-form-field label="Last name" layout="horizontal">
+            <input type="text" [value]="contact().lastName" placeholder="Last name">
+          </ui-form-field>
+
+          <ui-form-field label="Department" layout="horizontal">
+            <div class="select-with-pill">
+              <span class="pill" *ngIf="contact().department">
+                <ui-icon name="close" size="xs"></ui-icon>
+                <span>{{ contact().department }}</span>
+              </span>
+              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+            </div>
+          </ui-form-field>
+
+          <ui-form-field label="Date of birth" layout="horizontal">
+            <input type="text" [value]="formatValue(contact().dateOfBirth)" placeholder="–">
+          </ui-form-field>
+
+          <ui-form-field label="Support level" layout="horizontal">
+            <div class="select-field">
+              <input type="text" [value]="contact().supportLevel" placeholder="" readonly>
+              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+            </div>
+          </ui-form-field>
+
+          <ui-form-field label="Support person" layout="horizontal">
+            <div class="select-field">
+              <input type="text" [value]="contact().supportPerson" placeholder="" readonly>
+              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
+            </div>
+          </ui-form-field>
+        </div>
+      </div>
+
+      <!-- Contact Information Card -->
+      <div class="form-card">
+        <h2 class="form-card__title">Contact information</h2>
+
+        <div class="form-card__fields">
+          <ui-form-field label="Phone" layout="horizontal">
+            <input type="text" [value]="contact().phone" placeholder="Phone">
+          </ui-form-field>
+
+          <ui-form-field label="Other phone" layout="horizontal">
+            <input type="text" [value]="formatValue(contact().otherPhone)" placeholder="–">
+          </ui-form-field>
+
+          <ui-form-field label="Home phone" layout="horizontal">
+            <input type="text" [value]="formatValue(contact().homePhone)" placeholder="–">
+          </ui-form-field>
+
+          <ui-form-field label="Email" layout="horizontal">
+            <input type="text" [value]="contact().email" placeholder="Email">
+          </ui-form-field>
+
+          <ui-form-field label="Other email" layout="horizontal">
+            <input type="text" [value]="formatValue(contact().otherEmail)" placeholder="–">
+          </ui-form-field>
+
+          <ui-form-field label="Fax" layout="horizontal">
+            <input type="text" [value]="formatValue(contact().fax)" placeholder="–">
+          </ui-form-field>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Sticky Footer -->
+  <ui-mobile-footer
+    (primaryClick)="onSave()"
+    (secondaryClick)="onSaveAndContinue()"
+  ></ui-mobile-footer>
+  }
+</div>

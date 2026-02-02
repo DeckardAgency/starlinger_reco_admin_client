@@ -1,0 +1,59 @@
+<div class="performance-overview">
+    <div class="performance-overview__header">
+        <div class="performance-overview__title">
+            <ui-icon name="chart-line" size="md" color="#232323"></ui-icon>
+            <h2>Performance overview</h2>
+        </div>
+        <div class="performance-overview__date-range">
+            <form [formGroup]="dateRangeForm">
+                <app-date-picker
+                    formControlName="dateRange"
+                    [isRange]="true"
+                    [dateFormat]="'dd-MM-yyyy'"
+                    [rangePlaceholder]="'Select date range'"
+                    [storageKey]="'performance-overview-dates'">
+                </app-date-picker>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading state with shimmer -->
+    <div class="performance-overview__grid" *ngIf="isLoading">
+        <div class="performance-overview__card performance-overview__card--skeleton" *ngFor="let i of [1,2,3,4,5,6,7,8]">
+            <div class="skeleton skeleton--label"></div>
+            <div class="skeleton skeleton--value"></div>
+            <div class="skeleton skeleton--percentage"></div>
+        </div>
+    </div>
+
+    <!-- Error state -->
+    <div class="performance-overview__error" *ngIf="error && !isLoading">
+        <p>{{ error }}</p>
+        <ui-button variant="primary" size="md" (click)="loadPerformanceData()">Retry</ui-button>
+    </div>
+
+    <!-- Metrics grid -->
+    <div class="performance-overview__grid" *ngIf="!isLoading && !error">
+        <div class="performance-overview__card" *ngFor="let metric of metrics">
+            <div class="performance-overview__card-label">
+                <span>{{ metric.label }}</span>
+                <span class="performance-overview__help-icon" [title]="metric.infoTooltip">
+                    <ui-icon name="help-circle" size="sm" color="#232323"></ui-icon>
+                </span>
+            </div>
+            <div class="performance-overview__card-value" [ngClass]="{'performance-overview__card-value--currency': metric.value.toString().includes('€')}">
+                {{ metric.value }}
+            </div>
+            <div class="performance-overview__card-percentage"
+                 [ngClass]="{
+                   'performance-overview__card-percentage--up': metric.percentage > 0,
+                   'performance-overview__card-percentage--down': metric.percentage < 0,
+                   'performance-overview__card-percentage--neutral': metric.percentage === 0
+                 }">
+                <ui-icon *ngIf="metric.percentage > 0" name="trending-up" size="sm"></ui-icon>
+                <ui-icon *ngIf="metric.percentage < 0" name="trending-down" size="sm"></ui-icon>
+                <span>{{ metric.percentage | number:'1.2-2' }} %</span>
+            </div>
+        </div>
+    </div>
+</div>

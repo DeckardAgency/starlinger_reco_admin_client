@@ -1,0 +1,1119 @@
+// Admin Shared SCSS Partials
+// Import this file in admin page components to reduce code duplication
+
+// =============================================================================
+// Host Container Styles
+// =============================================================================
+@mixin admin-host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+@mixin admin-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: #f4f4f5;
+}
+
+// =============================================================================
+// Page Content
+// =============================================================================
+@mixin page-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: auto;
+}
+
+// =============================================================================
+// Table Container
+// =============================================================================
+@mixin table-container {
+  padding: 0 16px 16px 24px;
+  background: #f4f4f5;
+  flex: 1;
+}
+
+@mixin table-wrapper {
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+// =============================================================================
+// Data Table Overrides
+// =============================================================================
+@mixin data-table-overrides {
+  ::ng-deep .data-table {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+
+    &__table {
+      table-layout: fixed;
+    }
+
+    &__header-row,
+    &__header-cell {
+      background: white;
+    }
+
+    // Checkbox column alignment fix - reduce padding for first column
+    &__header-cell:first-child,
+    &__cell:first-child {
+      padding: 8px;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    // Actions column alignment fix - reduce padding for last column
+    &__header-cell:last-child,
+    &__cell:last-child {
+      padding: 8px;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    &__row {
+      background: transparent !important;
+
+      &:hover {
+        background: #fafafa !important;
+      }
+    }
+
+    &__cell {
+      background: transparent !important;
+    }
+  }
+}
+
+@mixin tabs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e4e4e7;
+}
+
+// =============================================================================
+// Inline Table (Inside Detail Pages)
+// =============================================================================
+@mixin inline-data-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th, td {
+    padding: 12px 16px;
+    text-align: left;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  th {
+    background: #fafafa;
+    font-weight: 500;
+    color: #71717a;
+    border-bottom: 1px solid #e4e4e7;
+  }
+
+  td {
+    color: #232323;
+    border-bottom: 1px solid #f4f4f5;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  tr:hover td {
+    background: #fafafa;
+  }
+}
+
+// =============================================================================
+// Customer/User Cell with Avatar
+// =============================================================================
+@mixin avatar-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@mixin avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f4f4f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #71717a;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// =============================================================================
+// Toggle Cell (Table)
+// =============================================================================
+@mixin toggle-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+}
+
+@mixin inline-toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: #e4e4e7;
+  border-radius: 10px;
+  transition: background-color 0.2s;
+
+  &--active {
+    background: #dc2626;
+  }
+
+  &__thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  &--active &__thumb {
+    transform: translateX(16px);
+  }
+}
+
+// =============================================================================
+// Page Footer
+// =============================================================================
+@mixin page-footer {
+  padding: 16px 16px 16px 24px;
+  background: #f4f4f5;
+  border-top: 1px solid #e4e4e7;
+}
+
+// =============================================================================
+// Button Styles
+// =============================================================================
+@mixin btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 8px 16px;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  background: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #232323;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background-color 0.2s, border-color 0.2s;
+
+  &:hover {
+    background-color: #f4f4f5;
+  }
+}
+
+@mixin btn-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+
+  svg, ui-icon {
+    flex-shrink: 0;
+  }
+}
+
+// =============================================================================
+// Detail Page Styles
+// =============================================================================
+
+@mixin detail-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: #f4f4f5;
+}
+
+@mixin form-card {
+  background: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  padding: 16px;
+
+  @media (max-width: 480px) {
+    padding: 12px;
+  }
+
+  &__title {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 18px;
+    color: #232323;
+    margin: 0 0 16px 0;
+  }
+
+  &__content, &__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    @media (max-width: 480px) {
+      gap: 12px;
+    }
+  }
+}
+
+@mixin select-with-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  box-sizing: border-box;
+  cursor: pointer;
+
+  .select-placeholder {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #71717a;
+    pointer-events: none;
+  }
+
+  .pill {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #18181b;
+    border-radius: 9999px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: #fafafa;
+    pointer-events: none;
+
+    &__remove {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      opacity: 0.8;
+      pointer-events: auto;
+      position: relative;
+      z-index: 20;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+  }
+
+  .select-chevron {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+}
+
+// Separate mixin for select-field to use with ::ng-deep
+@mixin select-with-pill-field {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0 !important;
+  cursor: pointer !important;
+  z-index: 10 !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+// =============================================================================
+// Rename Modal
+// =============================================================================
+@mixin rename-modal {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  &__title {
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+    color: #232323;
+    margin: 0;
+  }
+
+  &__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #f4f4f5;
+    }
+  }
+
+  &__body {
+    margin-bottom: 12px;
+  }
+
+  &__input {
+    width: 100%;
+    height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    background: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    color: #232323;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: #dc2626;
+    }
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+
+// =============================================================================
+// Data Table Transparent Overrides
+// =============================================================================
+@mixin data-table-transparent-overrides {
+  ::ng-deep .data-table {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+
+    &__header-row,
+    &__header-cell {
+      background: transparent;
+    }
+
+    &__row {
+      background: transparent !important;
+
+      &:hover {
+        background: #fafafa !important;
+      }
+    }
+
+    &__cell {
+      background: transparent !important;
+    }
+  }
+}
+
+// =============================================================================
+// Button Variants
+// =============================================================================
+@mixin btn-outline {
+  background: white;
+  border-color: #e4e4e7;
+}
+
+@mixin btn-primary {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: white;
+
+  &:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
+  }
+}
+
+@mixin btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: #71717a;
+
+  &:hover {
+    background: #f4f4f5;
+    color: #232323;
+  }
+}
+
+// =============================================================================
+// List Page Content Wrapper
+// Used for consistent padding and layout on list pages
+// =============================================================================
+@mixin list-page-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  flex: 1;
+}
+
+// =============================================================================
+// Tabs + Table Container Pattern
+// Used in: Dashboard History, Shop Orders, Manual Entries
+// =============================================================================
+@mixin tabs-table-container {
+  background: transparent;
+  border: 1px solid #E4E4E7;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+@mixin tabs-table-tabs {
+  width: 100%;
+
+  ::ng-deep .ui-tabs {
+    border-bottom: 1px solid #E4E4E7;
+
+    &__tab {
+      min-width: 221px;
+
+      &:focus {
+        outline: none;
+        box-shadow: none;
+      }
+
+      // Tablet
+      @media screen and (max-width: 1024px) {
+        min-width: 150px;
+      }
+    }
+
+    // Mobile - enable horizontal scroll on tabs container
+    @media screen and (max-width: 480px) {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      flex-wrap: nowrap;
+
+      // Hide scrollbar
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      .ui-tabs__tab {
+        flex: 0 0 auto;
+        min-width: 200px;
+      }
+    }
+  }
+}
+
+@mixin tabs-table-data-table {
+  ::ng-deep .data-table {
+    &__header-row,
+    &__header-cell {
+      background: white;
+    }
+
+    .data-table__row:last-child .data-table__cell {
+      border-bottom: none;
+    }
+  }
+}
+
+// Customer cell with avatar (used in tables)
+@mixin customer-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@mixin customer-name {
+  overflow: hidden;
+  color: #232323;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+// =============================================================================
+// Pill (dark pill with remove button for select fields)
+// =============================================================================
+@mixin pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 2px 6px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 100%), #232323;
+  border: 1px solid #656565;
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  color: #cacaca;
+
+  &__remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    z-index: 20;
+    pointer-events: auto !important;
+  }
+}
+
+// =============================================================================
+// Mobile Form Field Vertical Layout Override
+// =============================================================================
+@mixin form-field-mobile-vertical {
+  @media (max-width: 480px) {
+    ::ng-deep .ui-form-field--horizontal {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 8px !important;
+
+      .ui-form-field__label {
+        margin-bottom: 0 !important;
+      }
+    }
+  }
+}
+
+// =============================================================================
+// Search Input (simple search input with icon)
+// =============================================================================
+@mixin search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 346px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    flex: 1;
+  }
+}
+
+@mixin search-input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+@mixin search-input-field {
+  width: 100%;
+  height: 40px;
+  padding: 10px 12px 10px 36px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: #232323;
+  background: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  outline: none;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: #a1a1aa;
+  }
+
+  &:focus {
+    border-color: #dc2626;
+  }
+}
+
+// =============================================================================
+// Data Table No Headers (for log tables, etc.)
+// =============================================================================
+@mixin data-table-no-headers {
+  ::ng-deep .data-table {
+    // Add border-top with radius since headers are hidden
+    border-top: 1px solid #e4e4e7;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+
+    .data-table__row:first-child .data-table__cell:first-child {
+      border-top-left-radius: 8px;
+    }
+
+    .data-table__row:first-child .data-table__cell:last-child {
+      border-top-right-radius: 8px;
+    }
+
+    .data-table__row:last-child .data-table__cell {
+      border-bottom: none;
+    }
+  }
+}
+
+// =============================================================================
+// Detail Page Content Wrapper
+// Used for detail pages (order detail, entry detail, etc.)
+// =============================================================================
+@mixin detail-page-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  gap: 16px;
+
+  @media (max-width: 768px) {
+    padding: 12px;
+    gap: 12px;
+  }
+}
+
+// =============================================================================
+// Detail Page Header (with back button, title, badge, actions)
+// =============================================================================
+@mixin detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    @media (max-width: 480px) {
+      gap: 12px;
+    }
+  }
+
+  &__title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    color: #71717a;
+  }
+
+  &__title {
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1;
+    color: #232323;
+    margin: 0;
+
+    @media (max-width: 480px) {
+      font-size: 18px;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+      justify-content: flex-end;
+    }
+
+    @media (max-width: 480px) {
+      width: 100%;
+
+      .btn {
+        flex: 1;
+      }
+    }
+  }
+}
+
+// =============================================================================
+// Info Row (internal ref, date created, parts ordered)
+// =============================================================================
+@mixin detail-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e4e4e7;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  &__left,
+  &__right {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  &__right {
+    flex: 1;
+    justify-content: space-between;
+    margin-left: 24px;
+
+    @media (max-width: 768px) {
+      width: 100%;
+      margin-left: 0;
+    }
+
+    @media (max-width: 480px) {
+      gap: 12px;
+    }
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+  }
+
+  &__label {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1;
+    color: #71717a;
+
+    @media (max-width: 480px) {
+      font-size: 12px;
+    }
+  }
+
+  &__value {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1;
+    color: #232323;
+
+    @media (max-width: 480px) {
+      font-size: 12px;
+    }
+  }
+}
+
+// =============================================================================
+// Detail Form Cards (two-column layout)
+// =============================================================================
+@mixin detail-form-cards {
+  display: flex;
+  gap: 16px;
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+  }
+}
+
+// =============================================================================
+// Detail Section (with icon + title header)
+// =============================================================================
+@mixin detail-section {
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+
+    svg {
+      flex-shrink: 0;
+      color: #71717a;
+    }
+  }
+
+  &__title {
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 28px;
+    color: black;
+    margin: 0;
+
+    @media (max-width: 480px) {
+      font-size: 18px;
+    }
+  }
+}
+
+// =============================================================================
+// Expandable Group (machine groups, etc.)
+// =============================================================================
+@mixin expandable-group {
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background: white;
+    border-bottom: 1px solid #e4e4e7;
+
+    @media (max-width: 480px) {
+      padding: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: #232323;
+
+    svg {
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 480px) {
+      font-size: 14px;
+    }
+  }
+
+  &__toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #232323;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #f4f4f5;
+    }
+
+    svg {
+      flex-shrink: 0;
+    }
+  }
+
+  &__content {
+    background: transparent;
+    overflow-x: auto;
+  }
+}
+
+// =============================================================================
+// Actions Trigger Button (table row actions)
+// =============================================================================
+@mixin actions-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #f4f4f5;
+  }
+}
+
+// =============================================================================
+// Detail Page Form Styles (SINGLE SOURCE OF TRUTH)
+// Handles form fields AND toggles with consistent 120px label alignment
+// =============================================================================
+@mixin detail-form-styles {
+  // Form field label styling (128px is set via inline style from component, this just adds colors)
+  ::ng-deep .ui-form-field--horizontal {
+    .ui-form-field__label {
+      font-weight: 400;
+      color: #71717a;
+    }
+  }
+
+  // Toggle styling - use GRID to match form field alignment (133px matches form-field default)
+  ::ng-deep .ui-toggle {
+    display: grid !important;
+    grid-template-columns: 133px auto;
+    align-items: center;
+    gap: 16px;
+
+    .ui-toggle__label {
+      min-width: 133px !important;
+      font-weight: 400;
+      color: #71717a;
+    }
+  }
+
+  // Mobile: stack vertically
+  @media (max-width: 480px) {
+    ::ng-deep .ui-form-field--horizontal {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+
+      .ui-form-field__label {
+        min-width: unset;
+      }
+    }
+
+    ::ng-deep .ui-toggle {
+      display: inline-flex !important;
+      grid-template-columns: unset;
+
+      .ui-toggle__label {
+        min-width: unset;
+      }
+    }
+  }
+}
+
+// =============================================================================
+// Toggles Row (detail pages with toggle switches)
+// =============================================================================
+@mixin toggles-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 8px 0;
+
+  // Desktop: reset toggles to natural inline-flex (no grid constraint)
+  ::ng-deep .ui-toggle {
+    display: inline-flex !important;
+    grid-template-columns: unset !important;
+
+    .ui-toggle__label {
+      min-width: unset !important;
+    }
+  }
+
+  // Tablet: stack vertically with grid alignment to match form fields
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+
+    ::ng-deep .ui-toggle {
+      display: grid !important;
+      grid-template-columns: 133px 1fr !important;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+
+      .ui-toggle__label {
+        min-width: 133px !important;
+      }
+    }
+  }
+
+  // Mobile: keep grid for alignment with form fields
+  @media (max-width: 480px) {
+    ::ng-deep .ui-toggle {
+      display: grid !important;
+      grid-template-columns: 133px 1fr !important;
+    }
+  }
+}
+
+// Variant for toggles inside form cards (with border separator)
+@mixin form-card-toggles-row {
+  @include toggles-row;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e4e4e7;
+}

@@ -1,0 +1,43 @@
+<div [ngClass]="containerClasses">
+  <!-- Label -->
+  <label 
+    *ngIf="label" 
+    class="ui-form-field__label" 
+    [attr.for]="fieldId"
+    [style.width]="layout === 'horizontal' ? labelWidth : null"
+    [style.min-width]="layout === 'horizontal' ? labelWidth : null">
+    {{ label }}
+    <span *ngIf="required" class="ui-form-field__required">*</span>
+  </label>
+
+  <!-- Input wrapper -->
+  <div class="ui-form-field__wrapper">
+    <!-- Prefix slot -->
+    <div *ngIf="prefixTemplate" class="ui-form-field__prefix">
+      <ng-container *ngTemplateOutlet="prefixTemplate"></ng-container>
+    </div>
+
+    <!-- Main content slot (for input, select, etc.) -->
+    <ng-content></ng-content>
+
+    <!-- Suffix slot -->
+    <div *ngIf="suffixTemplate" class="ui-form-field__suffix">
+      <ng-container *ngTemplateOutlet="suffixTemplate"></ng-container>
+    </div>
+  </div>
+
+  <!-- Hint/Error container for horizontal layout -->
+  <div class="ui-form-field__messages" *ngIf="(hint && !error) || error">
+    <!-- Hint text -->
+    <span *ngIf="hint && !error" class="ui-form-field__hint">{{ hint }}</span>
+
+    <!-- Error text -->
+    <span *ngIf="error" class="ui-form-field__error">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" width="14" height="14">
+        <circle cx="8" cy="8" r="6.667" stroke="currentColor" stroke-width="1.33"/>
+        <path d="M10 6L6 10M6 6l4 4" stroke="currentColor" stroke-width="1.33" stroke-linecap="round"/>
+      </svg>
+      {{ error }}
+    </span>
+  </div>
+</div>

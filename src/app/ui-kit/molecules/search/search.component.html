@@ -1,0 +1,126 @@
+<div
+  class="ui-search"
+  [class.ui-search--sm]="size === 'sm'"
+  [class.ui-search--md]="size === 'md'"
+  [class.ui-search--lg]="size === 'lg'"
+  [class.ui-search--dark]="variant === 'dark'"
+  [class.ui-search--disabled]="disabled"
+  [class.ui-search--focused]="showDropdown || showRecent"
+>
+  <!-- Search Input -->
+  <div class="ui-search__input-wrapper">
+    <ui-icon
+      *ngIf="showIcon"
+      name="search"
+      class="ui-search__icon"
+      size="sm"
+    ></ui-icon>
+
+    <input
+      #searchInput
+      type="text"
+      class="ui-search__input"
+      [placeholder]="placeholder"
+      [(ngModel)]="query"
+      (input)="onInput()"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
+      (keydown)="onKeydown($event)"
+      [disabled]="disabled"
+      autocomplete="off"
+    />
+
+    <ui-spinner
+      *ngIf="loading"
+      size="sm"
+      class="ui-search__spinner"
+    ></ui-spinner>
+
+    <button
+      *ngIf="showClear && query.length > 0 && !loading"
+      type="button"
+      class="ui-search__clear"
+      (click)="clearQuery()"
+      aria-label="Clear search"
+    >
+      <ui-icon name="close" size="sm"></ui-icon>
+    </button>
+
+    <span
+      *ngIf="showShortcut && query.length === 0 && !loading"
+      class="ui-search__shortcut"
+    >
+      <kbd>⌘</kbd><kbd>{{ shortcutKey }}</kbd>
+    </span>
+  </div>
+
+  <!-- Recent Searches Dropdown -->
+  <div *ngIf="showRecent && recentSearches.length > 0" class="ui-search__dropdown">
+    <div class="ui-search__dropdown-header">
+      <span class="ui-search__dropdown-title">Recent Searches</span>
+      <button
+        type="button"
+        class="ui-search__dropdown-clear"
+        (click)="onClearRecentSearches()"
+      >
+        Clear
+      </button>
+    </div>
+
+    <ul class="ui-search__list">
+      <li
+        *ngFor="let recent of recentSearches; let i = index; trackBy: trackByRecent"
+        class="ui-search__item"
+        [class.ui-search__item--active]="i === activeIndex"
+        (click)="selectRecentSearch(recent)"
+        (mouseenter)="activeIndex = i"
+      >
+        <ui-icon name="clock" size="sm" class="ui-search__item-icon"></ui-icon>
+        <span class="ui-search__item-label">{{ recent.query }}</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Suggestions Dropdown -->
+  <div *ngIf="showDropdown && !loading" class="ui-search__dropdown">
+    <!-- Loading state -->
+    <div *ngIf="loading" class="ui-search__loading">
+      <ui-shimmer *ngFor="let i of [1,2,3]" width="100%" height="40px"></ui-shimmer>
+    </div>
+
+    <!-- Results -->
+    <ul *ngIf="hasResults" class="ui-search__list">
+      <li
+        *ngFor="let suggestion of displayedSuggestions; let i = index; trackBy: trackBySuggestion"
+        class="ui-search__item"
+        [class.ui-search__item--active]="i === activeIndex"
+        (click)="selectSuggestion(suggestion)"
+        (mouseenter)="activeIndex = i"
+      >
+        <ui-icon
+          *ngIf="suggestion.icon"
+          [name]="suggestion.icon"
+          size="sm"
+          class="ui-search__item-icon"
+        ></ui-icon>
+
+        <div class="ui-search__item-content">
+          <span class="ui-search__item-label">{{ suggestion.label }}</span>
+          <span *ngIf="suggestion.description" class="ui-search__item-description">
+            {{ suggestion.description }}
+          </span>
+        </div>
+
+        <span *ngIf="suggestion.type" class="ui-search__item-type">
+          {{ suggestion.type }}
+        </span>
+      </li>
+    </ul>
+
+    <!-- Empty state -->
+    <div *ngIf="!hasResults && query.length >= minLength" class="ui-search__empty">
+      <ui-icon name="search" size="lg" class="ui-search__empty-icon"></ui-icon>
+      <span class="ui-search__empty-text">{{ emptyMessage }}</span>
+    </div>
+  </div>
+</div>

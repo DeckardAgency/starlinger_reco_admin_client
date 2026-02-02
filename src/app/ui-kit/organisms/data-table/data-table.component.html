@@ -1,0 +1,46 @@
+<div class="data-table">
+  <table class="data-table__table">
+    <thead class="data-table__header" *ngIf="showHeaders">
+      <tr class="data-table__header-row">
+        <th
+          *ngFor="let column of columns"
+          class="data-table__header-cell"
+          [class.data-table__header-cell--sortable]="column.sortable"
+          [style.width]="column.width"
+          (click)="column.headerTemplate ? null : onSort(column)">
+          <ng-container *ngIf="column.headerTemplate; else defaultHeader">
+            <ng-container *ngTemplateOutlet="column.headerTemplate"></ng-container>
+          </ng-container>
+          <ng-template #defaultHeader>
+            <div class="data-table__header-content">
+              <span class="data-table__header-text">{{ column.label }}</span>
+              <svg *ngIf="column.sortable" [class]="getSortIconClass(column)" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4.66666 10.0001L7.99999 13.3334L11.3333 10.0001M4.66666 6.00008L7.99999 2.66675L11.3333 6.00008" stroke="#232323" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </ng-template>
+        </th>
+      </tr>
+    </thead>
+    <tbody class="data-table__body">
+      <tr *ngIf="data.length === 0" class="data-table__row data-table__row--empty">
+        <td class="data-table__cell data-table__cell--empty" [attr.colspan]="columns.length">
+          {{ emptyMessage }}
+        </td>
+      </tr>
+      <tr *ngFor="let row of data" class="data-table__row">
+        <td
+          *ngFor="let column of columns"
+          class="data-table__cell"
+          [style.width]="column.width">
+          <ng-container *ngIf="column.template; else defaultCell">
+            <ng-container *ngTemplateOutlet="column.template; context: { $implicit: row }"></ng-container>
+          </ng-container>
+          <ng-template #defaultCell>
+            <span class="data-table__cell-text">{{ getCellValue(row, column) }}</span>
+          </ng-template>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

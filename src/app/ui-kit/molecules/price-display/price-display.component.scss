@@ -1,0 +1,122 @@
+.ui-price-display {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+
+  // Label
+  &__label {
+    font-size: 12px;
+    color: #71717A;
+  }
+
+  // Values container
+  &__values {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  // Original price (crossed out)
+  &__original {
+    text-decoration: line-through;
+    color: #A1A1AA;
+  }
+
+  // Current price
+  &__current {
+    font-weight: 600;
+    color: #18181B;
+  }
+
+  // Discount badge
+  &__discount {
+    padding: 2px 6px;
+    background-color: #DCFCE7;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #16A34A;
+  }
+
+  // Size variants
+  &--sm {
+    .ui-price-display__label {
+      font-size: 11px;
+    }
+
+    .ui-price-display__original {
+      font-size: 12px;
+    }
+
+    .ui-price-display__current {
+      font-size: 14px;
+    }
+
+    .ui-price-display__discount {
+      font-size: 10px;
+    }
+  }
+
+  &--md {
+    .ui-price-display__original {
+      font-size: 14px;
+    }
+
+    .ui-price-display__current {
+      font-size: 18px;
+    }
+  }
+
+  &--lg {
+    .ui-price-display__label {
+      font-size: 13px;
+    }
+
+    .ui-price-display__original {
+      font-size: 16px;
+    }
+
+    .ui-price-display__current {
+      font-size: 24px;
+    }
+
+    .ui-price-display__discount {
+      font-size: 13px;
+      padding: 3px 8px;
+    }
+  }
+
+  &--xl {
+    .ui-price-display__label {
+      font-size: 14px;
+    }
+
+    .ui-price-display__original {
+      font-size: 18px;
+    }
+
+    .ui-price-display__current {
+      font-size: 32px;
+    }
+
+    .ui-price-display__discount {
+      font-size: 14px;
+      padding: 4px 10px;
+    }
+  }
+
+  // Highlight modifier
+  &--highlight {
+    .ui-price-display__current {
+      color: #DC2626;
+    }
+  }
+
+  // Has discount modifier
+  &--has-discount {
+    .ui-price-display__current {
+      color: #DC2626;
+    }
+  }
+}

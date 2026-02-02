@@ -1,0 +1,55 @@
+<div *ngIf="visible" [ngClass]="toastClasses" [@slideInOut] role="alert">
+  <!-- Icon -->
+  <div *ngIf="showIcon" class="ui-toast__icon">
+    <!-- Success icon -->
+    <svg *ngIf="type === 'success'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M6.5 10l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+
+    <!-- Error icon -->
+    <svg *ngIf="type === 'error'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M12.5 7.5l-5 5M7.5 7.5l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+
+    <!-- Warning icon -->
+    <svg *ngIf="type === 'warning'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none">
+      <path d="M8.575 3.217L1.517 15a1.667 1.667 0 001.425 2.5h14.116a1.667 1.667 0 001.425-2.5L11.425 3.217a1.667 1.667 0 00-2.85 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M10 7.5v3.333M10 14.167h.008" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+
+    <!-- Info icon -->
+    <svg *ngIf="type === 'info'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M10 13.333V10M10 6.667h.008" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <!-- Content -->
+  <div class="ui-toast__content">
+    <p *ngIf="title" class="ui-toast__title">{{ title }}</p>
+    <p *ngIf="message" class="ui-toast__message">{{ message }}</p>
+    <ng-content></ng-content>
+  </div>
+
+  <!-- Action button -->
+  <button *ngIf="actionLabel" class="ui-toast__action-btn" (click)="onAction()">
+    {{ actionLabel }}
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+      <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
+  <!-- Actions slot -->
+  <div class="ui-toast__actions">
+    <ng-content select="[toastAction]"></ng-content>
+  </div>
+
+  <!-- Close button -->
+  <button *ngIf="showClose" class="ui-toast__close" (click)="close()" aria-label="Close notification">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+      <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+</div>

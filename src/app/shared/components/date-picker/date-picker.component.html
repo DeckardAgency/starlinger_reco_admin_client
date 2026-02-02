@@ -1,0 +1,54 @@
+<div class="date-picker-container">
+    <!-- Datepicker input button -->
+    <button
+            class="date-picker-button"
+            type="button"
+            [disabled]="disabled()"
+            [attr.aria-expanded]="showCalendar()"
+            [attr.aria-haspopup]="true"
+            [attr.aria-label]="isRange ? 'Select date range' : 'Select date'"
+            (click)="toggleCalendar($event)">
+
+        <span class="date-picker-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M6.66667 1.66667V4.16667M13.3333 1.66667V4.16667M2.91667 7.57501H17.0833M17.5 7.08334V14.1667C17.5 16.6667 16.25 18.3333 13.3333 18.3333H6.66667C3.75 18.3333 2.5 16.6667 2.5 14.1667V7.08334C2.5 4.58334 3.75 2.91667 6.66667 2.91667H13.3333C16.25 2.91667 17.5 4.58334 17.5 7.08334Z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M13.0791 11.4167H13.0866M13.0791 13.9167H13.0866M9.99579 11.4167H10.0041M9.99579 13.9167H10.0041M6.91162 11.4167H6.91995M6.91162 13.9167H6.91995" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </span>
+        <span class="date-picker-value" [class.date-picker-placeholder]="isRange ? !startDate() : !selectedDate()">
+            {{ displayValue() }}
+        </span>
+    </button>
+
+    <!-- Backdrop when calendar is open -->
+    <div
+            class="backdrop"
+            *ngIf="showCalendar()"
+            (click)="onCloseCalendar()"
+            aria-hidden="true">
+    </div>
+
+    <!-- Calendar dropdown -->
+    <ng-container *ngIf="showCalendar()">
+        <div
+                class="calendar-wrapper"
+                [class.calendar-wrapper--single-month]="monthsToShow === 1"
+                [@calendarAnimation]="showCalendar() ? 'visible' : 'hidden'">
+
+            <app-calendar
+                    [isRange]="isRange"
+                    [selectedDate]="selectedDate()"
+                    [startDate]="startDate()"
+                    [endDate]="endDate()"
+                    [minDate]="minDate"
+                    [maxDate]="maxDate"
+                    [disableFutureDates]="disableFutureDates"
+                    [disablePastDates]="disablePastDates"
+                    [monthsToShow]="monthsToShow"
+                    (dateSelected)="onDateSelected($event)"
+                    (rangeSelected)="onRangeSelected($event)"
+                    (closeCalendar)="onCloseCalendar()">
+            </app-calendar>
+        </div>
+    </ng-container>
+</div>

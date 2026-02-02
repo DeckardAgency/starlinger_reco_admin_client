@@ -1,0 +1,32 @@
+<div [ngClass]="tabsClasses()" role="tablist">
+  <button
+    *ngFor="let tab of tabs; trackBy: trackByTabId"
+    class="ui-tabs__tab"
+    [class.ui-tabs__tab--active]="isActive(tab.id)"
+    [class.ui-tabs__tab--disabled]="tab.disabled"
+    [disabled]="tab.disabled"
+    [attr.aria-selected]="isActive(tab.id)"
+    [attr.aria-controls]="'panel-' + tab.id"
+    [attr.id]="'tab-' + tab.id"
+    role="tab"
+    (click)="selectTab(tab)"
+  >
+    <!-- Checkmark icon (shown on active tab for underline variant) -->
+    <svg *ngIf="isActive(tab.id) && variant === 'underline'" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" class="ui-tabs__tab-checkmark">
+      <path d="M13.3333 4L6.00001 11.3333L2.66667 8" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+
+    <!-- Label -->
+    <span class="ui-tabs__tab-label">{{ tab.label }}</span>
+
+    <!-- Badge -->
+    <span *ngIf="tab.badge !== undefined" class="ui-tabs__tab-badge">
+      {{ tab.badge }}
+    </span>
+  </button>
+</div>
+
+<!-- Tab content slot -->
+<div class="ui-tabs__content">
+  <ng-content></ng-content>
+</div>

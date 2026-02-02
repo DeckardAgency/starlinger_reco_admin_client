@@ -1,0 +1,36 @@
+<div class="ui-textarea" [class.ui-textarea--disabled]="disabled">
+  <!-- Label -->
+  <label *ngIf="label" class="ui-textarea__label" [attr.for]="name">
+    {{ label }}
+    <span *ngIf="required" class="ui-textarea__required">*</span>
+  </label>
+
+  <!-- Textarea field -->
+  <textarea
+    [ngClass]="textareaClasses()"
+    [value]="value()"
+    [placeholder]="placeholder"
+    [disabled]="disabled"
+    [readonly]="readonly"
+    [required]="required"
+    [name]="name"
+    [attr.id]="name"
+    [rows]="rows"
+    [attr.maxlength]="maxLength"
+    (input)="onInput($event)"
+    (focus)="onFocus($event)"
+    (blur)="onBlur($event)"
+  ></textarea>
+
+  <!-- Footer -->
+  <div class="ui-textarea__footer">
+    <!-- Hint or Error text -->
+    <span *ngIf="hint && !error" class="ui-textarea__hint">{{ hint }}</span>
+    <span *ngIf="error" class="ui-textarea__error">{{ error }}</span>
+
+    <!-- Character count -->
+    <span *ngIf="showCharCount" class="ui-textarea__count" [class.ui-textarea__count--limit]="maxLength && charCount() >= maxLength">
+      {{ charCount() }}<span *ngIf="maxLength"> / {{ maxLength }}</span>
+    </span>
+  </div>
+</div>

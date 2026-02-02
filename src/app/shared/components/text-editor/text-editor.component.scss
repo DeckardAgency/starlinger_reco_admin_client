@@ -1,0 +1,236 @@
+// text-editor.component.scss
+.text-editor {
+  display: flex;
+  flex-direction: column;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  background-color: #fff;
+  width: 100%;
+  height: auto;
+  min-height: 250px;
+
+  // Modifier: Fullscreen mode
+  &--fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    border-radius: 0;
+    border: none;
+  }
+
+  // Element: Toolbar
+  &__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 16px;
+    background-color: #ffffff;
+    gap: 8px;
+    align-items: center;
+
+    @media (max-width: 768px) {
+      padding: 12px;
+      gap: 6px;
+    }
+  }
+
+  // Element: Toolbar group
+  &__toolbar-group {
+    display: flex;
+    align-items: center;
+    margin-right: 16px;
+    border-right: 1px solid #e4e4e7;
+    padding-right: 16px;
+    gap: 4px;
+
+    @media (max-width: 768px) {
+      margin-right: 8px;
+      padding-right: 8px;
+    }
+
+    &:last-child {
+      border-right: none;
+      margin-right: 0;
+      padding-right: 0;
+    }
+  }
+
+  // Element: Toolbar button
+  &__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background-color: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    @media (max-width: 480px) {
+      width: 28px;
+      height: 28px;
+    }
+
+    &:hover {
+      background-color: #f4f4f5;
+    }
+
+    &:active {
+      background-color: #e4e4e7;
+    }
+
+    // Modifier: Active state
+    &--active {
+      background-color: #e4e4e7;
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+
+      @media (max-width: 480px) {
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  // Element: Icon inside button
+  &__icon {
+    font-style: normal;
+    font-size: 16px;
+
+    // Modifiers for specific icons
+    &--bold {
+      font-weight: bold;
+    }
+
+    &--italic {
+      font-style: italic;
+    }
+
+    &--underline {
+      text-decoration: underline;
+    }
+
+    &--align-left, &--align-center, &--align-right, &--align-justify {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+  }
+
+  // Element: Dropdown selects
+  &__select {
+    height: 32px;
+    padding: 0 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #232323;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    background-color: #fff;
+    cursor: pointer;
+    outline: none;
+
+    @media (max-width: 480px) {
+      height: 28px;
+      font-size: 12px;
+      padding: 0 6px;
+    }
+
+    &:focus {
+      border-color: #dc2626;
+    }
+  }
+
+  // Element: Content area
+  &__content {
+    background-color: #f4f4f5;
+    flex: 1;
+    padding: 16px;
+    min-height: 164px;
+    overflow-y: auto;
+    outline: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #232323;
+
+    @media (max-width: 480px) {
+      padding: 12px;
+      min-height: 120px;
+    }
+
+    // Placeholder styling
+    &:empty:before {
+      content: attr(placeholder);
+      color: #71717a;
+      pointer-events: none;
+    }
+
+    // Content styling
+    h1, h2, h3 {
+      margin-top: 0.5em;
+      margin-bottom: 0.5em;
+      font-family: 'Inter', sans-serif;
+      color: #232323;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    p {
+      margin-top: 0.5em;
+      margin-bottom: 0.5em;
+    }
+
+    blockquote {
+      border-left: 3px solid #e4e4e7;
+      margin-left: 1em;
+      padding-left: 1em;
+      color: #71717a;
+    }
+
+    pre {
+      background-color: #e4e4e7;
+      padding: 8px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: monospace;
+    }
+
+    ul, ol {
+      padding-left: 2em;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    a {
+      color: #dc2626;
+      text-decoration: underline;
+    }
+  }
+}

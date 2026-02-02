@@ -1,0 +1,71 @@
+<nav *ngIf="totalPages() > 1" class="ui-pagination" [ngClass]="'ui-pagination--' + size" aria-label="Pagination">
+  <!-- First page button -->
+  <button
+    *ngIf="showFirstLast"
+    class="ui-pagination__button ui-pagination__button--first"
+    [disabled]="isFirstPage()"
+    (click)="goToFirst()"
+    aria-label="Go to first page"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+      <path d="M11 12L7 8l4-4M5 4v8" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
+  <!-- Previous button -->
+  <button
+    class="ui-pagination__button ui-pagination__button--prev"
+    [disabled]="isFirstPage()"
+    (click)="goToPrevious()"
+    aria-label="Go to previous page"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+      <path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
+  <!-- Page numbers -->
+  <div class="ui-pagination__pages">
+    <!-- Show ellipsis before if needed -->
+    <span *ngIf="visiblePages()[0] > 1" class="ui-pagination__ellipsis">...</span>
+
+    <button
+      *ngFor="let page of visiblePages(); trackBy: trackByPage"
+      class="ui-pagination__page"
+      [class.ui-pagination__page--active]="page === currentPage"
+      [attr.aria-current]="page === currentPage ? 'page' : null"
+      (click)="goToPage(page)"
+    >
+      {{ page }}
+    </button>
+
+    <!-- Show ellipsis after if needed -->
+    <span *ngIf="visiblePages()[visiblePages().length - 1] < totalPages()" class="ui-pagination__ellipsis">...</span>
+  </div>
+
+  <!-- Next button -->
+  <button
+    class="ui-pagination__button ui-pagination__button--next"
+    [disabled]="isLastPage()"
+    (click)="goToNext()"
+    aria-label="Go to next page"
+  >
+    <span>Next</span>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+      <path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
+  <!-- Last page button -->
+  <button
+    *ngIf="showFirstLast"
+    class="ui-pagination__button ui-pagination__button--last"
+    [disabled]="isLastPage()"
+    (click)="goToLast()"
+    aria-label="Go to last page"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+      <path d="M5 12l4-4-4-4M11 4v8" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+</nav>

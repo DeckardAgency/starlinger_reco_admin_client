@@ -1,0 +1,126 @@
+<div class="users-page" (click)="closeDropdown()">
+  <!-- Page Header with Breadcrumb -->
+  <ui-breadcrumbs
+    variant="page-header"
+    separator="line"
+    [items]="[{ label: 'Users' }]"
+  ></ui-breadcrumbs>
+
+  <main class="page-content">
+    <!-- List Header -->
+    <ui-list-header
+      title="Users"
+      icon="users"
+      [count]="totalItems()"
+      addButtonLabel="Add user"
+      [showSearch]="true"
+      [showExportButton]="true"
+      [searchQuery]="searchQuery()"
+      (searchQueryChange)="onSearchChange($event)"
+      (add)="onAddUser()"
+      (export)="onExport()"
+    ></ui-list-header>
+
+    <!-- Filters Row -->
+    <div class="filters-row">
+      <div class="filter-group">
+        <label class="filter-label">Company:</label>
+        <select
+          class="filter-select"
+          [ngModel]="hasClientFilter"
+          (ngModelChange)="onHasClientFilterChange($event)"
+        >
+          @for (option of hasClientOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Role:</label>
+        <select
+          class="filter-select"
+          [ngModel]="roleFilter"
+          (ngModelChange)="onRoleFilterChange($event)"
+        >
+          @for (option of roleOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-container">
+      @if (isLoading()) {
+        <p>Loading users...</p>
+      } @else if (filteredUsers().length === 0) {
+        <p class="empty-state">No users found</p>
+      } @else {
+        <ui-data-table
+          [columns]="columns"
+          [data]="filteredUsers()"
+          [sortColumn]="sortColumn()"
+          [sortDirection]="sortDirection()"
+          (sort)="onSortChange($event)"
+        ></ui-data-table>
+      }
+    </div>
+
+    <!-- Table Footer -->
+    <ui-table-footer
+      [showingFrom]="1"
+      [showingTo]="filteredUsers().length"
+      [totalItems]="totalItems()"
+    ></ui-table-footer>
+  </main>
+
+  <!-- Checkbox Header Template -->
+  <ng-template #checkboxHeaderTemplate>
+    <ui-table-checkbox-selection
+      [isHeader]="true"
+      [isDropdownOpen]="isHeaderDropdownOpen()"
+      (dropdownToggle)="onHeaderDropdownToggle($event)"
+      (selectAll)="onSelectAll()"
+      (selectNone)="onSelectNone()"
+    ></ui-table-checkbox-selection>
+  </ng-template>
+
+  <!-- Checkbox Template -->
+  <ng-template #checkboxTemplate let-row>
+    <ui-table-checkbox-selection
+      [isHeader]="false"
+      [checked]="row.selected"
+      (change)="toggleUserSelection(row)"
+    ></ui-table-checkbox-selection>
+  </ng-template>
+
+  <!-- Name Template -->
+  <ng-template #nameTemplate let-row>
+    <span>{{ getFullName(row) }}</span>
+  </ng-template>
+
+  <!-- Role Template -->
+  <ng-template #roleTemplate let-row>
+    <span>{{ formatRole(row.role) }}</span>
+  </ng-template>
+
+  <!-- Actions Template -->
+  <ng-template #actionsTemplate let-row>
+    <ui-table-actions-dropdown
+      [isOpen]="openDropdownId() === row.id"
+      [row]="row"
+      [actions]="tableActions"
+      (toggle)="toggleDropdown(row.id, $event)"
+      (actionClick)="onActionClick($event)"
+      (close)="closeDropdown()"
+    ></ui-table-actions-dropdown>
+  </ng-template>
+</div>
+
+<!-- Mobile Footer -->
+<ui-mobile-footer
+  primaryLabel="Add user"
+  primaryIcon="plus"
+  [showSecondary]="false"
+  (primaryClick)="onAddUser()"
+></ui-mobile-footer>

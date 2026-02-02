@@ -1,0 +1,15 @@
+<div class="mobile-footer">
+  <button 
+    *ngIf="showSecondary"
+    class="mobile-footer__btn mobile-footer__btn--secondary" 
+    (click)="onSecondaryClick()">
+    <span>{{ secondaryLabel }}</span>
+    <ui-icon [name]="secondaryIcon" size="sm"></ui-icon>
+  </button>
+  <button 
+    class="mobile-footer__btn mobile-footer__btn--primary" 
+    (click)="onPrimaryClick()">
+    <span>{{ primaryLabel }}</span>
+    <ui-icon [name]="primaryIcon" size="sm" color="white"></ui-icon>
+  </button>
+</div>

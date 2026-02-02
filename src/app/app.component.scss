@@ -1,0 +1,55 @@
+.app {
+  display: block;
+  background-color: #f4f4f5;
+  font-family: "Inter", serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+
+  // Auth pages (login, forgot-password) - full viewport
+  &--auth-page {
+    height: 100vh;
+    overflow: hidden;
+    background-color: transparent;
+
+    // Override main content margins when on auth pages
+    .app__main {
+      margin-left: 0;
+      margin-top: 0;
+      height: 100vh;
+      min-height: unset;
+      overflow: hidden;
+    }
+  }
+
+  // 404 page - no scroll
+  &--404-page {
+    height: 100vh;
+    overflow: hidden;
+
+    .app__main {
+      overflow: hidden;
+    }
+  }
+
+  &__main {
+    margin-left: 250px;
+    margin-top: 80px; // Account for top-bar height
+    transition: margin-left 0.3s ease;
+    min-height: calc(100vh - 80px);
+    background-color: #f4f4f5;
+
+    @media screen and (max-width: 834px) {
+      margin-left: 0px;
+    }
+
+    @media screen and (max-width: 576px) {
+      margin-top: 80px; // Account for mobile top-bar height
+      padding-top: 16px; // Spacing between navbar and content
+      min-height: calc(100vh - 80px - 16px);
+    }
+
+    &--collapsed {
+      margin-left: 80px; // Match the collapsed sidebar width
+    }
+  }
+}

@@ -1,0 +1,44 @@
+.ui-spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &__svg {
+    width: 100%;
+    height: 100%;
+    animation: spin 0.75s linear infinite;
+  }
+
+  &__track {
+    stroke: currentColor;
+    opacity: 0.25;
+  }
+
+  &__head {
+    stroke: currentColor;
+    stroke-dasharray: 60;
+    stroke-dashoffset: 45;
+    stroke-linecap: round;
+  }
+
+  &__sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

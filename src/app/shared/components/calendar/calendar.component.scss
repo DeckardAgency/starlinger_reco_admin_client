@@ -1,0 +1,372 @@
+// Colors
+$red-primary: #dc2626;
+$red-light: #fef2f2;
+$grey-bg: #f4f4f5;
+$grey-border: #e4e4e7;
+$grey-text: #71717a;
+$dark-text: #18181b;
+
+.calendar-container {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  width: 100%;
+  max-width: 620px;
+  position: relative;
+  z-index: 1;
+
+  // Single month variant
+  &--single-month {
+    max-width: 310px;
+  }
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    width: 100%;
+    padding: 0;
+    box-shadow: none;
+    border-radius: 0;
+    box-sizing: border-box;
+  }
+}
+
+.calendar-grid {
+  display: flex;
+  gap: 24px;
+
+  &--single-month {
+    justify-content: center;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  @media (max-width: 480px) {
+    gap: 12px;
+  }
+}
+
+.month {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+.month-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 0 4px;
+
+  @media (max-width: 768px) {
+    margin-bottom: 12px;
+    padding: 0;
+  }
+}
+
+.month-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: $dark-text;
+
+  @media (max-width: 768px) {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+.nav-button {
+  background: white;
+  border: 1px solid $grey-border;
+  cursor: pointer;
+  color: $grey-text;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+
+  svg {
+    display: block;
+  }
+
+  &:hover {
+    color: $dark-text;
+    border-color: #d4d4d8;
+    background-color: $grey-bg;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $red-primary;
+    outline-offset: 2px;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  @media (max-width: 480px) {
+    width: 32px;
+    height: 32px;
+    padding: 4px;
+  }
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 4px;
+
+  @media (max-width: 480px) {
+    margin-bottom: 2px;
+  }
+}
+
+.weekday {
+  font-size: 12px;
+  font-weight: 500;
+  color: $grey-text;
+  padding: 8px 0;
+
+  @media (max-width: 480px) {
+    font-size: 11px;
+    padding: 6px 0;
+  }
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 2px;
+  width: 100%;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    gap: 1px;
+  }
+}
+
+.day {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.1s ease;
+  position: relative;
+  font-weight: 400;
+
+  @media (max-width: 480px) {
+    height: 36px;
+    font-size: 13px;
+    border-radius: 4px;
+  }
+
+  &.current-month {
+    color: $dark-text;
+  }
+
+  &.other-month {
+    color: #d4d4d8;
+    pointer-events: none;
+  }
+
+  // Today - subtle grey background
+  &.today {
+    background-color: $grey-bg;
+    font-weight: 500;
+  }
+
+  // Selected dates - RED background
+  &.selected, &.range-start, &.range-end {
+    background-color: $red-primary !important;
+    color: white !important;
+    font-weight: 500;
+    z-index: 2;
+    border-radius: 6px;
+  }
+
+  // Active range start (when selecting)
+  &.active-range-start {
+    background-color: $red-primary !important;
+    color: white !important;
+    font-weight: 500;
+    z-index: 3;
+  }
+
+  // Days in between - grey background
+  &.in-range {
+    background-color: $grey-bg;
+    border-radius: 0;
+    z-index: 1;
+
+    &:not(.range-start):not(.range-end) {
+      color: $dark-text;
+    }
+  }
+
+  // Hovered date during selection
+  &.hovered {
+    background-color: #e4e4e7;
+    color: $dark-text;
+  }
+
+  // Range start with in-range styling
+  &.range-start {
+    border-radius: 6px 0 0 6px;
+    
+    &.range-end {
+      border-radius: 6px;
+    }
+  }
+
+  // Range end styling
+  &.range-end {
+    border-radius: 0 6px 6px 0;
+  }
+
+  // Disabled dates
+  &.disabled {
+    color: #d4d4d8;
+    cursor: not-allowed;
+    pointer-events: none;
+
+    &:hover {
+      background-color: transparent;
+    }
+  }
+
+  // Hover state for non-selected dates
+  &:hover:not(.selected):not(.other-month):not(.range-start):not(.range-end):not(.disabled) {
+    background-color: $grey-bg;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px $red-primary;
+    z-index: 3;
+  }
+
+  &:focus:not(:focus-visible) {
+    box-shadow: none;
+  }
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid $grey-border;
+  gap: 12px;
+}
+
+.clear-button, .apply-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .button-text {
+    line-height: 1;
+  }
+
+  svg {
+    display: block;
+  }
+}
+
+.clear-button {
+  background-color: white;
+  color: $grey-text;
+  border: 1px solid $grey-border;
+
+  &:hover {
+    background-color: $grey-bg;
+    border-color: #d4d4d8;
+    color: $dark-text;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $red-primary;
+    outline-offset: 2px;
+  }
+}
+
+.apply-button {
+  background-color: $red-primary;
+  color: white;
+
+  &:hover {
+    background-color: #b91c1c;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $red-primary;
+    outline-offset: 2px;
+  }
+
+  &[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Animation for fade in
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Make calendar visually appear with animation
+.calendar-container {
+  animation: fadeIn 0.15s ease-out;
+}
+
+// Screenreader-only text
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

@@ -1,0 +1,25 @@
+<div class="actions-cell">
+  <button #triggerBtn class="actions-trigger" (click)="onToggle($event)" type="button">
+    <ui-icon name="more-vertical" size="sm"></ui-icon>
+  </button>
+
+  @if (isOpen) {
+    <div class="dropdown-menu" [style.top]="dropdownStyle.top" [style.left]="dropdownStyle.left" (click)="$event.stopPropagation()">
+      @for (action of actions; track action.id) {
+        <button
+          class="dropdown-menu__item"
+          [class.dropdown-menu__item--danger]="action.variant === 'danger'"
+          [class.dropdown-menu__item--disabled]="action.disabled"
+          (click)="onActionClick(action, $event)"
+          [disabled]="action.disabled"
+          type="button"
+        >
+          @if (action.icon) {
+            <ui-icon [name]="action.icon" size="sm"></ui-icon>
+          }
+          <span>{{ action.label }}</span>
+        </button>
+      }
+    </div>
+  }
+</div>

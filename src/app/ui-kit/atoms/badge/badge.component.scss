@@ -1,0 +1,119 @@
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  border-radius: 9999px;
+  white-space: nowrap;
+
+  // Sizes
+  &--sm {
+    padding: 2px 10px;
+    font-size: 11px;
+    line-height: 16px;
+  }
+
+  &--md {
+    padding: 4px 10px;
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  &--lg {
+    padding: 6px 12px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  // Rounded (pill style)
+  &--rounded {
+    border-radius: 9999px;
+  }
+
+  // Variants
+  &--default {
+    background-color: #F4F4F5;
+    color: #52525B;
+  }
+
+  &--primary {
+    background-color: #FEE2E2;
+    color: #DC2626;
+  }
+
+  &--secondary {
+    background-color: #E4E4E7;
+    color: #52525B;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    font-weight: 600;
+  }
+
+  &--success {
+    background-color: #237804;
+    color: #F0FDF4;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 600;
+  }
+
+  &--warning {
+    background-color: #AD7F00;
+    color: #FEFCE8;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 600;
+  }
+
+  &--danger {
+    background-color: #DC2626;
+    color: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 600;
+  }
+
+  &--info {
+    background-color: #3B0075;
+    color: #FAF5FF;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 600;
+  }
+
+  &--dark {
+    background-color: #18181B;
+    color: #FAFAFA;
+    font-weight: 500;
+  }
+
+  // Dot indicator
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+    flex-shrink: 0;
+  }
+
+  &--with-dot {
+    &.ui-badge--default .ui-badge__dot {
+      background-color: #71717A;
+    }
+
+    &.ui-badge--primary .ui-badge__dot {
+      background-color: #DC2626;
+    }
+
+    &.ui-badge--success .ui-badge__dot {
+      background-color: #16A34A;
+    }
+
+    &.ui-badge--warning .ui-badge__dot {
+      background-color: #D97706;
+    }
+
+    &.ui-badge--danger .ui-badge__dot {
+      background-color: #DC2626;
+    }
+
+    &.ui-badge--info .ui-badge__dot {
+      background-color: #2563EB;
+    }
+  }
+}

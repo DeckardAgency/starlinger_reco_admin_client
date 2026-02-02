@@ -1,0 +1,60 @@
+<div class="modal-overlay" *ngIf="isOpen" @modalOverlay (click)="onClose()">
+    <div class="modal" @modalContent (click)="$event.stopPropagation()">
+        <div class="modal__header modal__header--danger">
+            <h2 class="modal__title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                Cancel {{ itemType === 'inquiry' ? 'Inquiry' : 'Order' }}
+            </h2>
+            <button class="modal__close" (click)="onClose()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M15 5L5 15M5 5L15 15" stroke="#71717A" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="modal__body">
+            <div class="modal__order-info" *ngIf="itemNumber">
+                <span class="modal__order-label">{{ itemType === 'inquiry' ? 'Inquiry' : 'Order' }}:</span>
+                <span class="modal__order-number">{{ itemNumber }}</span>
+            </div>
+
+            <div class="modal__warning">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 6.66667V10M10 13.3333H10.0083M17.5 10C17.5 14.1421 14.1421 17.5 10 17.5C5.85786 17.5 2.5 14.1421 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5C14.1421 2.5 17.5 5.85786 17.5 10Z" stroke="#DC2626" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>This action cannot be undone. The customer will be notified.</span>
+            </div>
+
+            <form [formGroup]="cancellationForm">
+                <div class="form-group">
+                    <label class="form-label" for="cancellationReason">Reason for Cancellation <span class="required">*</span></label>
+                    <textarea
+                        id="cancellationReason"
+                        class="form-textarea"
+                        formControlName="cancellationReason"
+                        [placeholder]="'Please provide a reason for canceling this ' + (itemType === 'inquiry' ? 'inquiry' : 'order') + '...'"
+                        rows="4"
+                        [class.form-textarea--error]="hasError('cancellationReason')">
+                    </textarea>
+                    <span class="form-error" *ngIf="hasError('cancellationReason')">
+                        {{ getErrorMessage('cancellationReason') }}
+                    </span>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal__footer">
+            <button class="btn btn--secondary" (click)="onClose()" [disabled]="saving">
+                Keep {{ itemType === 'inquiry' ? 'Inquiry' : 'Order' }}
+            </button>
+            <button class="btn btn--danger" (click)="onSubmit()" [disabled]="saving">
+                <span *ngIf="saving" class="btn__spinner"></span>
+                {{ saving ? 'Canceling...' : 'Cancel ' + (itemType === 'inquiry' ? 'Inquiry' : 'Order') }}
+            </button>
+        </div>
+    </div>
+</div>

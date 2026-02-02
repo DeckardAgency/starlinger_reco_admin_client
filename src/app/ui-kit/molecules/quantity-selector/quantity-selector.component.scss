@@ -1,0 +1,130 @@
+.ui-quantity-selector {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #E4E4E7;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  overflow: hidden;
+
+  &--disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  // Sizes
+  &--sm {
+    height: 32px;
+
+    .ui-quantity-selector__btn {
+      width: 32px;
+    }
+
+    .ui-quantity-selector__input,
+    .ui-quantity-selector__value {
+      width: 40px;
+      font-size: 13px;
+    }
+  }
+
+  &--md {
+    height: 40px;
+
+    .ui-quantity-selector__btn {
+      width: 40px;
+    }
+
+    .ui-quantity-selector__input,
+    .ui-quantity-selector__value {
+      width: 56px;
+      font-size: 14px;
+    }
+  }
+
+  &--lg {
+    height: 48px;
+
+    .ui-quantity-selector__btn {
+      width: 48px;
+    }
+
+    .ui-quantity-selector__input,
+    .ui-quantity-selector__value {
+      width: 72px;
+      font-size: 16px;
+    }
+  }
+
+  // Button
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background-color: #F4F4F5;
+    color: #18181B;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover:not(:disabled) {
+      background-color: #E4E4E7;
+    }
+
+    &:active:not(:disabled) {
+      background-color: #D4D4D8;
+    }
+
+    &:disabled {
+      color: #A1A1AA;
+      cursor: not-allowed;
+    }
+
+    &--decrement {
+      border-right: 1px solid #E4E4E7;
+    }
+
+    &--increment {
+      border-left: 1px solid #E4E4E7;
+    }
+  }
+
+  // Input
+  &__input {
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-weight: 500;
+    color: #18181B;
+    outline: none;
+
+    // Remove number input spinners
+    -moz-appearance: textfield;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    &:focus {
+      background-color: #FAFAFA;
+    }
+
+    &:disabled {
+      color: #A1A1AA;
+    }
+  }
+
+  // Value (when input is hidden)
+  &__value {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-weight: 500;
+    color: #18181B;
+  }
+}
