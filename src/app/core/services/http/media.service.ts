@@ -61,4 +61,24 @@ export class MediaService {
     getMediaItems(): Observable<any> {
         return this.http.get<any>(this.apiUrl, this.httpOptions);
     }
+
+    /**
+     * Update a media item (e.g. rename)
+     */
+    updateMediaItem(id: string, data: Partial<MediaItem>): Observable<MediaItem> {
+        return this.http.patch<MediaItem>(`${this.apiUrl}/${id}`, data, {
+            headers: new HttpHeaders({
+                'Content-Type': 'application/merge-patch+json',
+                'Accept': 'application/ld+json'
+            })
+        });
+    }
+
+    /**
+     * Download a file as a blob (avoids CORS issues by using HttpClient)
+     */
+    downloadFile(url: string): Observable<Blob> {
+        const fullUrl = url.startsWith('http') ? url : `${environment.apiBaseUrl}${url}`;
+        return this.http.get(fullUrl, { responseType: 'blob' });
+    }
 }

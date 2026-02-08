@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, signal, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, signal, computed, HostBinding } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface TabItem {
@@ -12,6 +12,13 @@ export interface TabItem {
 export type TabsVariant = 'default' | 'pills' | 'underline';
 export type TabsSize = 'sm' | 'md' | 'lg';
 
+/**
+ * Tabs component with CSS custom properties for styling customization.
+ *
+ * Available CSS custom properties (set on parent or via inputs):
+ * --tabs-border-bottom: Bottom border (default: 1px solid #E4E4E7 for underline)
+ * --tabs-height: Tab height (default: auto, 56px for underline)
+ */
 @Component({
   selector: 'ui-tabs',
   standalone: true,
@@ -25,6 +32,16 @@ export class TabsComponent {
   @Input() variant: TabsVariant = 'default';
   @Input() size: TabsSize = 'md';
   @Input() fullWidth = false;
+
+  // Styling inputs
+  @Input() borderBottom?: string;
+  @Input() tabHeight?: string;
+
+  @HostBinding('style.--tabs-border-bottom')
+  get borderBottomStyle() { return this.borderBottom; }
+
+  @HostBinding('style.--tabs-height')
+  get tabHeightStyle() { return this.tabHeight; }
 
   @Input()
   set activeTab(value: string) {

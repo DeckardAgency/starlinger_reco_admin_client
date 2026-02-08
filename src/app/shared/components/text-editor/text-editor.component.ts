@@ -1,5 +1,5 @@
 // text-editor.component.ts
-import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild, HostListener } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnInit, OnChanges, SimpleChanges, Output, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -9,7 +9,7 @@ import { FormsModule } from '@angular/forms';
     templateUrl: './text-editor.component.html',
     styleUrls: ['./text-editor.component.scss']
 })
-export class TextEditorComponent implements OnInit {
+export class TextEditorComponent implements OnInit, OnChanges {
     @Input() placeholder: string = 'Start typing.';
     @Input() initialContent: string | null = '';
     @Output() contentChange = new EventEmitter<string>();
@@ -43,9 +43,22 @@ export class TextEditorComponent implements OnInit {
     isUnderline: boolean = false;
     currentAlignment: string = 'left';
 
+    private initialized = false;
+
     constructor() {}
 
+    ngOnChanges(changes: SimpleChanges): void {
+        if (changes['initialContent'] && this.initialized && !changes['initialContent'].firstChange) {
+            const newContent = changes['initialContent'].currentValue || '';
+            const currentContent = this.editorElement.nativeElement.innerHTML;
+            if (newContent && !currentContent) {
+                this.editorElement.nativeElement.innerHTML = newContent;
+            }
+        }
+    }
+
     ngOnInit(): void {
+        this.initialized = true;
         if (this.initialContent) {
             this.editorElement.nativeElement.innerHTML = this.initialContent;
         }

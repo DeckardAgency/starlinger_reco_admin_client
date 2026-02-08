@@ -220,18 +220,43 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
     } else if (event.action.id === 'clone') {
       console.log('Clone discount:', discount);
     } else if (event.action.id === 'delete') {
-      console.log('Delete discount:', discount);
+      this.deleteDiscount(discount);
+      return;
     }
+    this.closeDropdown();
+  }
+
+  private deleteDiscount(discount: DiscountRow): void {
+    if (!confirm(`Are you sure you want to delete "${discount.name}"?`)) {
+      this.closeDropdown();
+      return;
+    }
+    this.discountService.deleteDiscount(String(discount.id)).subscribe({
+      next: () => {
+        this.discounts.update(list => list.filter(d => d.id !== discount.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting discount:', error)
+    });
     this.closeDropdown();
   }
 
   onBulkDelete(): void {
     const selected = this.discounts().filter(d => d.selected);
-    console.log('Bulk delete discounts:', selected);
-    // Remove selected discounts (mock implementation)
-    const remaining = this.discounts().filter(d => !d.selected);
-    this.discounts.set(remaining);
-    this.selectAll.set(false);
+    if (selected.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selected.length} discount(s)?`)) return;
+
+    const deleteOps = selected.map(d =>
+      this.discountService.deleteDiscount(String(d.id)).toPromise()
+    );
+    Promise.all(deleteOps).then(() => {
+      this.discounts.update(list => list.filter(d => !d.selected));
+      this.selectAll.set(false);
+      this.cdr.markForCheck();
+    }).catch(error => {
+      console.error('Error bulk deleting discounts:', error);
+      this.loadDiscounts();
+    });
   }
 
   onHeaderDropdownToggle(isOpen: boolean): void {

@@ -4,9 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
-import { Contact } from '@core/models/account.model';
-import { UserService } from '@core/services/http/user.service';
-import { User } from '@core/models';
+import { ContactService } from '@core/services/http/contact.service';
+import { ClientService } from '@core/services/http/client.service';
+import { Contact } from '@core/models/contact.model';
+import { forkJoin } from 'rxjs';
 
 // Consolidated components
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -36,7 +37,8 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
 export class ContactsListComponent implements OnInit, AfterViewInit {
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
-  private userService = inject(UserService);
+  private contactService = inject(ContactService);
+  private clientService = inject(ClientService);
 
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
   @ViewChild('phoneTemplate') phoneTemplate!: TemplateRef<any>;
@@ -107,11 +109,25 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
   private loadContacts(): void {
     this.isLoading.set(true);
 
-    // Filter to only show users WITH a client (company employees)
-    this.userService.getUsers({ page: 1, itemsPerPage: 100, hasClient: true }).subscribe({
-      next: (response) => {
-        const items = (response.member || []).map(u => this.mapUserToContact(u));
-        this.contacts.set(items);
+    // Load contacts and accounts in parallel
+    forkJoin({
+      contacts: this.contactService.getContacts(1, undefined, undefined, { itemsPerPage: '100' }),
+      accounts: this.clientService.getClients(1, 'name', 'asc')
+    }).subscribe({
+      next: ({ contacts, accounts }) => {
+        // Create account lookup map (client IDs are UUID strings)
+        const accountMap = new Map<string, string>();
+        accounts.clients.forEach(client => {
+          accountMap.set(client.id, client.name);
+        });
+
+        // Resolve account names for each contact
+        const contactsWithAccount = contacts.contacts.map(c => ({
+          ...c,
+          account: c.accountId ? accountMap.get(c.accountId) || '' : ''
+        }));
+
+        this.contacts.set(contactsWithAccount);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
@@ -122,18 +138,6 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
         this.cdr.markForCheck();
       }
     });
-  }
-
-  private mapUserToContact(user: User): Contact {
-    return {
-      id: user.id,
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
-      account: user.client?.name || '',
-      accountId: user.client ? (user.client as { id?: string }).id as unknown as number : undefined,
-      email: user.email || '',
-      phone: (user as { phone?: string }).phone || ''
-    };
   }
 
   private initColumns(): void {
@@ -189,8 +193,24 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
     if (event.action.id === 'edit') {
       this.router.navigate(['/admin/contacts', contact.id, 'edit']);
     } else if (event.action.id === 'delete') {
-      console.log('Delete contact:', contact);
+      this.deleteContact(contact);
+      return;
     }
+    this.closeDropdown();
+  }
+
+  private deleteContact(contact: Contact): void {
+    if (!confirm(`Are you sure you want to delete "${contact.firstName} ${contact.lastName}"?`)) {
+      this.closeDropdown();
+      return;
+    }
+    this.contactService.deleteContact(contact.id).subscribe({
+      next: () => {
+        this.contacts.update(list => list.filter(c => c.id !== contact.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting contact:', error)
+    });
     this.closeDropdown();
   }
 

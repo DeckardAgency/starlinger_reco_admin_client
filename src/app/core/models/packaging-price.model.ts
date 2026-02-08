@@ -1,9 +1,9 @@
 export interface PackagingPrice {
   id: string;
-  name: string;
-  sizeFrom: number;
-  sizeTo: number;
-  priceBase: number;
+  name?: string;
+  sizeFrom: string | null;
+  sizeTo: string | null;
+  priceBase: string;
   legacyId?: number;
   createdAt?: string;
   updatedAt?: string;

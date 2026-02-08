@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map, catchError, of } from 'rxjs';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { Observable, map, catchError, of, tap } from 'rxjs';
 import { environment } from '@env/environment';
 
 export interface InquiryUser {
@@ -186,6 +186,30 @@ export class InquiryService {
    */
   getInquiry(id: string): Observable<Inquiry> {
     return this.http.get<Inquiry>(`${this.apiUrl}/${id}`);
+  }
+
+  /**
+   * Update an inquiry
+   */
+  updateInquiry(id: string, updateData: Partial<Inquiry>): Observable<Inquiry> {
+    const options = {
+      headers: new HttpHeaders({
+        'Content-Type': 'application/merge-patch+json',
+        'Accept': 'application/ld+json'
+      })
+    };
+
+    return this.http.patch<Inquiry>(
+      `${this.apiUrl}/${id}`,
+      updateData,
+      options
+    ).pipe(
+      tap(response => console.log('Inquiry updated:', response)),
+      catchError(error => {
+        console.error('Error updating inquiry:', error);
+        throw error;
+      })
+    );
   }
 
   /**

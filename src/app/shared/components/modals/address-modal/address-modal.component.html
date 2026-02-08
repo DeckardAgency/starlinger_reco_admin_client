@@ -1,0 +1,80 @@
+<div class="modal-overlay" *ngIf="isOpen" @modalOverlay (click)="onClose()">
+  <div class="modal" @modalContent (click)="$event.stopPropagation()">
+    <div class="modal__header">
+      <h2 class="modal__title">{{ title }}</h2>
+      <button class="modal__close" (click)="onClose()" [disabled]="saving">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M15 5L5 15M5 5L15 15" stroke="#71717A" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal__body">
+      <form [formGroup]="addressForm" (ngSubmit)="onSave()">
+        <div class="form-fields">
+          <ui-form-field label="Street" [error]="getError('street')" [required]="true">
+            <input
+              type="text"
+              formControlName="street"
+              placeholder="Enter street address"
+              [class.has-error]="hasError('street')"
+            >
+          </ui-form-field>
+
+          <ui-form-field label="City" [error]="getError('city')" [required]="true">
+            <input
+              type="text"
+              formControlName="city"
+              placeholder="Enter city"
+              [class.has-error]="hasError('city')"
+            >
+          </ui-form-field>
+
+          <ui-form-field label="Country" [error]="getError('country')" [required]="true">
+            <input
+              type="text"
+              formControlName="country"
+              placeholder="Enter country"
+              [class.has-error]="hasError('country')"
+            >
+          </ui-form-field>
+
+          <div class="toggle-fields">
+            <ui-toggle
+              label="Billing address"
+              labelPosition="left"
+              labelMinWidth="120px"
+              labelColor="#71717a"
+              [checked]="addressForm.get('isBilling')?.value"
+              (toggleChange)="onBillingChange($event)">
+            </ui-toggle>
+
+            <ui-toggle
+              label="Delivery address"
+              labelPosition="left"
+              labelMinWidth="120px"
+              labelColor="#71717a"
+              [checked]="addressForm.get('isDelivery')?.value"
+              (toggleChange)="onDeliveryChange($event)">
+            </ui-toggle>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal__footer">
+      <button class="btn btn--secondary" type="button" (click)="onClose()" [disabled]="saving">
+        Cancel
+      </button>
+      <button
+        class="btn btn--primary"
+        type="button"
+        (click)="onSave()"
+        [disabled]="saving"
+      >
+        <span *ngIf="saving" class="btn__spinner"></span>
+        {{ saving ? 'Saving...' : (isEditMode ? 'Update' : 'Add') }}
+      </button>
+    </div>
+  </div>
+</div>

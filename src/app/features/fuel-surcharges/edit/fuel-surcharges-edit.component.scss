@@ -23,12 +23,10 @@
   gap: 16px;
 }
 
-@include admin.detail-form-styles;
-
 .select-with-pill {
   @include admin.select-with-pill;
-}
 
-::ng-deep .select-with-pill .select-field {
-  @include admin.select-with-pill-field;
+  .select-field {
+    @include admin.select-with-pill-field;
+  }
 }

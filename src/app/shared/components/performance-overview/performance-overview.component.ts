@@ -157,13 +157,6 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
                 infoTooltip: 'Total number of orders placed in your shop'
             },
             {
-                label: 'Manual inquiries',
-                value: data.manualInquiries.value,
-                percentage: data.manualInquiries.percentageChange,
-                isIncreasing: data.manualInquiries.trend === 'up',
-                infoTooltip: 'Inquiries created manually by shop administrators'
-            },
-            {
                 label: 'Active inquiries',
                 value: data.activeInquiries.value,
                 percentage: data.activeInquiries.percentageChange,
@@ -211,7 +204,6 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
     private setDefaultMetrics() {
         this.metrics = [
             { label: 'Shop orders', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Total number of orders placed in your shop' },
-            { label: 'Manual inquiries', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Inquiries created manually by shop administrators' },
             { label: 'Active inquiries', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Inquiries that are currently in process' },
             { label: 'Cancelled inquiries', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Inquiries that were cancelled' },
             { label: 'Active carts', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Shopping carts that are currently active' },

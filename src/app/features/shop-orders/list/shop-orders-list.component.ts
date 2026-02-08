@@ -295,7 +295,17 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   }
 
   onDelete(order: ShopOrder): void {
-    console.log('Delete order:', order);
+    if (!confirm(`Are you sure you want to delete order "${order.internalRef}"?`)) {
+      this.closeDropdown();
+      return;
+    }
+    this.orderService.deleteOrder(String(order.id)).subscribe({
+      next: () => {
+        this.allOrders.update(list => list.filter(o => o.id !== order.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting order:', error)
+    });
     this.closeDropdown();
   }
 

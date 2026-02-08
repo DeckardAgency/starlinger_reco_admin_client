@@ -154,7 +154,7 @@ export class PaymentTypesListComponent implements OnInit, AfterViewInit {
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
       { key: 'id', label: 'ID', sortable: false, width: '112px' },
       { key: 'name', label: 'Name', sortable: false },
-      { key: 'active', label: 'Active', sortable: false, width: '192px', template: this.activeTemplate },
+      { key: 'isActive', label: 'Active', sortable: false, width: '192px', template: this.activeTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
@@ -204,16 +204,36 @@ export class PaymentTypesListComponent implements OnInit, AfterViewInit {
   }
 
   onDelete(paymentType: PaymentType): void {
-    console.log('Delete payment type:', paymentType);
+    if (!confirm(`Are you sure you want to delete "${paymentType.name}"?`)) {
+      this.closeDropdown();
+      return;
+    }
+    this.paymentTypeService.deletePaymentType(String(paymentType.id)).subscribe({
+      next: () => {
+        this.paymentTypes.update(list => list.filter(p => p.id !== paymentType.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting payment type:', error)
+    });
     this.closeDropdown();
   }
 
   onBulkDelete(): void {
     const selected = this.paymentTypes().filter(p => p.selected);
-    console.log('Bulk delete payment types:', selected);
-    const remaining = this.paymentTypes().filter(p => !p.selected);
-    this.paymentTypes.set(remaining);
-    this.selectAll.set(false);
+    if (selected.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selected.length} payment type(s)?`)) return;
+
+    const deleteOps = selected.map(p =>
+      this.paymentTypeService.deletePaymentType(String(p.id)).toPromise()
+    );
+    Promise.all(deleteOps).then(() => {
+      this.paymentTypes.update(list => list.filter(p => !p.selected));
+      this.selectAll.set(false);
+      this.cdr.markForCheck();
+    }).catch(error => {
+      console.error('Error bulk deleting payment types:', error);
+      this.loadPaymentTypes();
+    });
   }
 
   onHeaderDropdownToggle(isOpen: boolean): void {
@@ -244,10 +264,15 @@ export class PaymentTypesListComponent implements OnInit, AfterViewInit {
   }
 
   toggleActive(paymentType: PaymentType, value: boolean): void {
-    const updated = this.paymentTypes().map(p =>
-      p.id === paymentType.id ? { ...p, active: value } : p
-    );
-    this.paymentTypes.set(updated);
+    this.paymentTypeService.updatePaymentType(String(paymentType.id), { isActive: value }).subscribe({
+      next: () => {
+        this.paymentTypes.update(list => list.map(p =>
+          p.id === paymentType.id ? { ...p, isActive: value } : p
+        ));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error toggling active:', error)
+    });
   }
 
   onPageChange(page: number): void {

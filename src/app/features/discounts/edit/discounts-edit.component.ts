@@ -15,7 +15,10 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
 import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-footer.component';
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
+import { CalendarComponent } from '@app/ui-kit/molecules/calendar/calendar.component';
 import { DiscountService } from '@core/services/http/discount.service';
+import { AccountGroupService } from '@core/services/http/account-group.service';
+import { ClientService } from '@core/services/http/client.service';
 
 interface DiscountDetail {
   id: string;
@@ -63,7 +66,8 @@ const EMPTY_DISCOUNT: DiscountDetail = {
     MobileFooterComponent,
     TableFooterComponent,
     TableActionsDropdownComponent,
-    DataTableComponent
+    DataTableComponent,
+    CalendarComponent
   ],
   templateUrl: './discounts-edit.component.html',
   styleUrls: ['./discounts-edit.component.scss'],
@@ -79,6 +83,16 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   discount = signal<DiscountDetail>({ ...EMPTY_DISCOUNT });
   isEditMode = signal(false);
   isLoading = signal(false);
+
+  // Validation state
+  touched = signal<Record<string, boolean>>({});
+  errors = computed(() => {
+    const discount = this.discount();
+    const errs: Record<string, string> = {};
+    if (!discount.name?.trim()) errs['name'] = 'Name is required';
+    return errs;
+  });
+  isValid = computed(() => Object.keys(this.errors()).length === 0);
 
   // Products table
   products = signal<DiscountProduct[]>([]);
@@ -96,20 +110,15 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   // Dropdown state
   openDropdownId = signal<string | null>(null);
 
-  // Account options (mock data)
-  accountGroupOptions = [
-    { value: 'group1', label: 'VIP Clients' },
-    { value: 'group2', label: 'Standard Clients' },
-    { value: 'group3', label: 'Wholesale Partners' }
-  ];
+  // Calendar state
+  showDateFromCalendar = signal(false);
+  showDateToCalendar = signal(false);
+  dateFromDate = signal<Date | null>(null);
+  dateToDate = signal<Date | null>(null);
 
-  accountOptions = [
-    { value: 'acc1', label: 'Recycling team Gmbh' },
-    { value: 'acc2', label: 'Rodomsko recycling' },
-    { value: 'acc3', label: 'General recycling group' },
-    { value: 'acc4', label: 'ABC Industries' },
-    { value: 'acc5', label: 'XYZ Manufacturing' }
-  ];
+  // Account options (loaded from API)
+  accountGroupOptions = signal<{ value: string; label: string }[]>([]);
+  accountOptions = signal<{ value: string; label: string }[]>([]);
 
   // Selected values (for select fields)
   selectedAccountGroup = '';
@@ -124,10 +133,14 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private discountService: DiscountService
+    private discountService: DiscountService,
+    private accountGroupService: AccountGroupService,
+    private clientService: ClientService
   ) {}
 
   ngOnInit(): void {
+    this.loadDropdownOptions();
+
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       this.discountId = params['id'] || null;
       this.isEditMode.set(!!this.discountId && this.discountId !== 'new');
@@ -178,6 +191,8 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
           accountGroups: discountAny.accountGroups || [],
           accounts: discountAny.accounts || []
         });
+        this.dateFromDate.set(this.parseDateString(discount.dateValidFrom || ''));
+        this.dateToDate.set(this.parseDateString(discount.dateValidTo || ''));
         // Load products if available
         if (discountAny.products) {
           this.products.set(discountAny.products as DiscountProduct[]);
@@ -197,9 +212,44 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     // Products are loaded with discount data
   }
 
+  private loadDropdownOptions(): void {
+    this.accountGroupService.getAccountGroups(1, 100).subscribe({
+      next: (response) => {
+        this.accountGroupOptions.set(
+          (response.member || []).map(g => ({ value: g.id, label: g.name }))
+        );
+        this.cdr.markForCheck();
+      },
+      error: (err) => console.error('Error loading account groups:', err)
+    });
+
+    this.clientService.getClients(1, 'name', 'asc').subscribe({
+      next: (response) => {
+        this.accountOptions.set(
+          (response.clients || []).map(c => ({ value: c.id, label: c.name }))
+        );
+        this.cdr.markForCheck();
+      },
+      error: (err) => console.error('Error loading accounts:', err)
+    });
+  }
+
   // Navigation
   onBack(): void {
     this.router.navigate(['/admin/discounts/list']);
+  }
+
+  // Validation helpers
+  markAllTouched(): void {
+    this.touched.set({ name: true });
+  }
+
+  markFieldTouched(field: string): void {
+    this.touched.update(t => ({ ...t, [field]: true }));
+  }
+
+  getError(field: string): string {
+    return this.touched()[field] ? (this.errors()[field] || '') : '';
   }
 
   // Form handlers
@@ -209,14 +259,70 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
 
   onNameChange(value: string): void {
     this.discount.update(d => ({ ...d, name: value }));
+    this.markFieldTouched('name');
   }
 
-  onDateFromChange(value: string): void {
-    this.discount.update(d => ({ ...d, dateFrom: value }));
+  toggleDateFromCalendar(event?: Event): void {
+    event?.stopPropagation();
+    this.showDateToCalendar.set(false);
+    this.showDateFromCalendar.update(v => !v);
   }
 
-  onDateToChange(value: string): void {
-    this.discount.update(d => ({ ...d, dateTo: value }));
+  toggleDateToCalendar(event?: Event): void {
+    event?.stopPropagation();
+    this.showDateFromCalendar.set(false);
+    this.showDateToCalendar.update(v => !v);
+  }
+
+  onDateFromSelected(date: Date): void {
+    this.dateFromDate.set(date);
+    const isoString = this.formatDateToISO(date);
+    this.discount.update(d => ({ ...d, dateFrom: isoString }));
+    this.showDateFromCalendar.set(false);
+  }
+
+  onDateToSelected(date: Date): void {
+    this.dateToDate.set(date);
+    const isoString = this.formatDateToISO(date);
+    this.discount.update(d => ({ ...d, dateTo: isoString }));
+    this.showDateToCalendar.set(false);
+  }
+
+  clearDateFrom(event: Event): void {
+    event.stopPropagation();
+    this.dateFromDate.set(null);
+    this.discount.update(d => ({ ...d, dateFrom: '' }));
+    this.showDateFromCalendar.set(false);
+  }
+
+  clearDateTo(event: Event): void {
+    event.stopPropagation();
+    this.dateToDate.set(null);
+    this.discount.update(d => ({ ...d, dateTo: '' }));
+    this.showDateToCalendar.set(false);
+  }
+
+  formatDateDisplay(dateStr: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
+  private formatDateToISO(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}T00:00:00+00:00`;
+  }
+
+  private parseDateString(dateStr: string): Date | null {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? null : date;
   }
 
   onDiscountPercentChange(value: string): void {
@@ -264,15 +370,29 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   getAccountGroupLabel(value: string): string {
-    return this.accountGroupOptions.find(o => o.value === value)?.label || value;
+    return this.accountGroupOptions().find(o => o.value === value)?.label || value;
   }
 
   getAccountLabel(value: string): string {
-    return this.accountOptions.find(o => o.value === value)?.label || value;
+    return this.accountOptions().find(o => o.value === value)?.label || value;
   }
 
   // Save actions
   onSave(): void {
+    this.saveDiscount(false);
+  }
+
+  onSaveAndContinue(): void {
+    this.saveDiscount(true);
+  }
+
+  private saveDiscount(navigateToList: boolean): void {
+    this.markAllTouched();
+    if (!this.isValid()) {
+      this.cdr.markForCheck();
+      return;
+    }
+
     const data = this.discount();
     // Map component's local interface back to API format
     const apiData = {
@@ -284,18 +404,21 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
       priority: data.priority
     };
 
-    const operation = this.isEditMode()
-      ? this.discountService.updateDiscount(this.discountId!, apiData)
-      : this.discountService.createDiscount(apiData);
+    const isCreating = !this.isEditMode();
+    const operation = isCreating
+      ? this.discountService.createDiscount(apiData)
+      : this.discountService.updateDiscount(this.discountId!, apiData);
 
     operation.subscribe({
-      next: () => this.router.navigate(['/admin/discounts/list']),
+      next: (result) => {
+        if (navigateToList) {
+          this.router.navigate(['/admin/discounts/list']);
+        } else if (isCreating && result?.id) {
+          this.router.navigate(['/admin/discounts', result.id, 'edit']);
+        }
+      },
       error: (error) => console.error('Error saving discount:', error)
     });
-  }
-
-  onSaveAndContinue(): void {
-    console.log('Save and continue:', this.discount());
   }
 
   // Table handlers
@@ -324,6 +447,8 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
 
   closeDropdown(): void {
     this.openDropdownId.set(null);
+    this.showDateFromCalendar.set(false);
+    this.showDateToCalendar.set(false);
   }
 
   // Product actions

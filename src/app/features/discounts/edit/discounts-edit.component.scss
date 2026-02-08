@@ -34,14 +34,68 @@
   }
 }
 
-@include admin.detail-form-styles;
+.datepicker {
+  position: relative;
+  width: 100%;
+
+  &__input {
+    display: flex;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+
+    input {
+      cursor: pointer;
+      padding-right: 60px;
+    }
+  }
+
+  &__icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #71717a;
+    pointer-events: none;
+  }
+
+  &__clear {
+    position: absolute;
+    right: 36px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: #e4e4e7;
+    border-radius: 50%;
+    cursor: pointer;
+    color: #71717a;
+
+    &:hover {
+      background: #d4d4d8;
+      color: #18181b;
+    }
+  }
+
+  &__dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 100;
+  }
+}
 
 .select-with-pill {
   @include admin.select-with-pill;
-}
 
-::ng-deep .select-with-pill .select-field {
-  @include admin.select-with-pill-field;
+  .select-field {
+    @include admin.select-with-pill-field;
+  }
 }
 
 .products-section {
@@ -94,24 +148,13 @@
   border-radius: 6px;
   overflow: hidden;
 
-  ::ng-deep .data-table {
-    &__header-row,
-    &__header-cell {
-      background: white;
-    }
-
-    &__row {
-      background: transparent;
-
-      &:nth-child(odd) {
-        background: #f4f4f5;
-      }
-
-      &:hover {
-        background: #fafafa;
-      }
-    }
-  }
+  // Use CSS custom properties for ui-data-table styling
+  --data-table-border: none;
+  --data-table-border-radius: 0;
+  --data-table-background: transparent;
+  --data-table-header-background: white;
+  --data-table-row-background: transparent;
+  --data-table-row-hover-background: #fafafa;
 }
 
 .search-input {

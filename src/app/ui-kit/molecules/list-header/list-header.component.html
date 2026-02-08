@@ -56,7 +56,12 @@
 
     <!-- Add Button -->
     @if (showAddButton) {
-      <button class="btn btn--primary" (click)="onAdd()" type="button">
+      <button
+        class="btn btn--primary"
+        [class.btn--hide-on-mobile]="hideAddButtonOnMobile"
+        (click)="onAdd()"
+        type="button"
+      >
         <span>{{ addButtonLabel }}</span>
         <ui-icon name="plus" size="sm"></ui-icon>
       </button>

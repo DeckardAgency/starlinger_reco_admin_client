@@ -43,7 +43,6 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
   @ViewChild('percentTemplate') percentTemplate!: TemplateRef<any>;
-  @ViewChild('remoteCodeTemplate') remoteCodeTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
 
   // Search state
@@ -154,11 +153,8 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
   private initColumns(): void {
     this.columns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
-      { key: 'id', label: 'ID', sortable: false, width: '112px' },
       { key: 'name', label: 'Name', sortable: false },
       { key: 'percent', label: 'Percent', sortable: false, width: '192px', template: this.percentTemplate },
-      { key: 'remoteId', label: 'Remote id', sortable: false, width: '192px' },
-      { key: 'remoteCode', label: 'Remote code', sortable: false, width: '192px', template: this.remoteCodeTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
@@ -208,16 +204,36 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
   }
 
   onDelete(taxType: TaxType): void {
-    console.log('Delete tax type:', taxType);
+    if (!confirm(`Are you sure you want to delete "${taxType.name}"?`)) {
+      this.closeDropdown();
+      return;
+    }
+    this.taxTypeService.deleteTaxType(String(taxType.id)).subscribe({
+      next: () => {
+        this.taxTypes.update(list => list.filter(t => t.id !== taxType.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting tax type:', error)
+    });
     this.closeDropdown();
   }
 
   onBulkDelete(): void {
     const selected = this.taxTypes().filter(t => t.selected);
-    console.log('Bulk delete tax types:', selected);
-    const remaining = this.taxTypes().filter(t => !t.selected);
-    this.taxTypes.set(remaining);
-    this.selectAll.set(false);
+    if (selected.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selected.length} tax type(s)?`)) return;
+
+    const deleteOps = selected.map(t =>
+      this.taxTypeService.deleteTaxType(String(t.id)).toPromise()
+    );
+    Promise.all(deleteOps).then(() => {
+      this.taxTypes.update(list => list.filter(t => !t.selected));
+      this.selectAll.set(false);
+      this.cdr.markForCheck();
+    }).catch(error => {
+      console.error('Error bulk deleting tax types:', error);
+      this.loadTaxTypes();
+    });
   }
 
   onHeaderDropdownToggle(isOpen: boolean): void {
@@ -251,7 +267,8 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
     this.currentPage.set(page);
   }
 
-  formatPercent(value: number): string {
-    return value.toFixed(2).replace('.', ',');
+  formatPercent(value: number | string): string {
+    const num = Number(value);
+    return isNaN(num) ? '0,00' : num.toFixed(2).replace('.', ',');
   }
 }

@@ -71,18 +71,15 @@
   }
 }
 
-// Mobile form field vertical layout override
-@include admin.form-field-mobile-vertical;
-
 // =============================================================================
 // Select with Pill
 // =============================================================================
 .select-with-pill {
   @include admin.select-with-pill;
-}
 
-::ng-deep .select-with-pill .select-field {
-  @include admin.select-with-pill-field;
+  .select-field {
+    @include admin.select-with-pill-field;
+  }
 }
 
 // =============================================================================
@@ -116,10 +113,8 @@
 // Products Table (using ui-data-table)
 // =============================================================================
 .products-table {
-  ::ng-deep .data-table {
-    border: none;
-    border-radius: 0;
-  }
+  --data-table-border: none;
+  --data-table-border-radius: 0;
 }
 
 .text-right {
@@ -181,5 +176,9 @@
 // Log Table (using ui-data-table)
 // =============================================================================
 .log-table {
-  @include admin.data-table-no-headers;
+  --data-table-border: none;
+  --data-table-border-radius: 0;
+  --data-table-background: transparent;
+  --data-table-header-background: transparent;
+  --data-table-row-background: transparent;
 }

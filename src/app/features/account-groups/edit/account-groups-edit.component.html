@@ -1,0 +1,36 @@
+<div class="account-group-detail-page">
+  <ui-breadcrumbs
+    variant="page-header"
+    separator="chevron"
+    [items]="[
+      { label: 'Account groups', route: '/admin/account-groups' },
+      { label: isEditMode() ? 'Edit' : 'Add' }
+    ]"
+  ></ui-breadcrumbs>
+
+  <ui-detail-header
+    [title]="isEditMode() ? 'Edit account group' : 'New account group'"
+    [isEditMode]="isEditMode()"
+    [showSaveAndContinue]="true"
+    [showDiscard]="false"
+    (back)="onBack()"
+    (save)="onSave()"
+    (saveAndContinue)="onSaveAndContinue()"
+  ></ui-detail-header>
+
+  <div class="detail-content">
+    <div class="form-card">
+      <div class="form-card__toggles">
+        <ui-toggle label="Active" labelPosition="left" [checked]="accountGroup().isActive" (toggleChange)="onActiveChange($event)"></ui-toggle>
+      </div>
+
+      <div class="form-card__content">
+        <ui-form-field label="Name" layout="horizontal" [required]="true" [error]="getError('name')">
+          <input type="text" [value]="accountGroup().name" (input)="onNameChange($event)" placeholder="Enter name">
+        </ui-form-field>
+      </div>
+    </div>
+  </div>
+
+  <ui-mobile-footer (primaryClick)="onSave()" (secondaryClick)="onSaveAndContinue()"></ui-mobile-footer>
+</div>

@@ -30,7 +30,7 @@
           <ui-toggle
             label="Active"
             labelPosition="left"
-            [checked]="deliveryType().active"
+            [checked]="deliveryType().isActive"
             (toggleChange)="toggleActive()">
           </ui-toggle>
           <ui-toggle
@@ -40,30 +40,30 @@
             (toggleChange)="toggleReadyForShop()">
           </ui-toggle>
           <ui-toggle
-            label="Express"
+            label="Is delivery"
             labelPosition="left"
-            [checked]="deliveryType().express"
-            (toggleChange)="toggleExpress()">
+            [checked]="deliveryType().isDelivery"
+            (toggleChange)="toggleIsDelivery()">
           </ui-toggle>
           <ui-toggle
-            label="Enable Free Delivery"
+            label="Primary delivery method"
             labelPosition="left"
-            [checked]="deliveryType().enableFreeDelivery"
-            (toggleChange)="toggleEnableFreeDelivery()">
+            [checked]="deliveryType().useAsDefault"
+            (toggleChange)="toggleUseAsDefault()">
           </ui-toggle>
         </div>
 
         <!-- Form Fields -->
-        <ui-form-field label="Name" layout="horizontal">
+        <ui-form-field label="Name" layout="horizontal" [required]="true" [error]="getError('name')">
           <input type="text" [value]="deliveryType().name" (input)="onNameChange($event)" placeholder="Enter name">
         </ui-form-field>
 
         <ui-form-field label="Gross factor" layout="horizontal">
-          <input type="text" [value]="formatNumber(deliveryType().grossFactor)" (input)="onGrossFactorChange($event)" placeholder="1,00">
+          <input type="text" [value]="deliveryType().grossFactor || ''" (input)="onGrossFactorChange($event)" placeholder="1.00">
         </ui-form-field>
 
         <ui-form-field label="Order" layout="horizontal">
-          <input type="text" [value]="deliveryType().order" (input)="onOrderChange($event)" placeholder="0">
+          <input type="text" [value]="deliveryType().sortOrder" (input)="onSortOrderChange($event)" placeholder="0">
         </ui-form-field>
       </div>
     </div>
@@ -81,6 +81,12 @@
           </ui-tabs>
           <div class="tabs-header__spacer"></div>
           @if (activeTab() === 'documents') {
+            @if (hasSelectedDocuments()) {
+              <button class="btn btn--outline" (click)="deleteSelectedDocuments()">
+                <span>Delete selected</span>
+                <ui-icon name="trash" size="sm"></ui-icon>
+              </button>
+            }
             <button class="btn btn--outline" (click)="onAddDocument()">
               <span>Add document</span>
               <ui-icon name="plus" size="sm"></ui-icon>
@@ -111,6 +117,16 @@
       </div>
     </div>
   </div>
+
+  <!-- Hidden file input for document upload -->
+  <input
+    #documentFileInput
+    type="file"
+    style="display: none"
+    multiple
+    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp"
+    (change)="onDocumentFileSelected($event)"
+  >
 
   <!-- Document Templates -->
   <ng-template #checkboxHeaderTemplate>
@@ -157,13 +173,18 @@
         </button>
       </div>
       <div class="rename-modal__body">
-        <input
-          type="text"
-          class="rename-modal__input"
-          [value]="renameValue()"
-          (input)="onRenameInputChange($event)"
-          (keyup.enter)="confirmRename()"
-        />
+        <div class="rename-modal__input-row">
+          <input
+            type="text"
+            class="rename-modal__input"
+            [value]="renameValue()"
+            (input)="onRenameInputChange($event)"
+            (keyup.enter)="confirmRename()"
+          />
+          @if (renameExtension()) {
+            <span class="rename-modal__ext">.{{ renameExtension() }}</span>
+          }
+        </div>
       </div>
       <div class="rename-modal__footer">
         <button class="btn btn--ghost" (click)="cancelRename()">Cancel</button>

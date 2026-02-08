@@ -42,12 +42,16 @@
           <ui-toggle
             label="Billing"
             labelPosition="left"
+            labelMinWidth="100px"
+            labelColor="#71717a"
             [checked]="isBilling()"
             (toggleChange)="onBillingChange($event)">
           </ui-toggle>
           <ui-toggle
             label="Is active"
             labelPosition="left"
+            labelMinWidth="100px"
+            labelColor="#71717a"
             [checked]="isActive()"
             (toggleChange)="onActiveChange($event)">
           </ui-toggle>
@@ -55,59 +59,63 @@
 
         <div class="form-card__fields">
           <ui-form-field label="Account" layout="horizontal">
-            <div class="select-with-pill">
-              <span class="pill" *ngIf="contact().account">
-                <ui-icon name="close" size="xs"></ui-icon>
-                <span>{{ contact().account }}</span>
-              </span>
-              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
-            </div>
+            <ui-select
+              variant="pill"
+              [options]="accountOptions()"
+              [value]="contact().accountId || ''"
+              placeholder="Select account..."
+              (selectChange)="onAccountChange($event)"
+              (cleared)="clearAccount()">
+            </ui-select>
           </ui-form-field>
 
           <ui-form-field label="Person title" layout="horizontal">
-            <div class="select-with-pill">
-              <span class="pill" *ngIf="contact().personTitle">
-                <ui-icon name="close" size="xs"></ui-icon>
-                <span>{{ contact().personTitle }}</span>
-              </span>
-              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
-            </div>
+            <ui-select
+              variant="pill"
+              [options]="personTitleOptions()"
+              [value]="contact().titleId ? '' + contact().titleId : ''"
+              placeholder="Select title..."
+              (selectChange)="onPersonTitleChange($event)"
+              (cleared)="clearPersonTitle()">
+            </ui-select>
           </ui-form-field>
 
           <ui-form-field label="First name" layout="horizontal">
-            <input type="text" [value]="contact().firstName" placeholder="First name">
+            <input type="text" [value]="contact().firstName" (input)="updateContact('firstName', $event)" placeholder="First name">
           </ui-form-field>
 
           <ui-form-field label="Last name" layout="horizontal">
-            <input type="text" [value]="contact().lastName" placeholder="Last name">
+            <input type="text" [value]="contact().lastName" (input)="updateContact('lastName', $event)" placeholder="Last name">
           </ui-form-field>
 
           <ui-form-field label="Department" layout="horizontal">
-            <div class="select-with-pill">
-              <span class="pill" *ngIf="contact().department">
-                <ui-icon name="close" size="xs"></ui-icon>
-                <span>{{ contact().department }}</span>
-              </span>
-              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
-            </div>
+            <ui-select
+              variant="pill"
+              [options]="departmentOptions()"
+              [value]="contact().departmentId ? '' + contact().departmentId : ''"
+              placeholder="Select department..."
+              (selectChange)="onDepartmentChange($event)"
+              (cleared)="clearDepartment()">
+            </ui-select>
           </ui-form-field>
 
           <ui-form-field label="Date of birth" layout="horizontal">
-            <input type="text" [value]="formatValue(contact().dateOfBirth)" placeholder="–">
+            <input type="date" [value]="contact().dateOfBirth || ''" (input)="updateContact('dateOfBirth', $event)" placeholder="Date of birth">
           </ui-form-field>
 
           <ui-form-field label="Support level" layout="horizontal">
-            <div class="select-field">
-              <input type="text" [value]="contact().supportLevel" placeholder="" readonly>
-              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
-            </div>
+            <ui-select
+              variant="pill"
+              [options]="supportLevelOptions()"
+              [value]="contact().supportLevelId ? '' + contact().supportLevelId : ''"
+              placeholder="Select level..."
+              (selectChange)="onSupportLevelChange($event)"
+              (cleared)="clearSupportLevel()">
+            </ui-select>
           </ui-form-field>
 
           <ui-form-field label="Support person" layout="horizontal">
-            <div class="select-field">
-              <input type="text" [value]="contact().supportPerson" placeholder="" readonly>
-              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
-            </div>
+            <input type="text" [value]="contact().supportPersonId || ''" (input)="updateContact('supportPersonId', $event)" placeholder="Support person ID">
           </ui-form-field>
         </div>
       </div>
@@ -118,27 +126,27 @@
 
         <div class="form-card__fields">
           <ui-form-field label="Phone" layout="horizontal">
-            <input type="text" [value]="contact().phone" placeholder="Phone">
+            <input type="text" [value]="contact().phone || ''" (input)="updateContact('phone', $event)" placeholder="Phone">
           </ui-form-field>
 
           <ui-form-field label="Other phone" layout="horizontal">
-            <input type="text" [value]="formatValue(contact().otherPhone)" placeholder="–">
+            <input type="text" [value]="contact().otherPhone || ''" (input)="updateContact('otherPhone', $event)" placeholder="Other phone">
           </ui-form-field>
 
           <ui-form-field label="Home phone" layout="horizontal">
-            <input type="text" [value]="formatValue(contact().homePhone)" placeholder="–">
+            <input type="text" [value]="contact().homePhone || ''" (input)="updateContact('homePhone', $event)" placeholder="Home phone">
           </ui-form-field>
 
           <ui-form-field label="Email" layout="horizontal">
-            <input type="text" [value]="contact().email" placeholder="Email">
+            <input type="text" [value]="contact().email" (input)="updateContact('email', $event)" placeholder="Email">
           </ui-form-field>
 
           <ui-form-field label="Other email" layout="horizontal">
-            <input type="text" [value]="formatValue(contact().otherEmail)" placeholder="–">
+            <input type="text" [value]="contact().otherEmail || ''" (input)="updateContact('otherEmail', $event)" placeholder="Other email">
           </ui-form-field>
 
           <ui-form-field label="Fax" layout="horizontal">
-            <input type="text" [value]="formatValue(contact().fax)" placeholder="–">
+            <input type="text" [value]="contact().fax || ''" (input)="updateContact('fax', $event)" placeholder="Fax">
           </ui-form-field>
         </div>
       </div>

@@ -15,6 +15,7 @@
       (searchQueryChange)="onSearchChange($event)"
       (add)="onAddProductGroup()"
       (bulkDelete)="onBulkDelete()"
+      [hideAddButtonOnMobile]="true"
     ></ui-list-header>
 
     <div class="table-container">
@@ -68,7 +69,7 @@
 <!-- Active Template -->
 <ng-template #activeTemplate let-row>
   <ui-badge
-    [variant]="row.isActive ? 'success' : 'danger'"
+    [variant]="row.isActive ? 'success' : 'secondary'"
     size="sm">
     {{ row.isActive ? 'Yes' : 'No' }}
   </ui-badge>

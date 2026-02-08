@@ -7,11 +7,13 @@
       icon="fuel"
       addButtonLabel="Add option"
       [showSearch]="true"
-      [showExportButton]="true"
+      [showBulkDeleteButton]="true"
+      [isBulkDeleteDisabled]="!hasSelected()"
       [searchQuery]="searchQuery()"
       (searchQueryChange)="onSearchChange($event)"
       (add)="onAddFuelSurcharge()"
-      (export)="onExport()"
+      (bulkDelete)="onBulkDelete()"
+      [hideAddButtonOnMobile]="true"
     ></ui-list-header>
 
     <div class="table-container">
@@ -52,9 +54,19 @@
   ></ui-table-checkbox-selection>
 </ng-template>
 
-<!-- Fuel Surcharge Template -->
-<ng-template #fuelSurchargeTemplate let-row>
-  <span>{{ formatFuelSurcharge(row.fuelSurcharge) }}</span>
+<!-- Size From Template -->
+<ng-template #sizeFromTemplate let-row>
+  <span>{{ formatDecimal(row.sizeFrom) }}</span>
+</ng-template>
+
+<!-- Size To Template -->
+<ng-template #sizeToTemplate let-row>
+  <span>{{ formatDecimal(row.sizeTo) }}</span>
+</ng-template>
+
+<!-- Price Base Template -->
+<ng-template #priceBaseTemplate let-row>
+  <span>{{ formatDecimal(row.priceBase) }}</span>
 </ng-template>
 
 <!-- Actions Template -->

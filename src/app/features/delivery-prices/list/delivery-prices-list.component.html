@@ -13,6 +13,7 @@
       [showBulkDeleteButton]="true"
       [isBulkDeleteDisabled]="!hasSelected()"
       (bulkDelete)="onBulkDelete()"
+      [hideAddButtonOnMobile]="true"
     ></ui-list-header>
 
     <div class="table-container">
@@ -51,6 +52,13 @@
     [checked]="row.selected"
     (change)="toggleDeliveryPriceSelection(row)"
   ></ui-table-checkbox-selection>
+</ng-template>
+
+<!-- Delivery Type Template -->
+<ng-template #deliveryTypeTemplate let-row>
+  @if (getDeliveryTypeName(row.deliveryType)) {
+    <ui-badge variant="info" [rounded]="true">{{ getDeliveryTypeName(row.deliveryType) }}</ui-badge>
+  }
 </ng-template>
 
 <!-- Price Template -->

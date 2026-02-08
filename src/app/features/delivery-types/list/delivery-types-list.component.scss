@@ -1,59 +1,46 @@
-@use '../../../ui-kit/admin-shared' as admin;
-
 :host {
-  @include admin.admin-host;
-  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .delivery-types-page {
-  @include admin.admin-page;
-  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: #f4f4f5;
 }
 
 .page-content {
-  @include admin.list-page-content;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  flex: 1;
 }
 
 .table-container {
-  @include admin.tabs-table-container;
+  background: transparent;
+  border: 1px solid #E4E4E7;
+  border-radius: 8px;
+  overflow: hidden;
+
+  // Set CSS custom properties for ui-data-table
+  --data-table-background: #f4f4f5;
+  --data-table-header-background: white;
+  --data-table-row-background: transparent;
+  --data-table-row-hover-background: white;
 }
 
-@include admin.tabs-table-data-table;
-
-// Page-specific table styling
-::ng-deep .data-table {
-  background: #f4f4f5;
-
-  &__header-row,
-  &__header-cell {
-    background: white;
-  }
-
-  &__row {
-    &:hover {
-      background: white;
-    }
-  }
-}
-
-// Toggle cell for Active column
-:host ::ng-deep {
-  .toggle-cell {
-    @include admin.toggle-cell;
-  }
-
-  .toggle {
-    @include admin.inline-toggle;
-  }
+.toggle-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 // Mobile responsive
 @media (max-width: 768px) {
   .page-content {
     padding-bottom: 76px;
-  }
-
-  ::ng-deep .list-header__right .btn--primary {
-    display: none;
   }
 }

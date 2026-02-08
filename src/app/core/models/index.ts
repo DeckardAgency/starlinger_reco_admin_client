@@ -13,6 +13,8 @@ export * from './delivery-price.model';
 export * from './fuel-surcharge.model';
 export * from './packaging-price.model';
 export * from './admin-user.model';
+export * from './product-discount.model';
+export * from './product-product-link.model';
 
 // API Models (Request/Response interfaces)
 export * from './api/auth-api.model';

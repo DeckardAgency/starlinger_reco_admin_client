@@ -94,10 +94,7 @@ export class WarehousesListComponent implements OnInit, AfterViewInit {
 
     if (query) {
       result = result.filter(w =>
-        w.name.toLowerCase().includes(query) ||
-        (w.address && w.address.toLowerCase().includes(query)) ||
-        (w.city && w.city.toLowerCase().includes(query)) ||
-        String(w.id).includes(query)
+        w.name.toLowerCase().includes(query)
       );
     }
 
@@ -132,7 +129,7 @@ export class WarehousesListComponent implements OnInit, AfterViewInit {
 
     this.warehouseService.getWarehouses(1, 100).subscribe({
       next: (response) => {
-        const items = (response.member || []).map(w => ({ ...w, selected: false, documents: w.documents || [] }));
+        const items = (response.member || []).map(w => ({ ...w, selected: false }));
         this.warehouses.set(items);
         this.isLoading.set(false);
         this.cdr.markForCheck();
@@ -154,11 +151,8 @@ export class WarehousesListComponent implements OnInit, AfterViewInit {
   private initColumns(): void {
     this.columns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
-      { key: 'id', label: 'ID', sortable: false, width: '112px' },
       { key: 'name', label: 'Name', sortable: false },
-      { key: 'address', label: 'Address', sortable: false },
-      { key: 'city', label: 'City', sortable: false },
-      { key: 'active', label: 'Active', sortable: false, width: '192px', template: this.activeTemplate },
+      { key: 'isActive', label: 'Active', sortable: false, width: '192px', template: this.activeTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
@@ -211,16 +205,36 @@ export class WarehousesListComponent implements OnInit, AfterViewInit {
   }
 
   onDelete(warehouse: Warehouse): void {
-    console.log('Delete warehouse:', warehouse);
+    if (!confirm(`Are you sure you want to delete "${warehouse.name}"?`)) {
+      this.closeDropdown();
+      return;
+    }
+    this.warehouseService.deleteWarehouse(String(warehouse.id)).subscribe({
+      next: () => {
+        this.warehouses.update(list => list.filter(w => w.id !== warehouse.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting warehouse:', error)
+    });
     this.closeDropdown();
   }
 
   onBulkDelete(): void {
     const selected = this.warehouses().filter(w => w.selected);
-    console.log('Bulk delete warehouses:', selected);
-    const remaining = this.warehouses().filter(w => !w.selected);
-    this.warehouses.set(remaining);
-    this.selectAll.set(false);
+    if (selected.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selected.length} warehouse(s)?`)) return;
+
+    const deleteOps = selected.map(w =>
+      this.warehouseService.deleteWarehouse(String(w.id)).toPromise()
+    );
+    Promise.all(deleteOps).then(() => {
+      this.warehouses.update(list => list.filter(w => !w.selected));
+      this.selectAll.set(false);
+      this.cdr.markForCheck();
+    }).catch(error => {
+      console.error('Error bulk deleting warehouses:', error);
+      this.loadWarehouses();
+    });
   }
 
   onHeaderDropdownToggle(isOpen: boolean): void {
@@ -251,10 +265,15 @@ export class WarehousesListComponent implements OnInit, AfterViewInit {
   }
 
   toggleActive(warehouse: Warehouse, value: boolean): void {
-    const updated = this.warehouses().map(w =>
-      w.id === warehouse.id ? { ...w, active: value } : w
-    );
-    this.warehouses.set(updated);
+    this.warehouseService.updateWarehouse(String(warehouse.id), { isActive: value }).subscribe({
+      next: () => {
+        this.warehouses.update(list => list.map(w =>
+          w.id === warehouse.id ? { ...w, isActive: value } : w
+        ));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error toggling active:', error)
+    });
   }
 
   onPageChange(page: number): void {

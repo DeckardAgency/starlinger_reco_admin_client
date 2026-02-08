@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
@@ -60,6 +60,24 @@ export class UsersEditComponent implements OnInit {
   // Role options
   roleOptions: AdminUserRoleOption[] = ADMIN_USER_ROLE_OPTIONS;
 
+  // Validation state
+  touched = signal<Record<string, boolean>>({});
+  errors = computed(() => {
+    const user = this.user();
+    const errs: Record<string, string> = {};
+    if (!user.firstName?.trim()) errs['firstName'] = 'First name is required';
+    if (!user.lastName?.trim()) errs['lastName'] = 'Last name is required';
+    if (!user.email?.trim()) errs['email'] = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) errs['email'] = 'Invalid email format';
+    // Password required only for new users
+    if (!this.isEditMode() && !this.password()?.trim()) errs['password'] = 'Password is required';
+    if (this.password() && this.repeatPassword() && this.password() !== this.repeatPassword()) {
+      errs['repeatPassword'] = 'Passwords do not match';
+    }
+    return errs;
+  });
+  isValid = computed(() => Object.keys(this.errors()).length === 0);
+
   constructor() {
     this.route.params.pipe(takeUntilDestroyed()).subscribe(params => {
       const id = params['id'];
@@ -117,14 +135,29 @@ export class UsersEditComponent implements OnInit {
     return 'editor';
   }
 
+  // Validation methods
+  markAllTouched(): void {
+    this.touched.set({ firstName: true, lastName: true, email: true, password: true, repeatPassword: true });
+  }
+
+  markFieldTouched(field: string): void {
+    this.touched.update(t => ({ ...t, [field]: true }));
+  }
+
+  getError(field: string): string {
+    return this.touched()[field] ? (this.errors()[field] || '') : '';
+  }
+
   onFirstNameChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.user.update(u => ({ ...u, firstName: input.value }));
+    this.markFieldTouched('firstName');
   }
 
   onLastNameChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.user.update(u => ({ ...u, lastName: input.value }));
+    this.markFieldTouched('lastName');
   }
 
   onUsernameChange(event: Event): void {
@@ -135,16 +168,19 @@ export class UsersEditComponent implements OnInit {
   onEmailChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.user.update(u => ({ ...u, email: input.value }));
+    this.markFieldTouched('email');
   }
 
   onPasswordChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.password.set(input.value);
+    this.markFieldTouched('password');
   }
 
   onRepeatPasswordChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.repeatPassword.set(input.value);
+    this.markFieldTouched('repeatPassword');
   }
 
   togglePasswordVisibility(): void {
@@ -164,6 +200,12 @@ export class UsersEditComponent implements OnInit {
   }
 
   onSave(): void {
+    this.markAllTouched();
+    if (!this.isValid()) {
+      this.cdr.markForCheck();
+      return;
+    }
+
     const user = this.user();
     const data: Record<string, unknown> = {
       firstName: user.firstName,
@@ -182,6 +224,39 @@ export class UsersEditComponent implements OnInit {
 
     operation.subscribe({
       next: () => this.router.navigate(['/admin/users/list']),
+      error: (error) => console.error('Error saving user:', error)
+    });
+  }
+
+  onSaveAndContinue(): void {
+    this.markAllTouched();
+    if (!this.isValid()) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const user = this.user();
+    const data: Record<string, unknown> = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email
+    };
+
+    if (this.password()) {
+      data['password'] = this.password();
+    }
+
+    const operation = this.isEditMode() && this.userId()
+      ? this.userService.updateUser(this.userId()!, data)
+      : this.userService.createUser(data);
+
+    operation.subscribe({
+      next: (response) => {
+        if (!this.isEditMode() && response?.id) {
+          this.router.navigate(['/admin/users', response.id, 'edit']);
+        }
+        this.cdr.markForCheck();
+      },
       error: (error) => console.error('Error saving user:', error)
     });
   }

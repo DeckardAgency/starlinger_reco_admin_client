@@ -1,6 +1,7 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, ChangeDetectorRef, ViewChild, TemplateRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef, ViewChild, TemplateRef, AfterViewInit, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpEventType } from '@angular/common/http';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -19,38 +20,41 @@ import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@a
 import { TextEditorComponent } from '@shared/components/text-editor/text-editor.component';
 import { PaymentType, PaymentTypeDocument } from '@core/models/payment-type.model';
 import { PaymentTypeService } from '@core/services/http/payment-type.service';
+import { MediaService } from '@core/services/http/media.service';
+import { MediaItem } from '@core/models/media.model';
+import { environment } from '@env/environment';
 
 interface PaymentTypeDetail {
   id: string;
   name: string;
-  active: boolean;
-  readyForShop: boolean;
+  isActive: boolean;
   enableInstallments: boolean;
   configuration: string | null;
   providerCode: string | null;
   shortDescription: string;
-  useAsDefaultBase: boolean;
+  useAsDefault: boolean;
   remoteCode: string | null;
   paymentFee: number;
-  minCartTotalBase: number;
-  maxCartTotalBase: number;
+  minCartTotal: number;
+  maxCartTotal: number;
+  sortOrder: number;
   documents: PaymentTypeDocument[];
 }
 
 const EMPTY_PAYMENT_TYPE: PaymentTypeDetail = {
   id: '',
   name: '',
-  active: false,
-  readyForShop: false,
+  isActive: false,
   enableInstallments: false,
   configuration: null,
   providerCode: null,
   shortDescription: '',
-  useAsDefaultBase: false,
+  useAsDefault: false,
   remoteCode: null,
   paymentFee: 0,
-  minCartTotalBase: 0,
-  maxCartTotalBase: 0,
+  minCartTotal: 0,
+  maxCartTotal: 0,
+  sortOrder: 0,
   documents: []
 };
 
@@ -84,6 +88,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
+  @ViewChild('documentFileInput') documentFileInput?: ElementRef<HTMLInputElement>;
 
   // Mode
   isEditMode = signal(false);
@@ -94,6 +99,16 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
 
   // Loading state
   isLoading = signal(false);
+
+  // Validation state
+  touched = signal<Record<string, boolean>>({});
+  errors = computed(() => {
+    const paymentType = this.paymentType();
+    const errs: Record<string, string> = {};
+    if (!paymentType.name?.trim()) errs['name'] = 'Name is required';
+    return errs;
+  });
+  isValid = computed(() => Object.keys(this.errors()).length === 0);
 
   // Active tab
   activeTab = signal<'description' | 'details' | 'documents'>('description');
@@ -110,6 +125,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
   // Rename modal state
   isRenameModalOpen = signal(false);
   renameValue = signal('');
+  renameExtension = signal('');
   renameDocumentId = signal<string | null>(null);
 
   // Selection state
@@ -133,7 +149,8 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private paymentTypeService: PaymentTypeService
+    private paymentTypeService: PaymentTypeService,
+    private mediaService: MediaService
   ) {}
 
   ngOnInit(): void {
@@ -171,21 +188,37 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
 
     this.paymentTypeService.getPaymentTypeById(id).subscribe({
       next: (paymentType) => {
+        // Unwrap configuration: if it's {value: "text"}, extract just the text
+        let configStr: string | null = null;
+        if (paymentType.configuration) {
+          const cfg = paymentType.configuration as Record<string, unknown>;
+          if (typeof cfg === 'object' && Object.keys(cfg).length === 1 && typeof cfg['value'] === 'string') {
+            configStr = cfg['value'] as string;
+          } else {
+            configStr = JSON.stringify(paymentType.configuration);
+          }
+        }
+
         this.paymentType.set({
           id: paymentType.id || id,
           name: paymentType.name || '',
-          active: paymentType.active || false,
-          readyForShop: paymentType.readyForShop || false,
+          isActive: paymentType.isActive ?? false,
           enableInstallments: paymentType.enableInstallments || false,
-          configuration: paymentType.configuration || null,
+          configuration: configStr,
           providerCode: paymentType.providerCode || null,
           shortDescription: paymentType.shortDescription || '',
-          useAsDefaultBase: paymentType.useAsDefaultBase || false,
+          useAsDefault: paymentType.useAsDefault || false,
           remoteCode: paymentType.remoteCode || null,
-          paymentFee: paymentType.paymentFee || 0,
-          minCartTotalBase: paymentType.minCartTotalBase || 0,
-          maxCartTotalBase: paymentType.maxCartTotalBase || 0,
-          documents: (paymentType.documents || []).map(d => ({ ...d, selected: false }))
+          paymentFee: paymentType.paymentFee ? parseFloat(paymentType.paymentFee) : 0,
+          minCartTotal: paymentType.minCartTotal ? parseFloat(paymentType.minCartTotal) : 0,
+          maxCartTotal: paymentType.maxCartTotal ? parseFloat(paymentType.maxCartTotal) : 0,
+          sortOrder: paymentType.sortOrder || 0,
+          documents: ((paymentType as any).documents || []).map((m: any) => ({
+            id: typeof m === 'string' ? m.split('/').pop() : m.id,
+            fileType: this.getFileType(typeof m === 'object' ? m.mimeType : '', typeof m === 'object' ? m.filename : ''),
+            name: typeof m === 'object' ? (m.filename || 'unknown') : 'unknown',
+            size: typeof m === 'object' && m.fileSize ? this.formatFileSize(m.fileSize) : '-'
+          }))
         });
         this.isLoading.set(false);
         this.cdr.markForCheck();
@@ -198,24 +231,98 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     });
   }
 
+  private getFileType(mimeType: string, filename: string): string {
+    if (mimeType) {
+      if (mimeType.includes('pdf')) return 'PDF';
+      if (mimeType.includes('png')) return 'PNG';
+      if (mimeType.includes('jpeg') || mimeType.includes('jpg')) return 'JPG';
+      if (mimeType.includes('webp')) return 'WEBP';
+      if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'XLS';
+      if (mimeType.includes('word')) return 'DOC';
+      if (mimeType.includes('csv')) return 'CSV';
+      if (mimeType.includes('text')) return 'TXT';
+    }
+    const ext = filename?.split('.').pop()?.toUpperCase();
+    return ext || 'FILE';
+  }
+
   onBack(): void {
     this.router.navigate(['/admin/payment-types/list']);
   }
 
-  onSave(): void {
-    const data = this.paymentType();
-    const operation = this.isEditMode()
-      ? this.paymentTypeService.updatePaymentType(this.paymentTypeId!, data)
-      : this.paymentTypeService.createPaymentType(data);
+  // Validation helpers
+  markAllTouched(): void {
+    this.touched.set({ name: true });
+  }
 
-    operation.subscribe({
-      next: () => this.router.navigate(['/admin/payment-types/list']),
-      error: (error) => console.error('Error saving payment type:', error)
-    });
+  markFieldTouched(field: string): void {
+    this.touched.update(t => ({ ...t, [field]: true }));
+  }
+
+  getError(field: string): string {
+    return this.touched()[field] ? (this.errors()[field] || '') : '';
+  }
+
+  onSave(): void {
+    this.savePaymentType(false);
   }
 
   onSaveAndContinue(): void {
-    console.log('Save and continue:', this.paymentType());
+    this.savePaymentType(true);
+  }
+
+  private savePaymentType(navigateToList: boolean): void {
+    this.markAllTouched();
+    if (!this.isValid()) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const detail = this.paymentType();
+    // Parse configuration string back to JSON object for the backend (?array column)
+    let parsedConfig: Record<string, unknown> | null = null;
+    if (detail.configuration) {
+      try {
+        const parsed = JSON.parse(detail.configuration);
+        parsedConfig = typeof parsed === 'object' && parsed !== null ? parsed : { value: detail.configuration };
+      } catch {
+        parsedConfig = { value: detail.configuration };
+      }
+    }
+
+    // Build payload with only writable fields
+    const mediaIriPrefix = `${environment.apiPath}/media_items/`;
+    const data: Record<string, unknown> = {
+      name: detail.name,
+      isActive: detail.isActive,
+      enableInstallments: detail.enableInstallments,
+      configuration: parsedConfig,
+      providerCode: detail.providerCode,
+      shortDescription: detail.shortDescription,
+      useAsDefault: detail.useAsDefault,
+      remoteCode: detail.remoteCode,
+      paymentFee: String(detail.paymentFee),
+      minCartTotal: String(detail.minCartTotal),
+      maxCartTotal: String(detail.maxCartTotal),
+      sortOrder: detail.sortOrder,
+      documents: detail.documents.map(d => mediaIriPrefix + d.id)
+    };
+
+    const isCreating = !this.isEditMode();
+    const operation = isCreating
+      ? this.paymentTypeService.createPaymentType(data as any)
+      : this.paymentTypeService.updatePaymentType(this.paymentTypeId!, data as any);
+
+    operation.subscribe({
+      next: (result) => {
+        if (navigateToList) {
+          this.router.navigate(['/admin/payment-types/list']);
+        } else if (isCreating && result?.id) {
+          this.router.navigate(['/admin/payment-types', result.id, 'edit']);
+        }
+      },
+      error: (error) => console.error('Error saving payment type:', error)
+    });
   }
 
   setActiveTab(tabId: string): void {
@@ -224,25 +331,22 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
 
   // Toggle handlers
   toggleActive(): void {
-    this.paymentType.update(p => ({ ...p, active: !p.active }));
-  }
-
-  toggleReadyForShop(): void {
-    this.paymentType.update(p => ({ ...p, readyForShop: !p.readyForShop }));
+    this.paymentType.update(p => ({ ...p, isActive: !p.isActive }));
   }
 
   toggleEnableInstallments(): void {
     this.paymentType.update(p => ({ ...p, enableInstallments: !p.enableInstallments }));
   }
 
-  toggleUseAsDefaultBase(): void {
-    this.paymentType.update(p => ({ ...p, useAsDefaultBase: !p.useAsDefaultBase }));
+  toggleUseAsDefault(): void {
+    this.paymentType.update(p => ({ ...p, useAsDefault: !p.useAsDefault }));
   }
 
   // Input handlers
   onNameChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.paymentType.update(p => ({ ...p, name: input.value }));
+    this.markFieldTouched('name');
   }
 
   onConfigurationChange(event: Event): void {
@@ -266,16 +370,16 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     this.paymentType.update(p => ({ ...p, paymentFee: value }));
   }
 
-  onMinCartTotalBaseChange(event: Event): void {
+  onMinCartTotalChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     const value = parseFloat(input.value.replace(',', '.')) || 0;
-    this.paymentType.update(p => ({ ...p, minCartTotalBase: value }));
+    this.paymentType.update(p => ({ ...p, minCartTotal: value }));
   }
 
-  onMaxCartTotalBaseChange(event: Event): void {
+  onMaxCartTotalChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     const value = parseFloat(input.value.replace(',', '.')) || 0;
-    this.paymentType.update(p => ({ ...p, maxCartTotalBase: value }));
+    this.paymentType.update(p => ({ ...p, maxCartTotal: value }));
   }
 
   onShortDescriptionChange(content: string): void {
@@ -288,7 +392,44 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
 
   // Document handlers
   onAddDocument(): void {
-    console.log('Add document');
+    this.documentFileInput?.nativeElement?.click();
+  }
+
+  onDocumentFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+
+    const files = Array.from(input.files);
+    let uploaded = 0;
+
+    files.forEach(file => {
+      this.mediaService.uploadFile(file)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (httpEvent) => {
+            if (httpEvent.type === HttpEventType.Response && httpEvent.body) {
+              const media = httpEvent.body;
+              this.paymentType.update(p => ({
+                ...p,
+                documents: [...p.documents, {
+                  id: media.id,
+                  fileType: this.getFileType(media.mimeType || '', media.filename || file.name),
+                  name: media.filename || file.name,
+                  size: this.formatFileSize(file.size)
+                }]
+              }));
+              uploaded++;
+              if (uploaded === files.length) {
+                this.updatePaymentTypeMedia();
+              }
+              this.cdr.markForCheck();
+            }
+          },
+          error: (err) => console.error('Error uploading document:', err)
+        });
+    });
+
+    input.value = '';
   }
 
   toggleHeaderDropdown(event: Event): void {
@@ -351,22 +492,61 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
   renameDocument(docId: string): void {
     const doc = this.paymentType().documents.find(d => d.id === docId);
     if (doc) {
+      const { name, ext } = this.splitFilename(doc.name);
       this.renameDocumentId.set(docId);
-      this.renameValue.set(doc.name);
+      this.renameValue.set(name);
+      this.renameExtension.set(ext);
       this.isRenameModalOpen.set(true);
     }
     this.activeDocActionId.set(null);
   }
 
   downloadDocument(docId: string): void {
-    const doc = this.paymentType().documents.find(d => d.id === docId);
-    console.log('Download document:', doc);
+    this.mediaService.getMediaItem(docId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (media) => {
+          if (media.filePath) {
+            this.triggerDownload(media.filePath, media.filename || 'document');
+          }
+        },
+        error: (err) => console.error('Error downloading document:', err)
+      });
     this.activeDocActionId.set(null);
   }
 
+  private triggerDownload(url: string, filename: string): void {
+    this.mediaService.downloadFile(url)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(blobUrl);
+        },
+        error: (err) => console.error('Error downloading file:', err)
+      });
+  }
+
   deleteDocument(docId: string): void {
-    const updated = this.paymentType().documents.filter(d => d.id !== docId);
-    this.paymentType.update(p => ({ ...p, documents: updated }));
+    this.mediaService.deleteMediaItem(docId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.paymentType.update(p => ({
+            ...p,
+            documents: p.documents.filter(d => d.id !== docId)
+          }));
+          this.updatePaymentTypeMedia();
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('Error deleting document:', err)
+      });
     this.activeDocActionId.set(null);
   }
 
@@ -377,12 +557,25 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
 
   confirmRename(): void {
     const docId = this.renameDocumentId();
-    if (docId) {
-      const updated = this.paymentType().documents.map(d =>
-        d.id === docId ? { ...d, name: this.renameValue() } : d
-      );
-      this.paymentType.update(p => ({ ...p, documents: updated }));
-    }
+    const baseName = this.renameValue();
+    const ext = this.renameExtension();
+
+    if (!docId || !baseName) return;
+
+    const fullName = ext ? `${baseName}.${ext}` : baseName;
+
+    const updated = this.paymentType().documents.map(d =>
+      d.id === docId ? { ...d, name: fullName } : d
+    );
+    this.paymentType.update(p => ({ ...p, documents: updated }));
+
+    // Persist rename to API
+    this.mediaService.updateMediaItem(docId, { filename: fullName } as any)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        error: (err) => console.error('Error renaming document:', err)
+      });
+
     this.cancelRename();
   }
 
@@ -390,11 +583,63 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     this.isRenameModalOpen.set(false);
     this.renameDocumentId.set(null);
     this.renameValue.set('');
+    this.renameExtension.set('');
   }
 
   closeDropdowns(): void {
     this.isHeaderDropdownOpen.set(false);
     this.activeDocActionId.set(null);
+  }
+
+  hasSelectedDocuments(): boolean {
+    return this.paymentType().documents.some(d => d.selected);
+  }
+
+  deleteSelectedDocuments(): void {
+    const selected = this.paymentType().documents.filter(d => d.selected);
+    if (selected.length === 0) return;
+
+    selected.forEach(doc => {
+      this.mediaService.deleteMediaItem(doc.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          error: (err) => console.error('Error deleting document:', err)
+        });
+    });
+
+    this.paymentType.update(p => ({
+      ...p,
+      documents: p.documents.filter(d => !d.selected)
+    }));
+    this.updatePaymentTypeMedia();
+    this.cdr.markForCheck();
+  }
+
+  private formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return parseFloat((bytes / Math.pow(1024, i)).toFixed(1)) + ' ' + units[i];
+  }
+
+  private splitFilename(filename: string): { name: string; ext: string } {
+    const lastDot = filename.lastIndexOf('.');
+    if (lastDot <= 0) return { name: filename, ext: '' };
+    return { name: filename.substring(0, lastDot), ext: filename.substring(lastDot + 1) };
+  }
+
+  // Persist document links to the payment type via PATCH
+  private updatePaymentTypeMedia(): void {
+    if (!this.paymentTypeId) return;
+
+    const mediaIriPrefix = `${environment.apiPath}/media_items/`;
+    const documents = this.paymentType().documents.map(d => mediaIriPrefix + d.id);
+
+    this.paymentTypeService.updatePaymentType(this.paymentTypeId, { documents } as any)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        error: (err) => console.error('Error updating payment type media:', err)
+      });
   }
 }
 

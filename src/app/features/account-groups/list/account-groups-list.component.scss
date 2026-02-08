@@ -1,0 +1,38 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.account-groups-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: #f4f4f5;
+}
+
+.page-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  flex: 1;
+}
+
+.table-container {
+  background: transparent;
+  border: 1px solid #E4E4E7;
+  border-radius: 8px;
+  overflow: hidden;
+
+  --data-table-background: #f4f4f5;
+  --data-table-header-background: white;
+  --data-table-row-background: transparent;
+  --data-table-row-hover-background: white;
+}
+
+@media (max-width: 768px) {
+  .page-content {
+    padding-bottom: 76px;
+  }
+}

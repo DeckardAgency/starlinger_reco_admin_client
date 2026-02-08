@@ -26,6 +26,15 @@ export abstract class BaseHttpService {
   }
 
   /**
+   * Get merge-patch headers for PATCH requests (required by API Platform)
+   */
+  protected getMergePatchHeaders(): HttpHeaders {
+    return new HttpHeaders()
+      .set('Content-Type', 'application/merge-patch+json')
+      .set('Accept', 'application/ld+json');
+  }
+
+  /**
    * GET request with JSON-LD headers
    */
   protected getWithJsonLd<T>(url: string, params?: HttpParams): Observable<T> {
@@ -54,11 +63,11 @@ export abstract class BaseHttpService {
   }
 
   /**
-   * PATCH request with JSON-LD headers
+   * PATCH request with merge-patch headers (required by API Platform)
    */
   protected patchWithJsonLd<T>(url: string, body: unknown): Observable<T> {
     return this.http.patch<T>(url, body, {
-      headers: this.getJsonLdHeaders()
+      headers: this.getMergePatchHeaders()
     });
   }
 

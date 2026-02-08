@@ -12,13 +12,11 @@
   }
 
   &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
-
-    ::ng-deep svg {
-      display: block;
-      width: 20px;
-      height: 20px;
-    }
+    color: #232323;
   }
 
   &__title {
@@ -42,21 +40,13 @@
     text-decoration: none;
     cursor: pointer;
     transition: background 0.2s ease;
+    color: #DC2626;
 
     span {
-      color: #DC2626;
       font-family: Inter;
       font-size: 14px;
       font-weight: 500;
       line-height: 20px;
-    }
-
-    svg {
-      flex-shrink: 0;
-
-      path {
-        stroke: #DC2626;
-      }
     }
 
     &:hover {

@@ -48,9 +48,17 @@ import { IconComponent } from '../../atoms/icon/icon.component';
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+      --accordion-item-border: 1px solid #E4E4E7;
+      --accordion-item-border-radius: 8px;
+      --accordion-item-border-bottom: none;
+    }
+
     .ui-accordion-item {
-      border: 1px solid #E4E4E7;
-      border-radius: 8px;
+      border: var(--accordion-item-border);
+      border-radius: var(--accordion-item-border-radius);
+      border-bottom: var(--accordion-item-border-bottom);
       background-color: #FFFFFF;
       overflow: hidden;
 
@@ -162,13 +170,13 @@ export class AccordionItemComponent {
         border-radius: 8px;
         padding: 0;
 
-        ::ng-deep .ui-accordion-item {
-          border: none;
-          border-radius: 0;
-          border-bottom: 1px solid #E4E4E7;
+        ui-accordion-item {
+          --accordion-item-border: none;
+          --accordion-item-border-radius: 0;
+          --accordion-item-border-bottom: 1px solid #E4E4E7;
 
           &:last-child {
-            border-bottom: none;
+            --accordion-item-border-bottom: none;
           }
         }
       }

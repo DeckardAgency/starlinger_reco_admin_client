@@ -90,7 +90,7 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
 
     if (query) {
       result = result.filter(pp =>
-        pp.name.toLowerCase().includes(query) ||
+        (pp.name || '').toLowerCase().includes(query) ||
         String(pp.id).includes(query)
       );
     }
@@ -127,9 +127,6 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
       next: (response) => {
         const prices = response.member.map((pp: PackagingPrice) => ({
           ...pp,
-          sizeFrom: Number(pp.sizeFrom),
-          sizeTo: Number(pp.sizeTo),
-          priceBase: Number(pp.priceBase),
           selected: false
         }));
         this.packagingPrices.set(prices);
@@ -152,7 +149,6 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
   private initColumns(): void {
     this.columns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
-      { key: 'id', label: 'id', sortable: true, width: '112px' },
       { key: 'name', label: 'Name', sortable: true },
       { key: 'sizeFrom', label: 'Size from', sortable: true, template: this.sizeFromTemplate },
       { key: 'sizeTo', label: 'Size to', sortable: true, template: this.sizeToTemplate },
@@ -163,7 +159,6 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
 
   onSearchChange(query: string): void {
     this.searchQuery.set(query);
-    console.log('Searching:', this.searchQuery);
   }
 
   onSortChange(event: SortEvent): void {
@@ -206,10 +201,13 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
   }
 
   onDelete(packagingPrice: PackagingPrice): void {
+    if (!confirm(`Are you sure you want to delete "${packagingPrice.name || 'this item'}"?`)) {
+      this.closeDropdown();
+      return;
+    }
     this.packagingPriceService.deletePackagingPrice(packagingPrice.id).subscribe({
       next: () => {
-        const remaining = this.packagingPrices().filter(pp => pp.id !== packagingPrice.id);
-        this.packagingPrices.set(remaining);
+        this.packagingPrices.update(list => list.filter(pp => pp.id !== packagingPrice.id));
         this.cdr.markForCheck();
       },
       error: (error) => {
@@ -221,17 +219,20 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
 
   onBulkDelete(): void {
     const selected = this.packagingPrices().filter(pp => pp.selected);
+    if (selected.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selected.length} packaging price(s)?`)) return;
+
     const deletePromises = selected.map(pp =>
       this.packagingPriceService.deletePackagingPrice(pp.id).toPromise()
     );
 
     Promise.all(deletePromises).then(() => {
-      const remaining = this.packagingPrices().filter(pp => !pp.selected);
-      this.packagingPrices.set(remaining);
+      this.packagingPrices.update(list => list.filter(pp => !pp.selected));
       this.selectAll.set(false);
       this.cdr.markForCheck();
     }).catch(error => {
       console.error('Error bulk deleting packaging prices:', error);
+      this.loadPackagingPrices();
     });
   }
 
@@ -262,11 +263,16 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
     this.selectAll.set(updated.every(pp => pp.selected));
   }
 
-  formatSize(value: number): string {
-    return value.toString();
+  formatSize(value: string | null): string {
+    if (value == null || value === '') return '-';
+    const num = parseFloat(value);
+    return isNaN(num) ? value : String(num);
   }
 
-  formatPrice(value: number): string {
-    return value.toFixed(2).replace('.', ',') + ' €';
+  formatPrice(value: string | null): string {
+    if (value == null) return '';
+    const num = parseFloat(value);
+    if (isNaN(num)) return '0,00 €';
+    return num.toFixed(2).replace('.', ',') + ' €';
   }
 }

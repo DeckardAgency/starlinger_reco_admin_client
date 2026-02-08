@@ -1,19 +1,27 @@
 export interface PaymentType {
   id: string;
   name: string;
-  active: boolean;
-  readyForShop: boolean;
+  isActive: boolean;
   enableInstallments: boolean;
-  configuration: string | null;
-  providerCode: string | null;
-  shortDescription: string;
-  useAsDefaultBase: boolean;
-  remoteCode: string | null;
-  paymentFee: number;
-  minCartTotalBase: number;
-  maxCartTotalBase: number;
-  documents: PaymentTypeDocument[];
+  configuration?: Record<string, unknown> | string | null;
+  providerCode?: string | null;
+  shortDescription?: string;
+  remoteCode?: string | null;
+  fiscalCode?: string | null;
+  paymentFee?: string;
+  minCartTotal?: string;
+  maxCartTotal?: string;
+  color?: string | null;
+  icon?: string | null;
+  allowRecurringPayment: boolean;
+  recurringDaysReminder?: number | null;
+  useAsDefault: boolean;
+  sortOrder: number;
+  legacyId?: number;
+  createdAt?: string;
+  updatedAt?: string;
   selected?: boolean;
+  documents?: PaymentTypeDocument[];
 }
 
 export interface PaymentTypeDocument {

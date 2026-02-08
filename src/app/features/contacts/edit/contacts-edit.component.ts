@@ -6,33 +6,37 @@ import { Subject, takeUntil } from 'rxjs';
 
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
+import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
-import { UserService } from '@core/services/http/user.service';
-import { User } from '@core/models';
+import { ContactService } from '@core/services/http/contact.service';
+import { ClientService } from '@core/services/http/client.service';
+import { LookupService } from '@core/services/http/lookup.service';
+import { Contact, CreateContactDto } from '@core/models/contact.model';
 
-// Contact detail interface (aligned with User from API)
+// Contact detail interface for the form
 interface ContactDetail {
-  id: string | number | null;
+  id: number | null;
   firstName: string;
   lastName: string;
-  account: string;
-  accountId?: number;
-  personTitle?: string;
-  department?: string;
-  dateOfBirth?: string;
-  supportLevel?: string;
-  supportPerson?: string;
-  phone?: string;
-  otherPhone?: string;
-  homePhone?: string;
   email: string;
-  otherEmail?: string;
-  fax?: string;
-  isBilling: boolean;
+  phone: string;
+  otherPhone: string;
+  homePhone: string;
+  otherEmail: string;
+  fax: string;
+  dateOfBirth: string;
+  description: string;
+  accountId: string | null;
+  accountName: string;
+  titleId: number | null;
+  departmentId: number | null;
+  supportPersonId: number | null;
+  supportLevelId: number | null;
   isActive: boolean;
+  isBilling: boolean;
 }
 
 // Default empty contact for new mode
@@ -40,20 +44,22 @@ const EMPTY_CONTACT: ContactDetail = {
   id: null,
   firstName: '',
   lastName: '',
-  account: '',
-  personTitle: '',
-  department: '',
-  dateOfBirth: '',
-  supportLevel: '',
-  supportPerson: '',
+  email: '',
   phone: '',
   otherPhone: '',
   homePhone: '',
-  email: '',
   otherEmail: '',
   fax: '',
-  isBilling: false,
-  isActive: true
+  dateOfBirth: '',
+  description: '',
+  accountId: null,
+  accountName: '',
+  titleId: null,
+  departmentId: null,
+  supportPersonId: null,
+  supportLevelId: null,
+  isActive: true,
+  isBilling: false
 };
 
 @Component({
@@ -65,6 +71,7 @@ const EMPTY_CONTACT: ContactDetail = {
     RouterModule,
     ToggleComponent,
     IconComponent,
+    SelectComponent,
     FormFieldComponent,
     BreadcrumbsComponent,
     DetailHeaderComponent,
@@ -78,7 +85,9 @@ export class ContactsEditComponent implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-  private userService = inject(UserService);
+  private contactService = inject(ContactService);
+  private clientService = inject(ClientService);
+  private lookupService = inject(LookupService);
   private destroy$ = new Subject<void>();
 
   // Mode tracking
@@ -92,7 +101,19 @@ export class ContactsEditComponent implements OnInit, OnDestroy {
   isBilling = signal(false);
   isActive = signal(true);
 
+  // Account options for dropdown (string values to match native <select> behavior)
+  accountOptions = signal<{ value: string; label: string }[]>([]);
+
+  // Select options - loaded from API (string values to match native <select> behavior)
+  personTitleOptions = signal<{ value: string; label: string }[]>([]);
+  departmentOptions = signal<{ value: string; label: string }[]>([]);
+  supportLevelOptions = signal<{ value: string; label: string }[]>([]);
+
   ngOnInit(): void {
+    // Load dropdown options
+    this.loadAccounts();
+    this.loadLookupOptions();
+
     // Subscribe to route param changes to handle navigation between add/edit
     this.route.paramMap
       .pipe(takeUntil(this.destroy$))
@@ -105,8 +126,64 @@ export class ContactsEditComponent implements OnInit, OnDestroy {
           // New contact mode - reset to empty state
           this.isEditMode.set(false);
           this.resetForm();
+
+          // Check for pre-selected account from query params (e.g., from Account detail page)
+          this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(queryParams => {
+            const accountId = queryParams['accountId'];
+            const accountName = queryParams['accountName'];
+            if (accountId) {
+              this.contact.update(c => ({
+                ...c,
+                accountId: accountId,
+                accountName: accountName || ''
+              }));
+              this.cdr.markForCheck();
+            }
+          });
         }
       });
+  }
+
+  private loadLookupOptions(): void {
+    // Load contact titles
+    this.lookupService.getContactTitles().subscribe({
+      next: (items) => {
+        this.personTitleOptions.set(items.map(i => ({ value: String(i.id), label: i.name })));
+        this.cdr.markForCheck();
+      }
+    });
+
+    // Load departments
+    this.lookupService.getDepartments().subscribe({
+      next: (items) => {
+        this.departmentOptions.set(items.map(i => ({ value: String(i.id), label: i.name })));
+        this.cdr.markForCheck();
+      }
+    });
+
+    // Load support levels (hardcoded - no DB table)
+    this.lookupService.getSupportLevels().subscribe({
+      next: (items) => {
+        this.supportLevelOptions.set(items.map(i => ({ value: String(i.id), label: i.name })));
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private loadAccounts(): void {
+    this.clientService.getClients(1, 'name', 'asc').subscribe({
+      next: (response) => {
+        const options = response.clients.map(client => ({
+          value: String(client.id),
+          label: client.name
+        }));
+        this.accountOptions.set(options);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error loading accounts:', err);
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -124,10 +201,10 @@ export class ContactsEditComponent implements OnInit, OnDestroy {
   private loadContact(id: string): void {
     this.isLoading.set(true);
     this.loadError.set(null);
-    this.userService.getUserById(id).subscribe({
-      next: (user) => {
-        if (user) {
-          const detail = this.mapUserToContactDetail(user);
+    this.contactService.getContact(id).subscribe({
+      next: (contact) => {
+        if (contact) {
+          const detail = this.mapContactToDetail(contact);
           this.contact.set(detail);
           this.isBilling.set(detail.isBilling);
           this.isActive.set(detail.isActive);
@@ -145,18 +222,30 @@ export class ContactsEditComponent implements OnInit, OnDestroy {
     });
   }
 
-  private mapUserToContactDetail(user: User): ContactDetail {
-    const client = user.client as { id?: string; name?: string } | undefined;
+  private mapContactToDetail(contact: Contact): ContactDetail {
+    // Find account name from options
+    const account = this.accountOptions().find(a => a.value === String(contact.accountId));
+
     return {
-      id: user.id,
-      firstName: user.firstName ?? '',
-      lastName: user.lastName ?? '',
-      account: client?.name ?? '',
-      accountId: client?.id as number | undefined,
-      email: user.email ?? '',
-      phone: user.phoneNumber ?? (user as { phone?: string }).phone ?? undefined,
-      isBilling: false,
-      isActive: (user as { isActive?: boolean }).isActive ?? true
+      id: contact.id,
+      firstName: contact.firstName ?? '',
+      lastName: contact.lastName ?? '',
+      email: contact.email ?? '',
+      phone: contact.phone ?? '',
+      otherPhone: contact.otherPhone ?? '',
+      homePhone: contact.homePhone ?? '',
+      otherEmail: contact.otherEmail ?? '',
+      fax: contact.fax ?? '',
+      dateOfBirth: contact.dateOfBirth ?? '',
+      description: contact.description ?? '',
+      accountId: contact.accountId,
+      accountName: account?.label ?? '',
+      titleId: contact.titleId,
+      departmentId: contact.departmentId,
+      supportPersonId: contact.supportPersonId,
+      supportLevelId: contact.supportLevelId,
+      isActive: (contact.isActive !== null && contact.isActive !== undefined) ? contact.isActive === 1 : true,
+      isBilling: false // No backing field in contact_entity schema
     };
   }
 
@@ -172,26 +261,97 @@ export class ContactsEditComponent implements OnInit, OnDestroy {
     this.isActive.set(checked);
   }
 
-  onSaveAndContinue(): void {
-    console.log('Save and continue:', this.contact());
-    // Navigate to next contact or stay on page
+  onAccountChange(value: string | number): void {
+    const strValue = String(value);
+    const selectedAccount = this.accountOptions().find(opt => opt.value === strValue);
+    if (selectedAccount) {
+      this.contact.update(c => ({
+        ...c,
+        accountId: strValue,
+        accountName: selectedAccount.label
+      }));
+    }
+  }
+
+  clearAccount(): void {
+    this.contact.update(c => ({ ...c, accountId: null, accountName: '' }));
+  }
+
+  updateContact(field: keyof ContactDetail, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.contact.update(c => ({ ...c, [field]: value }));
+  }
+
+  onPersonTitleChange(value: string | number): void {
+    const titleId = typeof value === 'string' ? parseInt(value, 10) : value;
+    this.contact.update(c => ({ ...c, titleId }));
+  }
+
+  clearPersonTitle(): void {
+    this.contact.update(c => ({ ...c, titleId: null }));
+  }
+
+  onDepartmentChange(value: string | number): void {
+    const departmentId = typeof value === 'string' ? parseInt(value, 10) : value;
+    this.contact.update(c => ({ ...c, departmentId }));
+  }
+
+  clearDepartment(): void {
+    this.contact.update(c => ({ ...c, departmentId: null }));
+  }
+
+  onSupportLevelChange(value: string | number): void {
+    const supportLevelId = typeof value === 'string' ? parseInt(value, 10) : value;
+    this.contact.update(c => ({ ...c, supportLevelId }));
+  }
+
+  clearSupportLevel(): void {
+    this.contact.update(c => ({ ...c, supportLevelId: null }));
   }
 
   onSave(): void {
+    this.saveContact(false);
+  }
+
+  onSaveAndContinue(): void {
+    this.saveContact(true);
+  }
+
+  private saveContact(navigateToList: boolean): void {
     const contact = this.contact();
-    const data = {
-      firstName: contact.firstName,
-      lastName: contact.lastName,
-      email: contact.email,
-      phoneNumber: contact.phone
+
+    const data: CreateContactDto = {
+      firstName: contact.firstName?.trim() || null,
+      lastName: contact.lastName?.trim() || null,
+      email: contact.email?.trim() || null,
+      phone: contact.phone?.trim() || null,
+      otherPhone: contact.otherPhone?.trim() || null,
+      homePhone: contact.homePhone?.trim() || null,
+      otherEmail: contact.otherEmail?.trim() || null,
+      fax: contact.fax?.trim() || null,
+      dateOfBirth: contact.dateOfBirth || null,
+      description: contact.description?.trim() || null,
+      accountId: contact.accountId,
+      titleId: contact.titleId,
+      departmentId: contact.departmentId,
+      supportPersonId: contact.supportPersonId,
+      supportLevelId: contact.supportLevelId,
+      isActive: this.isActive() ? 1 : 0
     };
 
-    const operation = this.isEditMode() && contact.id
-      ? this.userService.updateUser(String(contact.id), data)
-      : this.userService.createUser(data);
+    const isCreating = !this.isEditMode() || !contact.id;
+    const operation = isCreating
+      ? this.contactService.createContact(data)
+      : this.contactService.updateContact(contact.id!, data);
 
     operation.subscribe({
-      next: () => this.router.navigate(['/admin/contacts/list']),
+      next: (result) => {
+        if (navigateToList) {
+          this.router.navigate(['/admin/contacts/list']);
+        } else if (isCreating && result?.id) {
+          this.router.navigate(['/admin/contacts', result.id, 'edit']);
+        }
+      },
       error: (error) => console.error('Error saving contact:', error)
     });
   }

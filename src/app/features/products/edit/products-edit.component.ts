@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ViewChild, TemplateRef, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ViewChild, TemplateRef, ElementRef, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, filter } from 'rxjs/operators';
+import { HttpClient, HttpEventType } from '@angular/common/http';
 
 import { BreadcrumbsComponent, BreadcrumbItem } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
@@ -17,16 +18,17 @@ import { ModalComponent } from '@app/ui-kit/organisms/modal/modal.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-footer.component';
 import { TextEditorComponent } from '@shared/components/text-editor/text-editor.component';
+import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { ProductService } from '@core/services/http/product.service';
-import { Product } from '@core/models';
-import {
-  mockProductAvailable,
-  mockProductRelated,
-  mockProductGallery,
-  mockProductDocuments,
-  mockProductAppliedDiscounts
-} from '@core/mocks/mock-data';
+import { ProductGroupService } from '@core/services/http/product-group.service';
+import { TaxTypeService } from '@core/services/http/tax-type.service';
+import { ProductDiscountService } from '@core/services/http/product-discount.service';
+import { ProductProductLinkService } from '@core/services/http/product-product-link.service';
+import { Product, MediaItem } from '@core/models';
+import { MediaService } from '@core/services/http/media.service';
+import { environment } from '@env/environment';
+import JSZip from 'jszip';
 
 interface ProductDetail {
   id: string;
@@ -127,7 +129,8 @@ const EMPTY_PRODUCT: ProductDetail = {
     IconComponent,
     TableFooterComponent,
     TextEditorComponent,
-    MobileFooterComponent
+    MobileFooterComponent,
+    TableActionsDropdownComponent
   ],
   templateUrl: './products-edit.component.html',
   styleUrls: ['./products-edit.component.scss'],
@@ -155,6 +158,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Gallery
   galleryImages = signal<GalleryImage[]>([]);
   activeImageDropdown = signal<string | null>(null);
+  primaryImageId = signal<string | null>(null);
 
   // Product documents
   productDocuments = signal<ProductDocument[]>([]);
@@ -166,6 +170,13 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Related products
   availableProducts = signal<RelatedProduct[]>([]);
   relatedProducts = signal<RelatedProduct[]>([]);
+  relatedChildProductIds = signal<Set<string>>(new Set());
+  private linkToProductMap = new Map<string, string>(); // link UUID -> child product UUID
+  filteredAvailableProducts = computed(() => {
+    const related = this.relatedChildProductIds();
+    const currentProductId = this.product().id;
+    return this.availableProducts().filter(p => !related.has(p.id) && p.id !== currentProductId);
+  });
   selectedProductIds = signal<Set<string>>(new Set());
   selectedRelatedProductIds = signal<Set<string>>(new Set());
 
@@ -186,19 +197,21 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   isDocHeaderDropdownOpen = signal(false);
   activeDocActionId = signal<string | null>(null);
 
+  documentActions: TableAction[] = [
+    { id: 'rename', label: 'Rename', icon: 'edit' },
+    { id: 'download', label: 'Download', icon: 'download' },
+    { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
+  ];
+
   // Rename modal
   isRenameModalOpen = signal(false);
   renameValue = signal('');
+  renameExtension = signal('');
   renameItemId = signal<string | null>(null);
   renameItemType = signal<'image' | 'document' | null>(null);
 
   // Options
-  productGroupOptions: SelectOption[] = [
-    { value: 'electrical', label: 'Electrical component' },
-    { value: 'mechanical', label: 'Mechanical component' },
-    { value: 'hydraulic', label: 'Hydraulic component' },
-    { value: 'pneumatic', label: 'Pneumatic component' }
-  ];
+  productGroupOptions = signal<SelectOption[]>([]);
 
   currencyOptions: SelectOption[] = [
     { value: 'EUR', label: 'Euro' },
@@ -206,16 +219,34 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     { value: 'GBP', label: 'British Pound' }
   ];
 
-  taxOptions: SelectOption[] = [
-    { value: 'PDV20', label: 'PDV20' },
-    { value: 'PDV25', label: 'PDV25' },
-    { value: 'PDV0', label: 'PDV0' }
-  ];
+  taxOptions = signal<SelectOption[]>([]);
 
   // Select model values
   productGroupValue = '';
   taxPercentValue = '';
   currencyValue = '';
+
+  // Validation state
+  touched = signal<Record<string, boolean>>({});
+  errors = computed(() => {
+    const product = this.product();
+    const errs: Record<string, string> = {};
+    if (!product.name?.trim()) errs['name'] = 'Name is required';
+    return errs;
+  });
+  isValid = computed(() => Object.keys(this.errors()).length === 0);
+
+  markAllTouched(): void {
+    this.touched.set({ name: true });
+  }
+
+  markFieldTouched(field: string): void {
+    this.touched.update(t => ({ ...t, [field]: true }));
+  }
+
+  getError(field: string): string {
+    return this.touched()[field] ? (this.errors()[field] || '') : '';
+  }
 
   // Tabs
   editorTabs: TabItem[] = [
@@ -244,6 +275,10 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('docCheckboxTemplate') docCheckboxTemplate!: TemplateRef<any>;
   @ViewChild('docActionsTemplate') docActionsTemplate!: TemplateRef<any>;
 
+  // File input refs
+  @ViewChild('imageFileInput') imageFileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('documentFileInput') documentFileInput!: ElementRef<HTMLInputElement>;
+
   // Document table columns
   documentColumns: TableColumn[] = [];
 
@@ -256,10 +291,19 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private productService: ProductService
+    private http: HttpClient,
+    private productService: ProductService,
+    private productGroupService: ProductGroupService,
+    private taxTypeService: TaxTypeService,
+    private productDiscountService: ProductDiscountService,
+    private productProductLinkService: ProductProductLinkService,
+    private mediaService: MediaService
   ) {}
 
   ngOnInit(): void {
+    this.loadProductGroups();
+    this.loadTaxTypes();
+
     this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
       const id = params.get('id');
       if (id && id !== 'new') {
@@ -272,10 +316,40 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     });
 
     this.loadAvailableProducts();
-    this.loadRelatedProducts();
-    this.loadGalleryImages();
-    this.loadProductDocuments();
-    this.loadAppliedDiscounts();
+  }
+
+  private loadProductGroups(): void {
+    this.productGroupService.getProductGroups(1, 100)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const options = response.member
+            .filter(pg => pg.isActive !== false)
+            .map(pg => ({ value: pg.id, label: pg.name }));
+          this.productGroupOptions.set(options);
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('Error loading product groups:', err)
+      });
+  }
+
+  private loadTaxTypes(): void {
+    this.taxTypeService.getTaxTypes(1, 100)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const options = response.member
+            .filter((tt: any) => tt.isActive !== false)
+            .map(tt => {
+              const pct = parseFloat(String(tt.percent));
+              const pctLabel = Number.isInteger(pct) ? pct.toString() : pct.toFixed(2).replace(/\.?0+$/, '');
+              return { value: tt.id, label: `${tt.name} (${pctLabel}%)` };
+            });
+          this.taxOptions.set(options);
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('Error loading tax types:', err)
+      });
   }
 
   ngAfterViewInit(): void {
@@ -326,6 +400,35 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.productGroupValue = productData.productGroup;
         this.taxPercentValue = productData.taxPercent;
         this.currencyValue = productData.currency;
+
+        // Track featured image
+        const featuredId = (apiProduct as any).featuredImage?.id || null;
+        this.primaryImageId.set(featuredId);
+
+        // Load gallery images from product response
+        this.galleryImages.set(
+          (apiProduct.imageGallery || []).map((m: MediaItem) => ({
+            id: m.id,
+            name: m.filename || '',
+            url: m.filePath || '',
+            isPrimary: m.id === featuredId
+          }))
+        );
+
+        // Load documents from product response
+        this.productDocuments.set(
+          (apiProduct.documents || []).map((m: MediaItem) => ({
+            id: m.id,
+            fileType: (m.mimeType || '').split('/').pop()?.toUpperCase() || 'FILE',
+            name: m.filename || '',
+            size: '-'
+          }))
+        );
+
+        // Load applied discounts and related products
+        this.loadAppliedDiscounts(id);
+        this.loadRelatedProducts(id);
+
         this.cdr.markForCheck();
       },
       error: () => {
@@ -340,49 +443,132 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       id: p.id,
       code: p.partNo ?? '',
       name: p.name ?? '',
-      active: (p as { isActive?: boolean }).isActive ?? true,
-      readyForShop: (p as { readyForShop?: boolean }).readyForShop ?? true,
+      active: p.isActive ?? true,
+      readyForShop: p.readyForShop ?? false,
       url: p.slug ?? '',
-      quantity: 0,
-      quantityStep: 1,
-      quoteItemLimit: 0,
-      fixedQuantity: 0,
+      quantity: p.qty ?? 0,
+      quantityStep: p.qtyStep ?? 1,
+      quoteItemLimit: p.quoteItemLimit ?? 0,
+      fixedQuantity: p.fixedQty ?? 0,
       weight: p.weight ?? '',
-      productGroup: '',
-      catalogCode: '',
+      productGroup: p.productGroupId ?? '',
+      catalogCode: p.catalogCode ?? '',
       basePrice: p.price ?? 0,
-      retailPrice: p.price ?? 0,
-      taxPercent: '',
-      currency: 'EUR',
-      discountPercent: 0,
-      discountPrice: 0,
+      retailPrice: p.retailPrice ?? 0,
+      taxPercent: p.taxTypeId ?? '',
+      currency: p.currency ?? 'EUR',
+      discountPercent: p.discountPercent ?? 0,
+      discountPrice: p.discountPrice ?? 0,
       shortDescription: p.shortDescription ?? ''
     };
   }
 
   private loadAvailableProducts(): void {
-    // In real app this would be an API call
-    this.availableProducts.set([...mockProductAvailable] as RelatedProduct[]);
+    const query = this.searchQuery();
+    const obs = query
+      ? this.productService.searchProducts(query)
+      : this.productService.getProducts(this.currentPage(), this.itemsPerPage);
+
+    obs.pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const products = (response.member || []).map(p => ({
+            id: p.id,
+            productId: p.partNo || p.id.substring(0, 8),
+            code: p.partNo || '',
+            name: p.name || '',
+            status: (p.isActive ? 'active' : 'inactive') as 'active' | 'inactive',
+            available: p.isActive ?? true
+          }));
+          this.availableProducts.set(products);
+          this.totalItems.set(response.totalItems || 0);
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('Error loading available products:', err)
+      });
   }
 
-  private loadRelatedProducts(): void {
-    // In real app this would be an API call
-    this.relatedProducts.set([...mockProductRelated] as RelatedProduct[]);
+  private loadRelatedProducts(productId: string): void {
+    this.productProductLinkService.getByParentProductId(productId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const links = response.member || [];
+          if (links.length === 0) {
+            this.relatedProducts.set([]);
+            this.relatedChildProductIds.set(new Set());
+            this.cdr.markForCheck();
+            return;
+          }
+          // Track all child product UUIDs for filtering
+          const childIds = new Set(links.map(l => l.childProductId));
+          this.relatedChildProductIds.set(childIds);
+          this.linkToProductMap.clear();
+          links.forEach(l => this.linkToProductMap.set(l.id, l.childProductId));
+          // For each link, fetch the child product details
+          const related: RelatedProduct[] = [];
+          let loaded = 0;
+          links.forEach(link => {
+            this.productService.getProductById(link.childProductId)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: (p) => {
+                  related.push({
+                    id: link.id,
+                    productId: p.partNo || p.id.substring(0, 8),
+                    code: p.partNo || '',
+                    name: p.name || '',
+                    status: (p.isActive ? 'active' : 'inactive') as 'active' | 'inactive',
+                    available: p.isActive ?? true,
+                    sortOrder: link.ord ?? 0
+                  });
+                  loaded++;
+                  if (loaded === links.length) {
+                    this.relatedProducts.set(related.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)));
+                    this.cdr.markForCheck();
+                  }
+                },
+                error: () => {
+                  related.push({
+                    id: link.id,
+                    productId: link.childProductId.substring(0, 8),
+                    code: '-',
+                    name: 'Unknown product',
+                    status: 'inactive',
+                    available: false,
+                    sortOrder: link.ord ?? 0
+                  });
+                  loaded++;
+                  if (loaded === links.length) {
+                    this.relatedProducts.set(related.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)));
+                    this.cdr.markForCheck();
+                  }
+                }
+              });
+          });
+        },
+        error: (err) => console.error('Error loading related products:', err)
+      });
   }
 
-  private loadGalleryImages(): void {
-    // In real app this would be an API call
-    this.galleryImages.set([...mockProductGallery] as GalleryImage[]);
-  }
-
-  private loadProductDocuments(): void {
-    // In real app this would be an API call
-    this.productDocuments.set([...mockProductDocuments] as ProductDocument[]);
-  }
-
-  private loadAppliedDiscounts(): void {
-    // In real app this would be an API call
-    this.appliedDiscounts.set([...mockProductAppliedDiscounts] as AppliedDiscount[]);
+  private loadAppliedDiscounts(productId: string): void {
+    this.productDiscountService.getByProductId(productId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const discounts = (response.member || []).map(d => ({
+            id: d.id.substring(0, 7),
+            dateValidFrom: d.dateValidFrom ? new Date(d.dateValidFrom).toLocaleString() : '-',
+            dateValidTo: d.dateValidTo ? new Date(d.dateValidTo).toLocaleString() : '-',
+            discountPriceBase: d.discountPriceBase ? `\u20AC ${d.discountPriceBase}` : '-',
+            discountPercent: d.rebate ?? '-',
+            appliedTo: d.appliedTo || '-'
+          }));
+          this.appliedDiscounts.set(discounts);
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('Error loading applied discounts:', err)
+      });
   }
 
   private resetForm(): void {
@@ -406,6 +592,39 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onReadyForShopChange(value: boolean): void {
     this.product.update(p => ({ ...p, readyForShop: value }));
+  }
+
+  // Field update handlers
+  updateProduct(field: string, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.product.update(p => ({ ...p, [field]: value }));
+  }
+
+  updateProductNumber(field: string, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.product.update(p => ({ ...p, [field]: value ? parseFloat(value) : 0 }));
+  }
+
+  // Tax type handlers
+  onTaxTypeChange(value: string | number): void {
+    this.taxPercentValue = String(value);
+    this.product.update(p => ({ ...p, taxPercent: String(value) }));
+  }
+
+  clearTaxType(): void {
+    this.taxPercentValue = '';
+    this.product.update(p => ({ ...p, taxPercent: '' }));
+  }
+
+  // Currency handlers
+  onCurrencyChange(value: string | number): void {
+    this.currencyValue = String(value);
+    this.product.update(p => ({ ...p, currency: String(value) }));
+  }
+
+  clearCurrency(): void {
+    this.currencyValue = '';
+    this.product.update(p => ({ ...p, currency: '' }));
   }
 
   // Tab handler
@@ -455,7 +674,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   toggleAllProducts(): void {
-    const products = this.availableProducts();
+    const products = this.filteredAvailableProducts();
     const selected = this.selectedProductIds();
     if (selected.size === products.length) {
       this.selectedProductIds.set(new Set());
@@ -465,7 +684,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   isAllProductsSelected(): boolean {
-    const products = this.availableProducts();
+    const products = this.filteredAvailableProducts();
     return products.length > 0 && this.selectedProductIds().size === products.length;
   }
 
@@ -483,7 +702,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   selectAllProducts(): void {
-    const products = this.availableProducts();
+    const products = this.filteredAvailableProducts();
     this.selectedProductIds.set(new Set(products.map(p => p.id)));
     this.isHeaderDropdownOpen.set(false);
   }
@@ -533,59 +752,175 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  toggleDocActionById(docId: string): void {
+    this.activeDocActionId.set(this.activeDocActionId() === docId ? null : docId);
+  }
+
   closeDocAction(): void {
     this.activeDocActionId.set(null);
+  }
+
+  onDocActionClick(event: ActionClickEvent): void {
+    const row = event.row as ProductDocument;
+    switch (event.actionId) {
+      case 'rename': this.renameDocument(row.id); break;
+      case 'download': this.downloadDocument(row.id); break;
+      case 'delete': this.deleteDocument(row.id); break;
+    }
   }
 
   renameDocument(docId: string): void {
     const doc = this.productDocuments().find(d => d.id === docId);
     if (doc) {
+      const { name, ext } = this.splitFilename(doc.name);
       this.renameItemId.set(docId);
       this.renameItemType.set('document');
-      this.renameValue.set(doc.name);
+      this.renameValue.set(name);
+      this.renameExtension.set(ext);
       this.isRenameModalOpen.set(true);
     }
     this.activeDocActionId.set(null);
   }
 
   downloadDocument(docId: string): void {
-    console.log('Download document:', docId);
+    this.mediaService.getMediaItem(docId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (media) => {
+          if (media.filePath) {
+            const url = media.filePath;
+            this.triggerDownload(url, media.filename || 'document');
+          }
+        },
+        error: (err) => console.error('Error downloading document:', err)
+      });
     this.activeDocActionId.set(null);
   }
 
   deleteDocument(docId: string): void {
-    this.productDocuments.update(docs => docs.filter(d => d.id !== docId));
+    this.mediaService.deleteMediaItem(docId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.productDocuments.update(docs => docs.filter(d => d.id !== docId));
+          this.updateProductMedia();
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('Error deleting document:', err)
+      });
     this.activeDocActionId.set(null);
+  }
+
+  deleteSelectedDocuments(): void {
+    const selectedIds = this.selectedDocumentIds();
+    if (selectedIds.size === 0) return;
+
+    selectedIds.forEach(docId => {
+      this.mediaService.deleteMediaItem(docId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          error: (err) => console.error('Error deleting document:', err)
+        });
+    });
+    this.productDocuments.update(docs => docs.filter(d => !selectedIds.has(d.id)));
+    this.selectedDocumentIds.set(new Set());
+    this.updateProductMedia();
+    this.cdr.markForCheck();
   }
 
   // Related products actions
   addSelectedProducts(): void {
     const selected = this.selectedProductIds();
-    const available = this.availableProducts();
+    const available = this.filteredAvailableProducts();
     const related = this.relatedProducts();
+    const productId = this.product().id;
+    if (!productId) return;
 
-    const newRelated = available
-      .filter(p => selected.has(p.id) && !related.find(r => r.id === p.id))
-      .map((p, i) => ({ ...p, sortOrder: related.length + i + 1 }));
+    const toAdd = available.filter(p => selected.has(p.id));
 
-    this.relatedProducts.set([...related, ...newRelated]);
+    toAdd.forEach((p, i) => {
+      const childProductId = p.id;
+      this.productProductLinkService.createLink({
+        parentProductId: productId,
+        childProductId,
+        ord: related.length + i + 1
+      }).pipe(takeUntil(this.destroy$)).subscribe({
+        next: (link) => {
+          this.relatedProducts.update(current => [
+            ...current,
+            { ...p, id: link.id, sortOrder: link.ord ?? current.length + 1 }
+          ]);
+          this.relatedChildProductIds.update(ids => { const s = new Set(ids); s.add(childProductId); return s; });
+          this.linkToProductMap.set(link.id, childProductId);
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('Error adding related product:', err)
+      });
+    });
+
     this.selectedProductIds.set(new Set());
   }
 
   addProduct(product: RelatedProduct): void {
     const related = this.relatedProducts();
-    if (!related.find(r => r.id === product.id)) {
-      this.relatedProducts.set([...related, { ...product, sortOrder: related.length + 1 }]);
-    }
+    const productId = this.product().id;
+    const childProductId = product.id;
+    if (!productId || this.relatedChildProductIds().has(childProductId)) return;
+
+    this.productProductLinkService.createLink({
+      parentProductId: productId,
+      childProductId,
+      ord: related.length + 1
+    }).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (link) => {
+        this.relatedProducts.update(current => [
+          ...current,
+          { ...product, id: link.id, sortOrder: link.ord ?? current.length + 1 }
+        ]);
+        this.relatedChildProductIds.update(ids => { const s = new Set(ids); s.add(childProductId); return s; });
+        this.linkToProductMap.set(link.id, childProductId);
+        this.cdr.markForCheck();
+      },
+      error: (err) => console.error('Error adding related product:', err)
+    });
   }
 
   removeProduct(product: RelatedProduct): void {
-    this.relatedProducts.update(products => products.filter(p => p.id !== product.id));
+    const linkId = product.id;
+    this.productProductLinkService.deleteLink(linkId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          const childId = this.linkToProductMap.get(linkId);
+          this.relatedProducts.update(products => products.filter(p => p.id !== linkId));
+          if (childId) {
+            this.relatedChildProductIds.update(ids => { const s = new Set(ids); s.delete(childId); return s; });
+            this.linkToProductMap.delete(linkId);
+          }
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('Error removing related product:', err)
+      });
   }
 
   removeSelectedRelatedProducts(): void {
     const selectedIds = this.selectedRelatedProductIds();
-    this.relatedProducts.update(products => products.filter(p => !selectedIds.has(p.id)));
+    selectedIds.forEach(linkId => {
+      this.productProductLinkService.deleteLink(linkId)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            const childId = this.linkToProductMap.get(linkId);
+            this.relatedProducts.update(products => products.filter(p => p.id !== linkId));
+            if (childId) {
+              this.relatedChildProductIds.update(ids => { const s = new Set(ids); s.delete(childId); return s; });
+              this.linkToProductMap.delete(linkId);
+            }
+            this.cdr.markForCheck();
+          },
+          error: (err) => console.error('Error removing related product:', err)
+        });
+    });
     this.selectedRelatedProductIds.set(new Set());
   }
 
@@ -598,39 +933,90 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Pagination
   onPageChange(page: number): void {
     this.currentPage.set(page);
+    this.loadAvailableProducts();
   }
 
   // Search
   onSearch(query: string): void {
     this.searchQuery.set(query);
     this.currentPage.set(1);
+    this.loadAvailableProducts();
   }
 
   // Save actions
-  onSaveAndContinue(): void {
-    console.log('Save and continue:', this.product());
+  onSave(): void {
+    this.saveProduct(false);
   }
 
-  onSave(): void {
+  onSaveAndContinue(): void {
+    this.saveProduct(true);
+  }
+
+  private saveProduct(navigateToList: boolean): void {
+    this.markAllTouched();
+    if (!this.isValid()) {
+      this.cdr.markForCheck();
+      return;
+    }
+
     const product = this.product();
-    const data = {
-      partNo: product.code,
+    const mediaIriPrefix = `${environment.apiPath}/media_items/`;
+    const primaryId = this.primaryImageId();
+
+    const data: Record<string, unknown> = {
       name: product.name,
-      slug: product.url,
+      partNo: product.code,
+      slug: product.url || undefined,
+      isActive: product.active,
+      readyForShop: product.readyForShop,
+      qty: product.quantity || null,
+      qtyStep: product.quantityStep || null,
+      quoteItemLimit: product.quoteItemLimit || null,
+      fixedQty: product.fixedQuantity || null,
+      weight: product.weight || null,
+      productGroupId: product.productGroup || null,
+      catalogCode: product.catalogCode || null,
       price: product.basePrice,
-      weight: product.weight,
-      shortDescription: product.shortDescription,
-      isActive: product.active
+      retailPrice: product.retailPrice || null,
+      taxTypeId: product.taxPercent || null,
+      currency: product.currency || null,
+      discountPercent: product.discountPercent || null,
+      discountPrice: product.discountPrice || null,
+      shortDescription: product.shortDescription || null,
+      imageGallery: this.galleryImages().map(img => mediaIriPrefix + img.id),
+      documents: this.productDocuments().map(doc => mediaIriPrefix + doc.id),
+      featuredImage: primaryId ? mediaIriPrefix + primaryId : null
     };
 
-    const operation = this.isEditMode() && product.id
-      ? this.productService.updateProduct(product.id, data)
-      : this.productService.createProduct(data);
+    const isCreating = !this.isEditMode() || !product.id;
+    const operation = isCreating
+      ? this.productService.createProduct(data)
+      : this.productService.updateProduct(product.id, data);
 
     operation.subscribe({
-      next: () => this.router.navigate(['/admin/products/list']),
+      next: (result) => {
+        if (navigateToList) {
+          this.router.navigate(['/admin/products/list']);
+        } else if (isCreating && result?.id) {
+          this.router.navigate(['/admin/products', result.id, 'edit']);
+        } else if (!isCreating && product.id) {
+          // Reload product data to confirm persistence
+          this.loadProduct(product.id);
+        }
+      },
       error: (error) => console.error('Error saving product:', error)
     });
+  }
+
+  // Product group handlers
+  onProductGroupChange(value: string | number): void {
+    this.productGroupValue = String(value);
+    this.product.update(p => ({ ...p, productGroup: String(value) }));
+  }
+
+  clearProductGroup(): void {
+    this.productGroupValue = '';
+    this.product.update(p => ({ ...p, productGroup: '' }));
   }
 
   // Helpers
@@ -642,9 +1028,28 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  getProductGroupLabel(value: string): string {
-    const option = this.productGroupOptions.find(opt => opt.value === value);
-    return option ? option.label : value;
+  // Media persistence - link media items to product via IRI references
+  private updateProductMedia(): void {
+    const productId = this.product().id;
+    if (!productId) return;
+
+    const mediaIriPrefix = `${environment.apiPath}/media_items/`;
+    const imageGallery = this.galleryImages().map(img => mediaIriPrefix + img.id);
+    const documents = this.productDocuments().map(doc => mediaIriPrefix + doc.id);
+
+    const data: Record<string, unknown> = { imageGallery, documents };
+    const primaryId = this.primaryImageId();
+    if (primaryId) {
+      data['featuredImage'] = mediaIriPrefix + primaryId;
+    } else {
+      data['featuredImage'] = null;
+    }
+
+    this.productService.updateProduct(productId, data)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        error: (err) => console.error('Error updating product media:', err)
+      });
   }
 
   // Gallery methods
@@ -668,43 +1073,154 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   makeImagePrimary(imageId: string): void {
+    this.primaryImageId.set(imageId);
     this.galleryImages.update(images =>
       images.map(img => ({ ...img, isPrimary: img.id === imageId }))
     );
     this.activeImageDropdown.set(null);
+    this.updateProductMedia();
   }
 
   renameImage(imageId: string): void {
     const image = this.galleryImages().find(img => img.id === imageId);
     if (image) {
+      const { name, ext } = this.splitFilename(image.name);
       this.renameItemId.set(imageId);
       this.renameItemType.set('image');
-      this.renameValue.set(image.name);
+      this.renameValue.set(name);
+      this.renameExtension.set(ext);
       this.isRenameModalOpen.set(true);
     }
     this.activeImageDropdown.set(null);
   }
 
   downloadImage(imageId: string): void {
-    console.log('Download image:', imageId);
+    const image = this.galleryImages().find(img => img.id === imageId);
+    if (image?.url) {
+      this.triggerDownload(image.url, image.name);
+    }
     this.activeImageDropdown.set(null);
   }
 
+  private triggerDownload(url: string, filename: string): void {
+    this.mediaService.downloadFile(url)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(blobUrl);
+        },
+        error: (err) => console.error('Error downloading file:', err)
+      });
+  }
+
   deleteImage(imageId: string): void {
-    this.galleryImages.update(images => images.filter(img => img.id !== imageId));
+    // If deleting the primary image, clear it
+    if (this.primaryImageId() === imageId) {
+      this.primaryImageId.set(null);
+    }
+    this.mediaService.deleteMediaItem(imageId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.galleryImages.update(images => images.filter(img => img.id !== imageId));
+          this.updateProductMedia();
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('Error deleting image:', err)
+      });
     this.activeImageDropdown.set(null);
   }
 
   uploadImage(): void {
-    console.log('Upload image');
+    this.imageFileInput?.nativeElement?.click();
+  }
+
+  onImageFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+
+    const productId = this.product().id;
+    if (!productId) return;
+
+    const files = Array.from(input.files);
+    let uploaded = 0;
+
+    files.forEach(file => {
+      this.mediaService.uploadFile(file)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (httpEvent) => {
+            if (httpEvent.type === HttpEventType.Response && httpEvent.body) {
+              const media = httpEvent.body;
+              this.galleryImages.update(images => [...images, {
+                id: media.id,
+                name: media.filename || file.name,
+                url: media.filePath || '',
+                isPrimary: false
+              }]);
+              uploaded++;
+              if (uploaded === files.length) {
+                this.updateProductMedia();
+              }
+              this.cdr.markForCheck();
+            }
+          },
+          error: (err) => console.error('Error uploading image:', err)
+        });
+    });
+
+    input.value = '';
   }
 
   downloadAllImages(): void {
-    console.log('Download all images');
+    const images = this.galleryImages().filter(img => img.url);
+    if (images.length === 0) return;
+
+    const zip = new JSZip();
+    let fetched = 0;
+
+    images.forEach(image => {
+      this.mediaService.downloadFile(image.url)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (blob) => {
+            zip.file(image.name || `image-${image.id}`, blob);
+            fetched++;
+            if (fetched === images.length) {
+              zip.generateAsync({ type: 'blob' }).then(zipBlob => {
+                const blobUrl = URL.createObjectURL(zipBlob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = 'gallery-images.zip';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+              });
+            }
+          },
+          error: (err) => console.error(`Error fetching image ${image.name}:`, err)
+        });
+    });
   }
 
   deleteAllImages(): void {
+    const images = this.galleryImages();
+    this.primaryImageId.set(null);
+    images.forEach(image => {
+      this.mediaService.deleteMediaItem(image.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({ error: (err) => console.error('Error deleting image:', err) });
+    });
     this.galleryImages.set([]);
+    this.updateProductMedia();
   }
 
   // Document methods
@@ -739,7 +1255,44 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   addDocument(): void {
-    console.log('Add document');
+    this.documentFileInput?.nativeElement?.click();
+  }
+
+  onDocumentFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+
+    const productId = this.product().id;
+    if (!productId) return;
+
+    const files = Array.from(input.files);
+    let uploaded = 0;
+
+    files.forEach(file => {
+      this.mediaService.uploadFile(file)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (httpEvent) => {
+            if (httpEvent.type === HttpEventType.Response && httpEvent.body) {
+              const media = httpEvent.body;
+              this.productDocuments.update(docs => [...docs, {
+                id: media.id,
+                fileType: (media.mimeType || '').split('/').pop()?.toUpperCase() || 'FILE',
+                name: media.filename || file.name,
+                size: '-'
+              }]);
+              uploaded++;
+              if (uploaded === files.length) {
+                this.updateProductMedia();
+              }
+              this.cdr.markForCheck();
+            }
+          },
+          error: (err) => console.error('Error uploading document:', err)
+        });
+    });
+
+    input.value = '';
   }
 
   // Rename modal methods
@@ -753,26 +1306,44 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.renameItemId.set(null);
     this.renameItemType.set(null);
     this.renameValue.set('');
+    this.renameExtension.set('');
   }
 
   confirmRename(): void {
     const itemId = this.renameItemId();
     const itemType = this.renameItemType();
-    const newName = this.renameValue();
+    const baseName = this.renameValue();
+    const ext = this.renameExtension();
 
-    if (!itemId || !newName) return;
+    if (!itemId || !baseName) return;
 
+    const fullName = ext ? `${baseName}.${ext}` : baseName;
+
+    // Update local state
     if (itemType === 'image') {
       this.galleryImages.update(images =>
-        images.map(img => img.id === itemId ? { ...img, name: newName } : img)
+        images.map(img => img.id === itemId ? { ...img, name: fullName } : img)
       );
     } else if (itemType === 'document') {
       this.productDocuments.update(docs =>
-        docs.map(doc => doc.id === itemId ? { ...doc, name: newName } : doc)
+        docs.map(doc => doc.id === itemId ? { ...doc, name: fullName } : doc)
       );
     }
 
+    // Persist to API
+    this.mediaService.updateMediaItem(itemId, { filename: fullName } as any)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        error: (err) => console.error('Error renaming media item:', err)
+      });
+
     this.cancelRename();
+  }
+
+  private splitFilename(filename: string): { name: string; ext: string } {
+    const lastDot = filename.lastIndexOf('.');
+    if (lastDot <= 0) return { name: filename, ext: '' };
+    return { name: filename.substring(0, lastDot), ext: filename.substring(lastDot + 1) };
   }
 }
 

@@ -51,8 +51,6 @@
   @include admin.toggles-row;
 }
 
-@include admin.detail-form-styles;
-
 // =============================================================================
 // Tabs Section
 // =============================================================================
@@ -82,12 +80,12 @@
     flex: 1;
   }
 
+  ui-tabs {
+    --tabs-border-bottom: none;
+  }
+
   @media (max-width: 768px) {
     flex-wrap: nowrap;
-
-    ::ng-deep .ui-tabs__tab {
-      flex: 0 0 auto;
-    }
   }
 }
 
@@ -118,20 +116,14 @@
     padding: 0;
     background: transparent;
 
-    ::ng-deep .text-editor {
-      border: none;
-      border-radius: 0;
-      background: transparent;
-
-      &__toolbar {
-        background: white;
-        border-bottom: 1px solid #e4e4e7;
-      }
-
-      &__content {
-        background: transparent;
-        min-height: 150px;
-      }
+    app-text-editor {
+      --text-editor-border: none;
+      --text-editor-border-radius: 0;
+      --text-editor-background: transparent;
+      --text-editor-toolbar-background: white;
+      --text-editor-toolbar-border-bottom: 1px solid #e4e4e7;
+      --text-editor-content-background: transparent;
+      --text-editor-content-min-height: 150px;
     }
   }
 
@@ -167,9 +159,32 @@
 // =============================================================================
 .rename-modal {
   @include admin.rename-modal;
+
+  &__input-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__ext {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    color: #71717a;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
 }
 
 // =============================================================================
 // Table Overrides
 // =============================================================================
-@include admin.data-table-transparent-overrides;
+.table-container {
+  // Use CSS custom properties for ui-data-table styling
+  --data-table-border: none;
+  --data-table-border-radius: 0;
+  --data-table-background: transparent;
+  --data-table-header-background: white;
+  --data-table-row-background: transparent;
+  --data-table-row-hover-background: #fafafa;
+}

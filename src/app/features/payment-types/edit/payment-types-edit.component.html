@@ -30,14 +30,8 @@
           <ui-toggle
             label="Active"
             labelPosition="left"
-            [checked]="paymentType().active"
+            [checked]="paymentType().isActive"
             (toggleChange)="toggleActive()">
-          </ui-toggle>
-          <ui-toggle
-            label="Ready for Shop"
-            labelPosition="left"
-            [checked]="paymentType().readyForShop"
-            (toggleChange)="toggleReadyForShop()">
           </ui-toggle>
           <ui-toggle
             label="Enable installments"
@@ -48,16 +42,16 @@
         </div>
 
         <!-- Form Fields -->
-        <ui-form-field label="Name" layout="horizontal">
+        <ui-form-field label="Name" layout="horizontal" [required]="true" [error]="getError('name')">
           <input type="text" [value]="paymentType().name" (input)="onNameChange($event)" placeholder="Enter name">
         </ui-form-field>
 
         <ui-form-field label="Configuration" layout="horizontal">
-          <input type="text" [value]="paymentType().configuration || '-'" (input)="onConfigurationChange($event)" placeholder="-">
+          <input type="text" [value]="paymentType().configuration || ''" (input)="onConfigurationChange($event)" placeholder="Enter configuration">
         </ui-form-field>
 
         <ui-form-field label="Provider code" layout="horizontal">
-          <input type="text" [value]="paymentType().providerCode || '-'" (input)="onProviderCodeChange($event)" placeholder="-">
+          <input type="text" [value]="paymentType().providerCode || ''" (input)="onProviderCodeChange($event)" placeholder="Enter provider code">
         </ui-form-field>
       </div>
     </div>
@@ -75,6 +69,12 @@
           </ui-tabs>
           <div class="tabs-header__spacer"></div>
           @if (activeTab() === 'documents') {
+            @if (hasSelectedDocuments()) {
+              <button class="btn btn--outline" (click)="deleteSelectedDocuments()">
+                <span>Delete selected</span>
+                <ui-icon name="trash" size="sm"></ui-icon>
+              </button>
+            }
             <button class="btn btn--outline" (click)="onAddDocument()">
               <span>Add document</span>
               <ui-icon name="plus" size="sm"></ui-icon>
@@ -100,26 +100,26 @@
               <h2 class="details-card__title">Details</h2>
               <div class="details-card__content">
                 <ui-toggle
-                  label="Use as default base"
+                  label="Use as default"
                   labelPosition="left"
-                  [checked]="paymentType().useAsDefaultBase"
-                  (toggleChange)="toggleUseAsDefaultBase()">
+                  [checked]="paymentType().useAsDefault"
+                  (toggleChange)="toggleUseAsDefault()">
                 </ui-toggle>
 
                 <ui-form-field label="Remote code" layout="horizontal">
-                  <input type="text" [value]="paymentType().remoteCode || '-'" (input)="onRemoteCodeChange($event)" placeholder="-">
+                  <input type="text" [value]="paymentType().remoteCode || ''" (input)="onRemoteCodeChange($event)" placeholder="Enter remote code">
                 </ui-form-field>
 
                 <ui-form-field label="Payment fee" layout="horizontal">
-                  <input type="text" [value]="formatNumber(paymentType().paymentFee)" (input)="onPaymentFeeChange($event)" placeholder="0,00">
+                  <input type="text" [value]="paymentType().paymentFee || ''" (input)="onPaymentFeeChange($event)" placeholder="0">
                 </ui-form-field>
 
-                <ui-form-field label="Min cart total base" layout="horizontal">
-                  <input type="text" [value]="formatNumber(paymentType().minCartTotalBase)" (input)="onMinCartTotalBaseChange($event)" placeholder="0,00">
+                <ui-form-field label="Min cart total" layout="horizontal">
+                  <input type="text" [value]="paymentType().minCartTotal || ''" (input)="onMinCartTotalChange($event)" placeholder="0">
                 </ui-form-field>
 
-                <ui-form-field label="Max cart total base" layout="horizontal">
-                  <input type="text" [value]="formatNumber(paymentType().maxCartTotalBase)" (input)="onMaxCartTotalBaseChange($event)" placeholder="0,00">
+                <ui-form-field label="Max cart total" layout="horizontal">
+                  <input type="text" [value]="paymentType().maxCartTotal || ''" (input)="onMaxCartTotalChange($event)" placeholder="0">
                 </ui-form-field>
               </div>
             </div>
@@ -138,6 +138,16 @@
       </div>
     </div>
   </div>
+
+  <!-- Hidden file input for document upload -->
+  <input
+    #documentFileInput
+    type="file"
+    style="display: none"
+    multiple
+    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp"
+    (change)="onDocumentFileSelected($event)"
+  >
 
   <!-- Document Templates -->
   <ng-template #checkboxHeaderTemplate>
@@ -184,13 +194,18 @@
         </button>
       </div>
       <div class="rename-modal__body">
-        <input
-          type="text"
-          class="rename-modal__input"
-          [value]="renameValue()"
-          (input)="onRenameInputChange($event)"
-          (keyup.enter)="confirmRename()"
-        />
+        <div class="rename-modal__input-row">
+          <input
+            type="text"
+            class="rename-modal__input"
+            [value]="renameValue()"
+            (input)="onRenameInputChange($event)"
+            (keyup.enter)="confirmRename()"
+          />
+          @if (renameExtension()) {
+            <span class="rename-modal__ext">.{{ renameExtension() }}</span>
+          }
+        </div>
       </div>
       <div class="rename-modal__footer">
         <button class="btn btn--ghost" (click)="cancelRename()">Cancel</button>

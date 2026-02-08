@@ -6,6 +6,7 @@ export interface MediaItem {
   filename: string;
   mimeType: string;
   filePath: string;
+  fileSize?: number | null;
   createdAt: string;
   updatedAt: string;
 }

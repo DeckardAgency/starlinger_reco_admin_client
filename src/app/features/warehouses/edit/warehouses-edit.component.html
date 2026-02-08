@@ -3,7 +3,7 @@
     variant="page-header"
     separator="chevron"
     [items]="[
-      { label: 'Warehouses', route: '/admin/warehouses' },
+      { label: 'Warehouses', route: '/admin/warehouses/list' },
       { label: isEditMode() ? 'Edit' : 'Add' }
     ]"
   ></ui-breadcrumbs>
@@ -24,46 +24,58 @@
       <div class="form-card__content">
         <div class="toggles-row">
           <ui-toggle label="Ready for Shop" labelPosition="left" [checked]="warehouse().readyForShop" (toggleChange)="toggleReadyForShop()"></ui-toggle>
-          <ui-toggle label="Active" labelPosition="left" [checked]="warehouse().active" (toggleChange)="toggleActive()"></ui-toggle>
-          <ui-toggle label="Enable for Checkout" labelPosition="left" [checked]="warehouse().enableForCheckout" (toggleChange)="toggleEnableForCheckout()"></ui-toggle>
+          <ui-toggle label="Keep URL" labelPosition="left" [checked]="warehouse().keepUrl" (toggleChange)="toggleKeepUrl()"></ui-toggle>
+          <ui-toggle label="Auto generate URL" labelPosition="left" [checked]="warehouse().autoGenerateUrl" (toggleChange)="toggleAutoGenerateUrl()"></ui-toggle>
         </div>
 
         <ui-form-field label="Contact person" layout="horizontal">
-          <input type="text" [value]="warehouse().contactPerson" (input)="onContactPersonChange($event)" placeholder="Enter contact person">
+          <input type="text" [value]="warehouse().contactPerson || ''" (input)="onContactPersonChange($event)" placeholder="Enter contact person">
         </ui-form-field>
 
-        <ui-form-field label="Name" layout="horizontal">
+        <ui-form-field label="Name" layout="horizontal" [required]="true" [error]="getError('name')">
           <input type="text" [value]="warehouse().name" (input)="onNameChange($event)" placeholder="Enter name">
         </ui-form-field>
 
         <ui-form-field label="Address" layout="horizontal">
-          <input type="text" [value]="warehouse().address" (input)="onAddressChange($event)" placeholder="Enter address">
+          <input type="text" [value]="warehouse().address || ''" (input)="onAddressChange($event)" placeholder="Enter address">
         </ui-form-field>
 
         <ui-form-field label="City" layout="horizontal">
-          <input type="text" [value]="warehouse().city" (input)="onCityChange($event)" placeholder="Enter city">
+          <input type="text" [value]="warehouse().city || ''" (input)="onCityChange($event)" placeholder="Enter city">
         </ui-form-field>
 
         <ui-form-field label="Phone" layout="horizontal">
-          <input type="text" [value]="warehouse().phone" (input)="onPhoneChange($event)" placeholder="Enter phone">
+          <input type="text" [value]="warehouse().phone || ''" (input)="onPhoneChange($event)" placeholder="Enter phone">
         </ui-form-field>
 
         <ui-form-field label="Email" layout="horizontal">
-          <input type="email" [value]="warehouse().email" (input)="onEmailChange($event)" placeholder="Enter email">
+          <input type="email" [value]="warehouse().email || ''" (input)="onEmailChange($event)" placeholder="Enter email">
         </ui-form-field>
 
         <ui-form-field label="URL" layout="horizontal">
-          <input type="url" [value]="warehouse().url" (input)="onUrlChange($event)" placeholder="Enter URL">
+          <input type="url" [value]="warehouse().url || ''" (input)="onUrlChange($event)" placeholder="Enter URL">
         </ui-form-field>
       </div>
     </div>
 
+    <!-- Tabs Section -->
     <div class="tabs-section">
       <div class="tabs-container">
         <div class="tabs-header">
-          <ui-tabs [tabs]="tabs" [activeTab]="activeTab()" variant="underline" (tabChange)="setActiveTab($event)"></ui-tabs>
+          <ui-tabs
+            [tabs]="tabs"
+            [activeTab]="activeTab()"
+            variant="underline"
+            (tabChange)="setActiveTab($event)">
+          </ui-tabs>
           <div class="tabs-header__spacer"></div>
           @if (activeTab() === 'documents') {
+            @if (hasSelectedDocuments()) {
+              <button class="btn btn--outline" (click)="deleteSelectedDocuments()">
+                <span>Delete selected</span>
+                <ui-icon name="trash" size="sm"></ui-icon>
+              </button>
+            }
             <button class="btn btn--outline" (click)="onAddDocument()">
               <span>Add document</span>
               <ui-icon name="plus" size="sm"></ui-icon>
@@ -71,34 +83,77 @@
           }
         </div>
 
+        <!-- Tab Content: Short Description -->
         @if (activeTab() === 'description') {
           <div class="tab-content tab-content--description">
-            <app-text-editor [initialContent]="warehouse().shortDescription" placeholder="Start typing." (contentChange)="onShortDescriptionChange($event)"></app-text-editor>
+            <app-text-editor
+              [initialContent]="warehouse().description"
+              placeholder="Start typing."
+              (contentChange)="onShortDescriptionChange($event)"
+            ></app-text-editor>
           </div>
         }
 
+        <!-- Tab Content: Documents -->
         @if (activeTab() === 'documents') {
           <div class="tab-content tab-content--table">
-            <ui-data-table [columns]="documentColumns" [data]="warehouse().documents"></ui-data-table>
+            <ui-data-table
+              [columns]="documentColumns"
+              [data]="warehouse().documents"
+            ></ui-data-table>
           </div>
         }
       </div>
     </div>
   </div>
 
+  <!-- Hidden file input for document upload -->
+  <input
+    #documentFileInput
+    type="file"
+    style="display: none"
+    multiple
+    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp"
+    (change)="onDocumentFileSelected($event)"
+  >
+
+  <!-- Document Templates -->
   <ng-template #checkboxHeaderTemplate>
-    <ui-table-checkbox-selection [isHeader]="true" [isDropdownOpen]="isHeaderDropdownOpen()" (dropdownToggle)="onHeaderDropdownToggle($event)" (selectAll)="onSelectAllDocuments()" (selectNone)="onSelectNoneDocuments()"></ui-table-checkbox-selection>
+    <ui-table-checkbox-selection
+      [isHeader]="true"
+      [isDropdownOpen]="isHeaderDropdownOpen()"
+      (dropdownToggle)="onHeaderDropdownToggle($event)"
+      (selectAll)="onSelectAllDocuments()"
+      (selectNone)="onSelectNoneDocuments()"
+    ></ui-table-checkbox-selection>
   </ng-template>
 
   <ng-template #checkboxTemplate let-row>
-    <ui-table-checkbox-selection [isHeader]="false" [checked]="row.selected" (change)="toggleDocumentSelection(row)"></ui-table-checkbox-selection>
+    <ui-table-checkbox-selection
+      [isHeader]="false"
+      [checked]="row.selected"
+      (change)="toggleDocumentSelection(row)"
+    ></ui-table-checkbox-selection>
   </ng-template>
 
   <ng-template #actionsTemplate let-row>
-    <ui-table-actions-dropdown [isOpen]="activeDocActionId() === row.id" [row]="row" [actions]="documentActions" (toggle)="toggleDocumentActions(row.id)" (actionClick)="onDocumentActionClick($event)" (close)="closeDocActionsDropdown()"></ui-table-actions-dropdown>
+    <ui-table-actions-dropdown
+      [isOpen]="activeDocActionId() === row.id"
+      [row]="row"
+      [actions]="documentActions"
+      (toggle)="toggleDocumentActions(row.id)"
+      (actionClick)="onDocumentActionClick($event)"
+      (close)="closeDocActionsDropdown()"
+    ></ui-table-actions-dropdown>
   </ng-template>
 
-  <ui-modal [isOpen]="isRenameModalOpen()" (isOpenChange)="isRenameModalOpen.set($event)" [showClose]="false" size="sm">
+  <!-- Rename Modal -->
+  <ui-modal
+    [isOpen]="isRenameModalOpen()"
+    (isOpenChange)="isRenameModalOpen.set($event)"
+    [showClose]="false"
+    size="sm"
+  >
     <div class="rename-modal">
       <div class="rename-modal__header">
         <h3 class="rename-modal__title">Rename</h3>
@@ -107,7 +162,18 @@
         </button>
       </div>
       <div class="rename-modal__body">
-        <input type="text" class="rename-modal__input" [value]="renameValue()" (input)="onRenameInputChange($event)" (keyup.enter)="confirmRename()"/>
+        <div class="rename-modal__input-row">
+          <input
+            type="text"
+            class="rename-modal__input"
+            [value]="renameValue()"
+            (input)="onRenameInputChange($event)"
+            (keyup.enter)="confirmRename()"
+          />
+          @if (renameExtension()) {
+            <span class="rename-modal__ext">.{{ renameExtension() }}</span>
+          }
+        </div>
       </div>
       <div class="rename-modal__footer">
         <button class="btn btn--ghost" (click)="cancelRename()">Cancel</button>

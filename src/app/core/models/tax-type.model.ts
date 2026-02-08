@@ -1,9 +1,10 @@
 export interface TaxType {
   id: string;
   name: string;
-  percent: number;
-  remoteId?: number;
+  percent: string;
+  remoteId?: number | null;
   remoteCode?: string | null;
+  isActive?: boolean;
   selected?: boolean;
 }
 

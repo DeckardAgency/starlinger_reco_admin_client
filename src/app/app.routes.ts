@@ -60,6 +60,24 @@ export const routes: Routes = [
         title: 'Admin | Account Detail'
       },
 
+      // Account Groups
+      { path: 'account-groups', redirectTo: 'account-groups/list', pathMatch: 'full' },
+      {
+        path: 'account-groups/list',
+        loadComponent: () => import('@features/account-groups/list/account-groups-list.component').then(m => m.AccountGroupsListComponent),
+        title: 'Admin | Account Groups'
+      },
+      {
+        path: 'account-groups/new',
+        loadComponent: () => import('@features/account-groups/edit/account-groups-edit.component').then(m => m.AccountGroupsEditComponent),
+        title: 'Admin | New Account Group'
+      },
+      {
+        path: 'account-groups/:id/edit',
+        loadComponent: () => import('@features/account-groups/edit/account-groups-edit.component').then(m => m.AccountGroupsEditComponent),
+        title: 'Admin | Account Group Detail'
+      },
+
       // Contacts
       { path: 'contacts', redirectTo: 'contacts/list', pathMatch: 'full' },
       {

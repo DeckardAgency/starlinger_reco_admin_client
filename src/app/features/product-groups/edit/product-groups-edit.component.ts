@@ -21,6 +21,7 @@ interface ProductGroupDetail {
   sortOrder: number;
   metaTitle: string;
   metaDescription: string;
+  metaKeywords: string;
 }
 
 const EMPTY_PRODUCT_GROUP: ProductGroupDetail = {
@@ -32,7 +33,8 @@ const EMPTY_PRODUCT_GROUP: ProductGroupDetail = {
   showOnHomepage: false,
   sortOrder: 0,
   metaTitle: '',
-  metaDescription: ''
+  metaDescription: '',
+  metaKeywords: ''
 };
 
 @Component({
@@ -100,7 +102,8 @@ export class ProductGroupsEditComponent implements OnInit, OnDestroy {
           showOnHomepage: pg.showOnHomepage ?? false,
           sortOrder: pg.sortOrder || 0,
           metaTitle: pg.metaTitle || '',
-          metaDescription: pg.metaDescription || ''
+          metaDescription: pg.metaDescription || '',
+          metaKeywords: pg.metaKeywords || ''
         });
         this.isLoading.set(false);
         this.cdr.markForCheck();
@@ -149,6 +152,11 @@ export class ProductGroupsEditComponent implements OnInit, OnDestroy {
     this.productGroup.update(pg => ({ ...pg, metaDescription: value }));
   }
 
+  onMetaKeywordsChange(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.productGroup.update(pg => ({ ...pg, metaKeywords: value }));
+  }
+
   onIsActiveChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.productGroup.update(pg => ({ ...pg, isActive: checked }));
@@ -161,41 +169,35 @@ export class ProductGroupsEditComponent implements OnInit, OnDestroy {
 
   // Save actions
   onSave(): void {
-    this.isSaving.set(true);
-    const data = this.productGroup();
-
-    const operation = this.isEditMode()
-      ? this.productGroupService.updateProductGroup(this.productGroupId!, data)
-      : this.productGroupService.createProductGroup(data);
-
-    operation.subscribe({
-      next: () => {
-        this.isSaving.set(false);
-        this.router.navigate(['/admin/product-groups/list']);
-      },
-      error: (error) => {
-        console.error('Error saving product group:', error);
-        this.isSaving.set(false);
-        alert('Failed to save product group');
-        this.cdr.markForCheck();
-      }
-    });
+    this.saveProductGroup(false);
   }
 
   onSaveAndContinue(): void {
-    this.isSaving.set(true);
-    const data = this.productGroup();
+    this.saveProductGroup(true);
+  }
 
-    const operation = this.isEditMode()
-      ? this.productGroupService.updateProductGroup(this.productGroupId!, data)
-      : this.productGroupService.createProductGroup(data);
+  private saveProductGroup(navigateToList: boolean): void {
+    this.isSaving.set(true);
+    const formData = this.productGroup();
+    const isCreating = !this.isEditMode();
+
+    // Exclude id when creating (let backend generate it)
+    const { id, ...createData } = formData;
+    const data = isCreating ? createData : formData;
+
+    const operation = isCreating
+      ? this.productGroupService.createProductGroup(data)
+      : this.productGroupService.updateProductGroup(this.productGroupId!, data);
 
     operation.subscribe({
       next: (result) => {
         this.isSaving.set(false);
-        if (!this.isEditMode() && result.id) {
-          // If creating new, redirect to edit mode
+        if (navigateToList) {
+          this.router.navigate(['/admin/product-groups/list']);
+        } else if (isCreating && result?.id) {
           this.router.navigate(['/admin/product-groups', result.id, 'edit']);
+        } else if (!isCreating && this.productGroupId) {
+          this.loadProductGroup(this.productGroupId);
         }
         this.cdr.markForCheck();
       },

@@ -1,26 +1,37 @@
-<div class="ui-select" [class.ui-select--disabled]="disabled">
+<div class="ui-select" [class.ui-select--disabled]="_disabled()" [class.ui-select--pill]="variant() === 'pill'">
   <!-- Label -->
-  <label *ngIf="label" class="ui-select__label" [attr.for]="name">
-    {{ label }}
-    <span *ngIf="required" class="ui-select__required">*</span>
+  <label *ngIf="label()" class="ui-select__label" [attr.for]="name()">
+    {{ label() }}
+    <span *ngIf="required()" class="ui-select__required">*</span>
   </label>
 
   <!-- Select wrapper -->
   <div class="ui-select__wrapper">
+    <!-- Pill variant: show placeholder or pill -->
+    @if (variant() === 'pill') {
+      <span class="ui-select__placeholder" *ngIf="!_value()">{{ placeholder() }}</span>
+      <div class="ui-select__pill" *ngIf="_value()">
+        <button type="button" class="ui-select__pill-remove" (click)="onClear($event)">
+          <ui-icon name="close" size="xs" color="#fafafa"></ui-icon>
+        </button>
+        <span>{{ selectedLabel() }}</span>
+      </div>
+    }
+
     <select
       [ngClass]="selectClasses()"
-      [value]="value()"
-      [disabled]="disabled"
-      [required]="required"
-      [name]="name"
-      [attr.id]="name"
+      [value]="_value()"
+      [disabled]="_disabled()"
+      [required]="required()"
+      [name]="name()"
+      [attr.id]="name()"
       (change)="onSelectChange($event)"
       (focus)="onFocus()"
       (blur)="onBlur()"
     >
-      <option value="" disabled [selected]="!value()">{{ placeholder }}</option>
+      <option value="" disabled [selected]="!_value()">{{ placeholder() }}</option>
       <option
-        *ngFor="let option of options"
+        *ngFor="let option of options()"
         [value]="option.value"
         [disabled]="option.disabled"
       >
@@ -30,15 +41,13 @@
 
     <!-- Chevron icon -->
     <span class="ui-select__icon">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" width="16" height="16">
-        <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+      <ui-icon name="chevron-down" size="sm" color="#71717A"></ui-icon>
     </span>
   </div>
 
   <!-- Hint text -->
-  <span *ngIf="hint && !error" class="ui-select__hint">{{ hint }}</span>
+  <span *ngIf="hint() && !error()" class="ui-select__hint">{{ hint() }}</span>
 
   <!-- Error text -->
-  <span *ngIf="error" class="ui-select__error">{{ error }}</span>
+  <span *ngIf="error()" class="ui-select__error">{{ error() }}</span>
 </div>

@@ -6,13 +6,22 @@ import {
   EventEmitter,
   forwardRef,
   booleanAttribute,
-  signal
+  signal,
+  HostBinding
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 
 export type ToggleSize = 'sm' | 'md' | 'lg';
 
+/**
+ * Toggle component with CSS custom properties for styling customization.
+ *
+ * Available CSS custom properties (set on parent or via inputs):
+ * --toggle-label-color: Label text color (default: #18181B)
+ * --toggle-label-min-width: Label minimum width (default: auto)
+ * --toggle-label-font-weight: Label font weight (default: 400)
+ */
 @Component({
   selector: 'ui-toggle',
   standalone: true,
@@ -41,6 +50,20 @@ export class ToggleComponent implements ControlValueAccessor {
   get checked(): boolean {
     return this._checked();
   }
+
+  // Styling inputs - these set CSS custom properties on the host element
+  @Input() labelColor?: string;
+  @Input() labelMinWidth?: string;
+  @Input() labelFontWeight?: string | number;
+
+  @HostBinding('style.--toggle-label-color')
+  get labelColorStyle() { return this.labelColor; }
+
+  @HostBinding('style.--toggle-label-min-width')
+  get labelMinWidthStyle() { return this.labelMinWidth; }
+
+  @HostBinding('style.--toggle-label-font-weight')
+  get labelFontWeightStyle() { return this.labelFontWeight; }
 
   @Output() toggleChange = new EventEmitter<boolean>();
 

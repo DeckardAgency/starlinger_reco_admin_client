@@ -22,16 +22,16 @@
     <div class="form-card">
       <h2 class="form-card__title">Tax type details</h2>
       <div class="form-card__content">
-        <ui-form-field label="Name" layout="horizontal">
+        <ui-form-field label="Name" layout="horizontal" [required]="true" [error]="getError('name')">
           <input type="text" [value]="taxType().name" (input)="onNameChange($event)" placeholder="Enter name">
         </ui-form-field>
 
-        <ui-form-field label="Percent" layout="horizontal">
-          <input type="text" [value]="formatPercent(taxType().percent)" (input)="onPercentChange($event)" placeholder="0,00">
+        <ui-form-field label="Percent" layout="horizontal" [required]="true" [error]="getError('percent')">
+          <input type="text" [value]="taxType().percent" (input)="onPercentChange($event)" placeholder="0">
         </ui-form-field>
 
         <ui-form-field label="Remote code" layout="horizontal">
-          <input type="text" [value]="taxType().remoteCode || '-'" (input)="onRemoteCodeChange($event)" placeholder="-">
+          <input type="text" [value]="taxType().remoteCode || ''" (input)="onRemoteCodeChange($event)" placeholder="Enter remote code">
         </ui-form-field>
       </div>
     </div>

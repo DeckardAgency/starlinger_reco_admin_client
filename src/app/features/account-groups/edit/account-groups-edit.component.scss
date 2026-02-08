@@ -1,0 +1,34 @@
+@use '../../../ui-kit/admin-shared' as admin;
+
+:host {
+  @include admin.admin-host;
+}
+
+.account-group-detail-page {
+  @include admin.detail-page;
+}
+
+.detail-content {
+  @include admin.detail-page-content;
+
+  @media (max-width: 768px) {
+    padding-bottom: 80px;
+  }
+}
+
+.form-card {
+  background: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  padding: 16px;
+
+  &__toggles {
+    @include admin.form-card-toggles-row;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}

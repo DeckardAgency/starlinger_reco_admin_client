@@ -28,36 +28,31 @@
       <!-- Form Fields -->
       <div class="form-card__fields">
         <ui-form-field label="DHL zone" layout="horizontal">
-          <div class="select-with-pill">
-            <span class="select-placeholder" *ngIf="!country().dhlZone">Select</span>
-            <div class="pill" *ngIf="country().dhlZone">
-              <button class="pill__remove" (click)="removeDhlZone(); $event.stopPropagation()">
-                <ui-icon name="close" size="xs" color="#fafafa"></ui-icon>
-              </button>
-              <span>{{ getDhlZoneLabel(country().dhlZone) }}</span>
-            </div>
-            <select class="select-field" [(ngModel)]="selectedDhlZone" (change)="onDhlZoneChange()">
-              <option value="" disabled selected>Select</option>
-              <option *ngFor="let opt of dhlZoneOptions" [value]="opt.value">{{ opt.label }}</option>
-            </select>
-            <ui-icon name="chevron-down" size="sm" color="#71717A" class="select-chevron"></ui-icon>
-          </div>
+          <ui-select
+            variant="pill"
+            [options]="dhlZoneOptions"
+            [value]="selectedDhlZone"
+            [clearable]="true"
+            placeholder="Select"
+            (selectChange)="onDhlZoneChange($event)"
+            (cleared)="clearDhlZone()">
+          </ui-select>
         </ui-form-field>
 
-        <ui-form-field label="Name" layout="horizontal">
+        <ui-form-field label="Name" layout="horizontal" [required]="true" [error]="getError('name')">
           <input type="text" [value]="country().name" (input)="onNameChange($event)" placeholder="Enter name">
         </ui-form-field>
 
-        <ui-form-field label="Code" layout="horizontal">
+        <ui-form-field label="Code" layout="horizontal" [required]="true" [error]="getError('code')">
           <input type="text" [value]="country().code" (input)="onCodeChange($event)" placeholder="Enter code">
         </ui-form-field>
 
         <ui-form-field label="ISO 31661 Alpha 3 Code" layout="horizontal">
-          <input type="text" [value]="country().iso31661Alpha3Code" (input)="onIso31661Alpha3CodeChange($event)" placeholder="Enter ISO code">
+          <input type="text" [value]="country().iso31661Alpha3Code || ''" (input)="onIso31661Alpha3CodeChange($event)" placeholder="Enter ISO code">
         </ui-form-field>
 
         <ui-form-field label="Default tax percent" layout="horizontal">
-          <input type="text" [value]="country().defaultTaxPercent === 0 ? '0,00' : country().defaultTaxPercent" (input)="onDefaultTaxPercentChange($event)" placeholder="0,00">
+          <input type="text" [value]="country().defaultTaxPercent || ''" (input)="onDefaultTaxPercentChange($event)" placeholder="0.00">
         </ui-form-field>
       </div>
     </div>

@@ -116,6 +116,15 @@
               placeholder="Enter meta description"
             ></textarea>
           </ui-form-field>
+
+          <ui-form-field label="Meta keywords" layout="horizontal">
+            <input
+              type="text"
+              [value]="productGroup().metaKeywords"
+              (input)="onMetaKeywordsChange($event)"
+              placeholder="Enter meta keywords"
+            >
+          </ui-form-field>
         </div>
       </div>
     </div>

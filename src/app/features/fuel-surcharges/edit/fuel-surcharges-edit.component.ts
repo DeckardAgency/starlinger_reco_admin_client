@@ -1,31 +1,30 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule, ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
-import { BreadcrumbsComponent, BreadcrumbItem } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
+import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
-import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
+import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { FuelSurchargeService } from '@core/services/http/fuel-surcharge.service';
 
 interface FuelSurchargeDetail {
   id: string;
   name: string;
-  date: string;
-  fuelSurcharge: number;
-  deliveryType: string;
+  sizeFrom: string;
+  sizeTo: string;
+  priceBase: string;
 }
 
 const EMPTY_FUEL_SURCHARGE: FuelSurchargeDetail = {
   id: '',
   name: '',
-  date: '',
-  fuelSurcharge: 0,
-  deliveryType: ''
+  sizeFrom: '',
+  sizeTo: '',
+  priceBase: ''
 };
 
 interface SelectOption {
@@ -33,12 +32,17 @@ interface SelectOption {
   label: string;
 }
 
-const DELIVERY_TYPE_OPTIONS: SelectOption[] = [
-  { value: 'DHL', label: 'DHL' },
-  { value: 'FedEx', label: 'FedEx' },
-  { value: 'UPS', label: 'UPS' },
-  { value: 'Standard', label: 'Standard' },
-  { value: 'Express', label: 'Express' }
+const SIZE_FROM_OPTIONS: SelectOption[] = [
+  { value: '0', label: '0' },
+  { value: '50', label: '50' },
+  { value: '100', label: '100' },
+  { value: '150', label: '150' },
+  { value: '200', label: '200' },
+  { value: '250', label: '250' },
+  { value: '300', label: '300' },
+  { value: '400', label: '400' },
+  { value: '500', label: '500' },
+  { value: '1000', label: '1000' }
 ];
 
 @Component({
@@ -52,76 +56,66 @@ const DELIVERY_TYPE_OPTIONS: SelectOption[] = [
     BreadcrumbsComponent,
     DetailHeaderComponent,
     MobileFooterComponent,
-    IconComponent
+    SelectComponent
   ],
   templateUrl: './fuel-surcharges-edit.component.html',
   styleUrls: ['./fuel-surcharges-edit.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class FuelSurchargesEditComponent implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
+export class FuelSurchargesEditComponent implements OnInit {
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private cdr = inject(ChangeDetectorRef);
+  private fuelSurchargeService = inject(FuelSurchargeService);
+
   private fuelSurchargeId: string | null = null;
 
-  // Form state
   fuelSurcharge = signal<FuelSurchargeDetail>({ ...EMPTY_FUEL_SURCHARGE });
   isEditMode = signal(false);
   isLoading = signal(false);
 
-  // Dropdown options
-  deliveryTypeOptions = DELIVERY_TYPE_OPTIONS;
+  sizeFromOptions = signal<SelectOption[]>(SIZE_FROM_OPTIONS);
+  selectedSizeFrom = '';
 
-  // Selected value for native select
-  selectedDeliveryType = '';
+  // Validation state
+  touched = signal<Record<string, boolean>>({});
+  errors = computed(() => {
+    const fs = this.fuelSurcharge();
+    const errs: Record<string, string> = {};
+    if (!fs.priceBase?.trim()) errs['priceBase'] = 'Price base is required';
+    return errs;
+  });
+  isValid = computed(() => Object.keys(this.errors()).length === 0);
 
-  // Breadcrumb items
-  breadcrumbItems: BreadcrumbItem[] = [
-    { label: 'Fuel surcharge', route: '/admin/fuel-surcharges' },
-    { label: 'Edit', route: '' }
-  ];
-
-  constructor(
-    private router: Router,
-    private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef,
-    private fuelSurchargeService: FuelSurchargeService
-  ) {}
-
-  ngOnInit(): void {
-    this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
-      this.fuelSurchargeId = params['id'] || null;
-      this.isEditMode.set(!!this.fuelSurchargeId && this.fuelSurchargeId !== 'new');
-
-      if (this.isEditMode()) {
-        this.loadFuelSurcharge(this.fuelSurchargeId!);
+  constructor() {
+    this.route.params.pipe(takeUntilDestroyed()).subscribe(params => {
+      const id = params['id'];
+      if (id && id !== 'new') {
+        this.fuelSurchargeId = id;
+        this.isEditMode.set(true);
+        this.loadFuelSurcharge(id);
       } else {
+        this.isEditMode.set(false);
         this.fuelSurcharge.set({ ...EMPTY_FUEL_SURCHARGE });
       }
     });
   }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
+  ngOnInit(): void {}
 
   private loadFuelSurcharge(id: string): void {
     this.isLoading.set(true);
 
     this.fuelSurchargeService.getFuelSurchargeById(id).subscribe({
       next: (fuelSurcharge) => {
-        // Extract deliveryType - can be an object (DeliveryTypeRef) or string
-        const deliveryTypeValue = typeof fuelSurcharge.deliveryType === 'object' && fuelSurcharge.deliveryType
-          ? fuelSurcharge.deliveryType.name || fuelSurcharge.deliveryType.id || ''
-          : fuelSurcharge.deliveryType || '';
-
         this.fuelSurcharge.set({
           id: fuelSurcharge.id || id,
           name: fuelSurcharge.name || '',
-          date: fuelSurcharge.date || '',
-          fuelSurcharge: fuelSurcharge.fuelSurcharge || 0,
-          deliveryType: deliveryTypeValue
+          sizeFrom: fuelSurcharge.sizeFrom || '',
+          sizeTo: fuelSurcharge.sizeTo || '',
+          priceBase: fuelSurcharge.priceBase || ''
         });
-        this.selectedDeliveryType = deliveryTypeValue;
+        this.selectedSizeFrom = fuelSurcharge.sizeFrom || '';
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
@@ -133,54 +127,89 @@ export class FuelSurchargesEditComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Navigation
   goBack(): void {
     this.router.navigate(['/admin/fuel-surcharges/list']);
   }
 
+  // Validation helpers
+  markAllTouched(): void {
+    this.touched.set({ priceBase: true });
+  }
+
+  markFieldTouched(field: string): void {
+    this.touched.update(t => ({ ...t, [field]: true }));
+  }
+
+  getError(field: string): string {
+    return this.touched()[field] ? (this.errors()[field] || '') : '';
+  }
+
   // Form handlers
-  onDeliveryTypeChange(): void {
-    if (this.selectedDeliveryType) {
-      this.fuelSurcharge.update(fs => ({ ...fs, deliveryType: this.selectedDeliveryType }));
-    }
-  }
-
-  removeDeliveryType(): void {
-    this.fuelSurcharge.update(fs => ({ ...fs, deliveryType: '' }));
-    this.selectedDeliveryType = '';
-  }
-
-  onDateChange(event: Event): void {
+  onNameChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.fuelSurcharge.update(fs => ({ ...fs, date: input.value }));
+    this.fuelSurcharge.update(fs => ({ ...fs, name: input.value }));
   }
 
-  onFuelSurchargeChange(event: Event): void {
+  onSizeFromChange(value: string | number): void {
+    this.selectedSizeFrom = String(value);
+    this.fuelSurcharge.update(fs => ({ ...fs, sizeFrom: String(value) }));
+  }
+
+  clearSizeFrom(): void {
+    this.selectedSizeFrom = '';
+    this.fuelSurcharge.update(fs => ({ ...fs, sizeFrom: '' }));
+  }
+
+  onSizeToChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = parseFloat(input.value.replace(',', '.')) || 0;
-    this.fuelSurcharge.update(fs => ({ ...fs, fuelSurcharge: value }));
+    this.fuelSurcharge.update(fs => ({ ...fs, sizeTo: input.value }));
   }
 
-  formatFuelSurcharge(value: number): string {
-    if (value === 0) return '';
-    return value.toString().replace('.', ',');
+  onPriceBaseChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.fuelSurcharge.update(fs => ({ ...fs, priceBase: input.value }));
+    this.markFieldTouched('priceBase');
   }
 
   // Save actions
   onSave(): void {
-    const data = this.fuelSurcharge();
-    const operation = this.isEditMode()
-      ? this.fuelSurchargeService.updateFuelSurcharge(this.fuelSurchargeId!, data)
-      : this.fuelSurchargeService.createFuelSurcharge(data);
-
-    operation.subscribe({
-      next: () => this.router.navigate(['/admin/fuel-surcharges/list']),
-      error: (error) => console.error('Error saving fuel surcharge:', error)
-    });
+    this.saveFuelSurcharge(true);
   }
 
   onSaveAndContinue(): void {
-    console.log('Save and continue:', this.fuelSurcharge());
+    this.saveFuelSurcharge(false);
+  }
+
+  private saveFuelSurcharge(navigateToList: boolean): void {
+    this.markAllTouched();
+    if (!this.isValid()) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const formData = this.fuelSurcharge();
+
+    const payload: Record<string, unknown> = {
+      name: formData.name || null,
+      sizeFrom: formData.sizeFrom ? String(formData.sizeFrom) : null,
+      sizeTo: formData.sizeTo ? String(formData.sizeTo) : null,
+      priceBase: formData.priceBase ? String(formData.priceBase) : null
+    };
+
+    const isCreating = !this.isEditMode();
+    const operation = isCreating
+      ? this.fuelSurchargeService.createFuelSurcharge(payload as any)
+      : this.fuelSurchargeService.updateFuelSurcharge(this.fuelSurchargeId!, payload as any);
+
+    operation.subscribe({
+      next: (result) => {
+        if (navigateToList) {
+          this.router.navigate(['/admin/fuel-surcharges/list']);
+        } else if (isCreating && result?.id) {
+          this.router.navigate(['/admin/fuel-surcharges', result.id, 'edit']);
+        }
+      },
+      error: (error) => console.error('Error saving fuel surcharge:', error)
+    });
   }
 }
-

@@ -1,17 +1,18 @@
 import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { IconComponent } from '../../atoms/icon/icon.component';
 
 export interface DropdownMenuItem {
   id: string;
   label: string;
-  icon: string;
+  iconName: string;
   action?: () => void;
 }
 
 @Component({
   selector: 'ui-dropdown-menu',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   templateUrl: './dropdown-menu.component.html',
   styleUrls: ['./dropdown-menu.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

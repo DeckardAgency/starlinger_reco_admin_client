@@ -21,15 +21,19 @@
 
   <div class="page-content">
     <div class="form-card">
+      <ui-form-field label="Name" layout="horizontal" [required]="true" [error]="getError('name')">
+        <input type="text" [value]="packagingPrice().name" (input)="onNameChange($event)" placeholder="Enter name">
+      </ui-form-field>
+
       <ui-form-field label="Size from" layout="horizontal">
-        <input type="number" [value]="packagingPrice().sizeFrom" (input)="onSizeFromChange($event)"/>
+        <input type="number" [value]="packagingPrice().sizeFrom ?? ''" (input)="onSizeFromChange($event)"/>
       </ui-form-field>
 
       <ui-form-field label="Size to" layout="horizontal">
-        <input type="number" [value]="packagingPrice().sizeTo" (input)="onSizeToChange($event)"/>
+        <input type="number" [value]="packagingPrice().sizeTo ?? ''" (input)="onSizeToChange($event)"/>
       </ui-form-field>
 
-      <ui-form-field label="Price base" layout="horizontal">
+      <ui-form-field label="Price base" layout="horizontal" [required]="true" [error]="getError('priceBase')">
         <input type="number" step="0.01" [value]="packagingPrice().priceBase" (input)="onPriceBaseChange($event)"/>
       </ui-form-field>
     </div>

@@ -14,6 +14,7 @@ import { TableActionsDropdownComponent, TableAction } from '@app/ui-kit/molecule
 import { TableCheckboxSelectionComponent } from '@app/ui-kit/molecules/table-checkbox-selection/table-checkbox-selection.component';
 import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-footer.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
 
 @Component({
   selector: 'app-delivery-prices-list',
@@ -28,7 +29,8 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
     TableActionsDropdownComponent,
     TableCheckboxSelectionComponent,
     TableFooterComponent,
-    MobileFooterComponent
+    MobileFooterComponent,
+    BadgeComponent
   ],
   templateUrl: './delivery-prices-list.component.html',
   styleUrls: ['./delivery-prices-list.component.scss'],
@@ -43,6 +45,7 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
   @ViewChild('priceTemplate') priceTemplate!: TemplateRef<any>;
+  @ViewChild('deliveryTypeTemplate') deliveryTypeTemplate!: TemplateRef<any>;
 
   // Search state
   searchQuery = signal('');
@@ -91,7 +94,7 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
 
     if (query) {
       result = result.filter(dp =>
-        dp.name.toLowerCase().includes(query) ||
+        (dp.name || '').toLowerCase().includes(query) ||
         String(dp.id).includes(query)
       );
     }
@@ -149,13 +152,13 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
   private initColumns(): void {
     this.columns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
-      { key: 'id', label: 'ID', sortable: false, width: '80px' },
-      { key: 'name', label: 'Name', sortable: false },
-      { key: 'dhlZone', label: 'DHL zone', sortable: false },
-      { key: 'deliveryType', label: 'Delivery type', sortable: false },
+      { key: 'name', label: 'ID', sortable: false },
+      { key: 'deliveryType', label: 'Delivery type', sortable: false, template: this.deliveryTypeTemplate },
       { key: 'sizeFrom', label: 'Size from', sortable: false },
-      { key: 'sizeTo', label: 'Size to', sortable: false },
       { key: 'priceBase', label: 'Price base', sortable: false, template: this.priceTemplate },
+      { key: 'stepStartsAt', label: 'Step starts at', sortable: false },
+      { key: 'forEveryNextSize', label: 'For every next size', sortable: false },
+      { key: 'priceBaseStep', label: 'Price base step', sortable: false },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
@@ -196,17 +199,43 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
     if (event.action.id === 'edit') {
       this.router.navigate(['/admin/delivery-prices', deliveryPrice.id, 'edit']);
     } else if (event.action.id === 'delete') {
-      console.log('Delete delivery price:', deliveryPrice);
+      this.deleteDeliveryPrice(deliveryPrice);
+      return;
     }
+    this.closeDropdown();
+  }
+
+  private deleteDeliveryPrice(deliveryPrice: DeliveryPrice): void {
+    if (!confirm(`Are you sure you want to delete this delivery price?`)) {
+      this.closeDropdown();
+      return;
+    }
+    this.deliveryPriceService.deleteDeliveryPrice(String(deliveryPrice.id)).subscribe({
+      next: () => {
+        this.deliveryPrices.update(list => list.filter(dp => dp.id !== deliveryPrice.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting delivery price:', error)
+    });
     this.closeDropdown();
   }
 
   onBulkDelete(): void {
     const selected = this.deliveryPrices().filter(dp => dp.selected);
-    console.log('Bulk delete delivery prices:', selected);
-    const remaining = this.deliveryPrices().filter(dp => !dp.selected);
-    this.deliveryPrices.set(remaining);
-    this.selectAll.set(false);
+    if (selected.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selected.length} delivery price(s)?`)) return;
+
+    const deleteOps = selected.map(dp =>
+      this.deliveryPriceService.deleteDeliveryPrice(String(dp.id)).toPromise()
+    );
+    Promise.all(deleteOps).then(() => {
+      this.deliveryPrices.update(list => list.filter(dp => !dp.selected));
+      this.selectAll.set(false);
+      this.cdr.markForCheck();
+    }).catch(error => {
+      console.error('Error bulk deleting delivery prices:', error);
+      this.loadDeliveryPrices();
+    });
   }
 
   onHeaderDropdownToggle(isOpen: boolean): void {
@@ -236,8 +265,19 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
     this.selectAll.set(updated.every(dp => dp.selected));
   }
 
-  formatPrice(value: number): string {
-    return value.toFixed(2).replace('.', ',') + ' €';
+  formatPrice(value: string | number | null): string {
+    if (value == null) return '0,00 €';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '0,00 €';
+    return num.toFixed(2).replace('.', ',') + ' €';
+  }
+
+  getDeliveryTypeName(deliveryType: unknown): string {
+    if (!deliveryType) return '';
+    if (typeof deliveryType === 'object' && deliveryType !== null && 'name' in deliveryType) {
+      return (deliveryType as { name: string }).name;
+    }
+    return String(deliveryType);
   }
 
   onPageChange(page: number): void {

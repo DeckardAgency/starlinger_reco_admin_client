@@ -43,15 +43,13 @@
   }
 }
 
-@include admin.detail-form-styles;
-
 // =============================================================================
 // Select with Pill Styling
 // =============================================================================
 .select-with-pill {
   @include admin.select-with-pill;
-}
 
-::ng-deep .select-with-pill .select-field {
-  @include admin.select-with-pill-field;
+  .select-field {
+    @include admin.select-with-pill-field;
+  }
 }

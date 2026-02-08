@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -10,7 +10,8 @@ import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcru
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
-import { DHL_ZONES, DhlZone } from '@core/models/country.model';
+import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
+import { DHL_ZONES } from '@core/models/country.model';
 import { CountryService } from '@core/services/http/country.service';
 
 interface CountryDetail {
@@ -19,7 +20,7 @@ interface CountryDetail {
   code: string;
   iso31661Alpha3Code: string;
   dhlZone: string;
-  defaultTaxPercent: number;
+  defaultTaxPercent: string;
 }
 
 const EMPTY_COUNTRY: CountryDetail = {
@@ -28,8 +29,13 @@ const EMPTY_COUNTRY: CountryDetail = {
   code: '',
   iso31661Alpha3Code: '',
   dhlZone: '',
-  defaultTaxPercent: 0
+  defaultTaxPercent: ''
 };
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
 
 @Component({
   selector: 'app-countries-edit',
@@ -42,7 +48,8 @@ const EMPTY_COUNTRY: CountryDetail = {
     BreadcrumbsComponent,
     DetailHeaderComponent,
     MobileFooterComponent,
-    IconComponent
+    IconComponent,
+    SelectComponent
   ],
   templateUrl: './countries-edit.component.html',
   styleUrls: ['./countries-edit.component.scss'],
@@ -57,10 +64,22 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
   isEditMode = signal(false);
   isLoading = signal(false);
 
-  // DHL zone options
-  dhlZoneOptions: DhlZone[] = DHL_ZONES;
+  // Validation state
+  touched = signal<Record<string, boolean>>({});
+  errors = computed(() => {
+    const country = this.country();
+    const errs: Record<string, string> = {};
+    if (!country.name?.trim()) errs['name'] = 'Name is required';
+    if (!country.code?.trim()) errs['code'] = 'Code is required';
+    else if (country.code.trim().length !== 2) errs['code'] = 'Code must be exactly 2 characters';
+    return errs;
+  });
+  isValid = computed(() => Object.keys(this.errors()).length === 0);
 
-  // Selected DHL zone for the select-with-pill
+  // DHL zone options for ui-select (string values matching backend integers)
+  dhlZoneOptions: SelectOption[] = DHL_ZONES.map(zone => ({ value: zone.value, label: zone.label }));
+
+  // Selected value for DHL zone select
   selectedDhlZone = '';
 
   constructor(
@@ -74,7 +93,7 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       this.countryId = params['id'] || null;
       this.isEditMode.set(!!this.countryId && this.countryId !== 'new');
-      
+
       if (this.isEditMode()) {
         this.loadCountry(this.countryId!);
       } else {
@@ -98,10 +117,10 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
           name: country.name || '',
           code: country.code || '',
           iso31661Alpha3Code: country.iso31661Alpha3Code || '',
-          dhlZone: country.dhlZone || '',
-          defaultTaxPercent: country.defaultTaxPercent || 0
+          dhlZone: country.dhlZone != null ? String(country.dhlZone) : '',
+          defaultTaxPercent: country.defaultTaxPercent != null ? String(country.defaultTaxPercent) : ''
         });
-        this.selectedDhlZone = country.dhlZone || '';
+        this.selectedDhlZone = country.dhlZone != null ? String(country.dhlZone) : '';
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
@@ -122,11 +141,13 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
   onNameChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.country.update(c => ({ ...c, name: value }));
+    this.markFieldTouched('name');
   }
 
   onCodeChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.country.update(c => ({ ...c, code: value }));
+    this.markFieldTouched('code');
   }
 
   onIso31661Alpha3CodeChange(event: Event): void {
@@ -136,38 +157,72 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
 
   onDefaultTaxPercentChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.country.update(c => ({ ...c, defaultTaxPercent: parseFloat(value) || 0 }));
+    this.country.update(c => ({ ...c, defaultTaxPercent: value }));
   }
 
-  onDhlZoneChange(): void {
-    if (this.selectedDhlZone) {
-      this.country.update(c => ({ ...c, dhlZone: this.selectedDhlZone }));
-    }
+  onDhlZoneChange(value: string | number): void {
+    const strValue = String(value);
+    this.selectedDhlZone = strValue;
+    this.country.update(c => ({ ...c, dhlZone: strValue }));
   }
 
-  removeDhlZone(): void {
-    this.country.update(c => ({ ...c, dhlZone: '' }));
+  clearDhlZone(): void {
     this.selectedDhlZone = '';
+    this.country.update(c => ({ ...c, dhlZone: '' }));
   }
 
-  getDhlZoneLabel(value: string): string {
-    return this.dhlZoneOptions.find(o => o.value === value)?.label || value;
+  // Validation helpers
+  markAllTouched(): void {
+    this.touched.set({ name: true, code: true });
+  }
+
+  markFieldTouched(field: string): void {
+    this.touched.update(t => ({ ...t, [field]: true }));
+  }
+
+  getError(field: string): string {
+    return this.touched()[field] ? (this.errors()[field] || '') : '';
   }
 
   // Save actions
   onSave(): void {
-    const data = this.country();
-    const operation = this.isEditMode()
-      ? this.countryService.updateCountry(this.countryId!, data)
-      : this.countryService.createCountry(data);
-
-    operation.subscribe({
-      next: () => this.router.navigate(['/admin/countries/list']),
-      error: (error) => console.error('Error saving country:', error)
-    });
+    this.saveCountry(false);
   }
 
   onSaveAndContinue(): void {
-    console.log('Save and continue:', this.country());
+    this.saveCountry(true);
+  }
+
+  private saveCountry(navigateToList: boolean): void {
+    this.markAllTouched();
+    if (!this.isValid()) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const c = this.country();
+    const payload: Record<string, unknown> = {
+      name: c.name,
+      code: c.code,
+      iso31661Alpha3Code: c.iso31661Alpha3Code || null,
+      defaultTaxPercent: c.defaultTaxPercent !== '' ? c.defaultTaxPercent : null,
+      dhlZone: c.dhlZone !== '' ? parseInt(c.dhlZone, 10) : null
+    };
+
+    const isCreating = !this.isEditMode();
+    const operation = isCreating
+      ? this.countryService.createCountry(payload)
+      : this.countryService.updateCountry(this.countryId!, payload);
+
+    operation.subscribe({
+      next: (result) => {
+        if (navigateToList) {
+          this.router.navigate(['/admin/countries/list']);
+        } else if (isCreating && result?.id) {
+          this.router.navigate(['/admin/countries', result.id, 'edit']);
+        }
+      },
+      error: (error) => console.error('Error saving country:', error)
+    });
   }
 }

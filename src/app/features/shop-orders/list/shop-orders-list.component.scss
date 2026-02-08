@@ -1,31 +1,37 @@
-@use '../../../ui-kit/admin-shared' as admin;
-
 :host {
-  @include admin.admin-host;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .shop-orders-page {
-  @include admin.admin-page;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: #f4f4f5;
 }
 
 .page-content {
-  @include admin.list-page-content;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  flex: 1;
 }
 
-// Table container (tabs + table)
 .table-container {
-  @include admin.tabs-table-container;
+  background: transparent;
+  border: 1px solid #E4E4E7;
+  border-radius: 8px;
+  overflow: hidden;
+
+  // Set CSS custom properties for ui-data-table
+  --data-table-background: #f4f4f5;
+  --data-table-header-background: white;
+  --data-table-row-background: transparent;
+  --data-table-row-hover-background: white;
 }
 
-// Tabs styling
-ui-tabs {
-  @include admin.tabs-table-tabs;
-}
-
-// Table styling (includes background colors)
-@include admin.tabs-table-data-table;
-
-// Loading state
 .loading-state {
   display: flex;
   justify-content: center;
@@ -36,21 +42,50 @@ ui-tabs {
   font-size: 14px;
 }
 
-// Customer cell
 .customer-cell {
-  @include admin.customer-cell;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .customer-name {
-  @include admin.customer-name;
+  overflow: hidden;
+  color: #232323;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
   font-weight: 400;
+  line-height: 20px;
 }
 
 // Button styles for export
 .btn {
-  @include admin.btn-base;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 8px 16px;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  background: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #232323;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background-color 0.2s, border-color 0.2s;
+
+  &:hover {
+    background-color: #f4f4f5;
+  }
 
   &--icon {
-    @include admin.btn-icon;
+    width: 40px;
+    height: 40px;
+    padding: 0;
   }
 }

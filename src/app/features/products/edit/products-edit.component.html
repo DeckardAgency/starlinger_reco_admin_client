@@ -52,44 +52,42 @@
         </div>
 
         <div class="card__fields">
+          <ui-form-field label="Name" layout="horizontal" [error]="getError('name')">
+            <input type="text" [value]="product().name" placeholder="Enter product name" (input)="updateProduct('name', $event)" (blur)="markFieldTouched('name')">
+          </ui-form-field>
           <ui-form-field label="URL" layout="horizontal">
-            <input type="text" [value]="product().url" placeholder="Enter URL" disabled>
+            <input type="text" [value]="product().url" placeholder="Enter URL" (input)="updateProduct('url', $event)">
           </ui-form-field>
           <ui-form-field label="Quantity" layout="horizontal">
-            <input type="number" [value]="product().quantity" placeholder="0">
+            <input type="number" [value]="product().quantity" placeholder="0" (input)="updateProductNumber('quantity', $event)">
           </ui-form-field>
           <ui-form-field label="Quantity step" layout="horizontal">
-            <input type="number" [value]="product().quantityStep" placeholder="0.00">
+            <input type="number" [value]="product().quantityStep" placeholder="0" (input)="updateProductNumber('quantityStep', $event)">
           </ui-form-field>
           <ui-form-field label="Quote item limit" layout="horizontal">
-            <input type="number" [value]="product().quoteItemLimit" placeholder="0.00">
+            <input type="number" [value]="product().quoteItemLimit" placeholder="0" (input)="updateProductNumber('quoteItemLimit', $event)">
           </ui-form-field>
           <ui-form-field label="Fixed quantity" layout="horizontal">
-            <input type="number" [value]="product().fixedQuantity" placeholder="0.00">
+            <input type="number" [value]="product().fixedQuantity" placeholder="0" (input)="updateProductNumber('fixedQuantity', $event)">
           </ui-form-field>
           <ui-form-field label="Weight" layout="horizontal">
-            <input type="text" [value]="product().weight" placeholder="kg 0.00">
+            <input type="text" [value]="product().weight" placeholder="kg 0.00" (input)="updateProduct('weight', $event)">
           </ui-form-field>
           <ui-form-field label="Product group" layout="horizontal">
-            <div class="select-with-pill">
-              <div class="pill" *ngIf="productGroupValue">
-                <button class="pill__remove" (click)="productGroupValue = ''">
-                  <ui-icon name="x" size="xs" color="#fafafa"></ui-icon>
-                </button>
-                <span>{{ getProductGroupLabel(productGroupValue) }}</span>
-              </div>
-              <select class="select-field" [(ngModel)]="productGroupValue">
-                <option value="" disabled>Select product group</option>
-                <option *ngFor="let opt of productGroupOptions" [value]="opt.value">{{ opt.label }}</option>
-              </select>
-              <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
-            </div>
+            <ui-select
+              variant="pill"
+              [options]="productGroupOptions()"
+              [value]="productGroupValue"
+              placeholder="Select product group"
+              (selectChange)="onProductGroupChange($event)"
+              (cleared)="clearProductGroup()">
+            </ui-select>
           </ui-form-field>
           <ui-form-field label="Code" layout="horizontal">
-            <input type="text" [value]="product().code" placeholder="Enter code">
+            <input type="text" [value]="product().code" placeholder="Enter code" (input)="updateProduct('code', $event)">
           </ui-form-field>
           <ui-form-field label="Catalog code" layout="horizontal">
-            <input type="text" [value]="product().catalogCode" placeholder="Enter catalog code">
+            <input type="text" [value]="product().catalogCode" placeholder="Enter catalog code" (input)="updateProduct('catalogCode', $event)">
           </ui-form-field>
         </div>
       </div>
@@ -100,22 +98,36 @@
 
         <div class="card__fields">
           <ui-form-field label="Base price" layout="horizontal">
-            <input type="text" [value]="'€ ' + product().basePrice" placeholder="€ 0.00">
+            <input type="number" [value]="product().basePrice" placeholder="0.00" (input)="updateProductNumber('basePrice', $event)">
           </ui-form-field>
           <ui-form-field label="Retail price" layout="horizontal">
-            <input type="text" [value]="'€ ' + product().retailPrice" placeholder="€ 0.00" disabled>
+            <input type="number" [value]="product().retailPrice" placeholder="0.00" (input)="updateProductNumber('retailPrice', $event)">
           </ui-form-field>
-          <ui-form-field label="Tax percent" layout="horizontal">
-            <input type="text" [value]="product().taxPercent" placeholder="PDV20" disabled>
+          <ui-form-field label="Tax type" layout="horizontal">
+            <ui-select
+              variant="pill"
+              [options]="taxOptions()"
+              [value]="taxPercentValue"
+              placeholder="Select tax type"
+              (selectChange)="onTaxTypeChange($event)"
+              (cleared)="clearTaxType()">
+            </ui-select>
           </ui-form-field>
           <ui-form-field label="Currency" layout="horizontal">
-            <input type="text" [value]="product().currency === 'EUR' ? 'Euro' : product().currency" placeholder="Euro" disabled>
+            <ui-select
+              variant="pill"
+              [options]="currencyOptions"
+              [value]="currencyValue"
+              placeholder="Select currency"
+              (selectChange)="onCurrencyChange($event)"
+              (cleared)="clearCurrency()">
+            </ui-select>
           </ui-form-field>
           <ui-form-field label="Discount %" layout="horizontal">
-            <input type="number" [value]="product().discountPercent" placeholder="0.00" disabled>
+            <input type="number" [value]="product().discountPercent" placeholder="0.00" (input)="updateProductNumber('discountPercent', $event)">
           </ui-form-field>
           <ui-form-field label="Discount price" layout="horizontal">
-            <input type="number" [value]="product().discountPrice" placeholder="0.00" disabled>
+            <input type="number" [value]="product().discountPrice" placeholder="0.00" (input)="updateProductNumber('discountPrice', $event)">
           </ui-form-field>
         </div>
       </div>
@@ -134,6 +146,10 @@
 
         <!-- Tab-specific CTAs -->
         <div class="tabbed-section__cta" *ngIf="activeTab() === 'documents'">
+          <button *ngIf="selectedDocumentIds().size > 0" class="btn btn--outline" (click)="deleteSelectedDocuments()">
+            <span>Delete selected</span>
+            <ui-icon name="trash" size="sm"></ui-icon>
+          </button>
           <button class="btn btn--outline" (click)="addDocument()">
             <span>Add document</span>
             <ui-icon name="plus" size="sm"></ui-icon>
@@ -152,21 +168,22 @@
 
       <!-- Gallery Tab Content -->
       <div class="tab-content" *ngIf="activeTab() === 'gallery'" (click)="closeImageDropdown()">
+        <input #imageFileInput type="file" accept="image/*" multiple style="display: none" (change)="onImageFileSelected($event)">
         <div class="gallery-toolbar">
           <button class="btn btn--secondary" (click)="uploadImage()">
             <span>Upload image</span>
             <ui-icon name="plus" size="sm"></ui-icon>
           </button>
-          <button class="btn btn--outline" (click)="downloadAllImages()">
+          <button class="btn btn--outline" (click)="downloadAllImages()" [disabled]="galleryImages().length === 0">
             <span>Download all images</span>
             <ui-icon name="download" size="sm"></ui-icon>
           </button>
-          <button class="btn btn--outline" (click)="deleteAllImages()">
+          <button class="btn btn--outline" (click)="deleteAllImages()" [disabled]="galleryImages().length === 0">
             <span>Delete all images</span>
             <ui-icon name="trash" size="sm"></ui-icon>
           </button>
         </div>
-        <div class="gallery-grid">
+        <div class="gallery-grid" *ngIf="galleryImages().length > 0">
           <div class="gallery-item" *ngFor="let image of galleryImages()">
             <div class="gallery-item__header">
               <span class="gallery-item__name">{{ image.name }}</span>
@@ -193,20 +210,26 @@
               </div>
             </div>
             <div class="gallery-item__image">
-              <div class="gallery-item__placeholder"></div>
+              <img *ngIf="image.url" [src]="image.url" [alt]="image.name" class="gallery-item__img">
+              <div *ngIf="!image.url" class="gallery-item__placeholder"></div>
             </div>
           </div>
+        </div>
+        <div class="empty-state" *ngIf="galleryImages().length === 0">
+          <p class="empty-state__text">No images</p>
         </div>
       </div>
 
       <!-- Product Documents Tab Content -->
       <div class="tab-content tab-content--no-padding" *ngIf="activeTab() === 'documents'">
+        <input #documentFileInput type="file" multiple style="display: none" (change)="onDocumentFileSelected($event)">
         <div class="documents-table">
           <ui-data-table
             [columns]="documentColumns"
             [data]="productDocuments()"
             [sortColumn]="sortColumn()"
             [sortDirection]="sortDirection()"
+            emptyMessage="No documents"
             (sort)="onSort($event)">
           </ui-data-table>
         </div>
@@ -214,7 +237,7 @@
 
       <!-- Applied Discounts Tab Content -->
       <div class="tab-content tab-content--no-padding" *ngIf="activeTab() === 'discounts'">
-        <div class="discounts-table">
+        <div class="discounts-table" *ngIf="appliedDiscounts().length > 0">
           <table class="discount-table">
             <thead>
               <tr>
@@ -237,6 +260,9 @@
               </tr>
             </tbody>
           </table>
+        </div>
+        <div class="empty-state" *ngIf="appliedDiscounts().length === 0">
+          <p class="empty-state__text">No applied discounts</p>
         </div>
       </div>
     </div>
@@ -268,7 +294,7 @@
       <div class="table-container">
         <ui-data-table
           [columns]="availableProductColumns"
-          [data]="availableProducts()"
+          [data]="filteredAvailableProducts()"
           [sortColumn]="sortColumn()"
           [sortDirection]="sortDirection()"
           (sort)="onSort($event)">
@@ -408,25 +434,14 @@
 </ng-template>
 
 <ng-template #docActionsTemplate let-row>
-  <div class="doc-actions">
-    <button class="doc-actions__btn" (click)="toggleDocAction($event, row.id)">
-      <ui-icon name="more-vertical" size="sm"></ui-icon>
-    </button>
-    <div class="doc-actions__dropdown" *ngIf="activeDocActionId() === row.id" (click)="$event.stopPropagation()">
-      <button class="doc-actions__dropdown-item" (click)="renameDocument(row.id)">
-        <ui-icon name="edit" size="sm"></ui-icon>
-        <span>Rename</span>
-      </button>
-      <button class="doc-actions__dropdown-item" (click)="downloadDocument(row.id)">
-        <ui-icon name="download" size="sm"></ui-icon>
-        <span>Download</span>
-      </button>
-      <button class="doc-actions__dropdown-item doc-actions__dropdown-item--danger" (click)="deleteDocument(row.id)">
-        <ui-icon name="trash" size="sm"></ui-icon>
-        <span>Delete</span>
-      </button>
-    </div>
-  </div>
+  <ui-table-actions-dropdown
+    [isOpen]="activeDocActionId() === row.id"
+    [row]="row"
+    [actions]="documentActions"
+    (toggle)="toggleDocActionById(row.id)"
+    (actionClick)="onDocActionClick($event)"
+    (close)="closeDocAction()"
+  ></ui-table-actions-dropdown>
 </ng-template>
 
 <!-- Rename Modal -->
@@ -444,13 +459,16 @@
       </button>
     </div>
     <div class="rename-modal__body">
-      <input
-        type="text"
-        class="rename-modal__input"
-        [value]="renameValue()"
-        (input)="onRenameInputChange($event)"
-        (keyup.enter)="confirmRename()"
-      />
+      <div class="rename-modal__input-row">
+        <input
+          type="text"
+          class="rename-modal__input"
+          [value]="renameValue()"
+          (input)="onRenameInputChange($event)"
+          (keyup.enter)="confirmRename()"
+        />
+        <span class="rename-modal__ext" *ngIf="renameExtension()">.{{ renameExtension() }}</span>
+      </div>
     </div>
     <div class="rename-modal__footer">
       <button class="btn btn--ghost" (click)="cancelRename()">Cancel</button>

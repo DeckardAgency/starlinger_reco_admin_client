@@ -23,11 +23,24 @@ export interface Product {
   technicalDescription: string;
   machineText: string;
   statistic: string;
+  isActive: boolean;
+  readyForShop: boolean;
+  qty: number | null;
+  qtyStep: number | null;
+  quoteItemLimit: number | null;
+  fixedQty: number | null;
+  productGroupId: string | null;
+  catalogCode: string | null;
+  retailPrice: number | null;
+  taxTypeId: string | null;
+  currency: string | null;
+  discountPercent: number | null;
+  discountPrice: number | null;
   featuredImage: MediaItem | null;
   createdAt: string;
   updatedAt: string;
   imageGallery: MediaItem[];
-  documents: string[];
+  documents: MediaItem[];
   machines: string[];
 }
 

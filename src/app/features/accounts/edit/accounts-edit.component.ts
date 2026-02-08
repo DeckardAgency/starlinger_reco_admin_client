@@ -5,6 +5,7 @@ import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
+import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { TabsComponent, TabItem } from '@app/ui-kit/molecules/tabs/tabs.component';
 import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
@@ -16,13 +17,19 @@ import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-f
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { DataTableComponent, TableColumn } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { AddressModalComponent, AddressFormData } from '../../../shared/components/modals/address-modal/address-modal.component';
 import { Account, AccountContact } from '@core/models/account.model';
 import { ClientService } from '@core/services/http/client.service';
-import { ClientDetail } from '@core/models/client.model';
+import { ContactService } from '@core/services/http/contact.service';
+import { OrderService } from '@core/services/http/order.service';
+import { AddressService } from '@core/services/http/address.service';
+import { ClientDetail, ClientAddress } from '@core/models/client.model';
+import { Order } from '@core/models/order.model';
+import { AccountGroupService } from '@core/services/http/account-group.service';
 
 // Interfaces for tab data
 interface Address {
-  id: number;
+  id: string;
   street: string;
   city: string;
   country: string;
@@ -62,7 +69,7 @@ const EMPTY_ACCOUNT: Account = {
   amountSpent: 0,
   isActive: true,
   isLegalEntity: false,
-  accountType: [],
+  accountType: '',
   phone: '',
   otherPhone: '',
   otherEmail: '',
@@ -78,6 +85,7 @@ const EMPTY_ACCOUNT: Account = {
     FormsModule,
     RouterModule,
     ToggleComponent,
+    SelectComponent,
     TabsComponent,
     BadgeComponent,
     IconComponent,
@@ -88,7 +96,8 @@ const EMPTY_ACCOUNT: Account = {
     TableFooterComponent,
     TableActionsDropdownComponent,
     DataTableComponent,
-    MobileFooterComponent
+    MobileFooterComponent,
+    AddressModalComponent
   ],
   templateUrl: './accounts-edit.component.html',
   styleUrls: ['./accounts-edit.component.scss'],
@@ -99,6 +108,10 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private clientService = inject(ClientService);
+  private contactService = inject(ContactService);
+  private orderService = inject(OrderService);
+  private addressService = inject(AddressService);
+  private accountGroupService = inject(AccountGroupService);
   private destroy$ = new Subject<void>();
 
   isLoading = signal(false);
@@ -149,50 +162,67 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   tabs: TabItem[] = [
     { id: 'contacts', label: 'Contacts' },
     { id: 'addresses', label: 'Addresses' },
-    { id: 'shop-orders', label: 'Shop orders' },
-    { id: 'manual-entries', label: 'Manual entries' },
-    { id: 'machines', label: 'Machines' }
+    { id: 'shop-orders', label: 'Shop orders' }
   ];
 
   activeTab = signal('contacts');
 
   // Dropdown state
-  openDropdownId = signal<number | null>(null);
+  openDropdownId = signal<number | string | null>(null);
 
   // Form state
   isActive = signal(true);
   isLegalEntity = signal(false);
 
-  // Account type options for multi-select
+  // Address modal state
+  isAddressModalOpen = signal(false);
+  selectedAddress = signal<Address | null>(null);
+  isAddressSaving = signal(false);
+
+  // Validation state
+  touched = signal<Record<string, boolean>>({});
+  errors = computed(() => {
+    const account = this.account();
+    const errs: Record<string, string> = {};
+    if (!account.name?.trim()) errs['name'] = 'Title is required';
+    if (!account.accountType) errs['accountType'] = 'Account type is required';
+    if (!account.code?.trim()) errs['code'] = 'Code is required';
+    else if (account.code.trim().length < 2) errs['code'] = 'Code must be at least 2 characters';
+    return errs;
+  });
+  isValid = computed(() => Object.keys(this.errors()).length === 0);
+
+  // Account type options for single-select
   accountTypeOptions = [
     { value: 'client', label: 'Client' },
     { value: 'supplier', label: 'Supplier' },
     { value: 'partner', label: 'Partner' },
     { value: 'distributor', label: 'Distributor' }
   ];
-  selectedAccountType = '';
 
-  // Add account type
-  onAccountTypeSelect(): void {
-    if (this.selectedAccountType) {
-      const option = this.accountTypeOptions.find(o => o.value === this.selectedAccountType);
-      const currentTypes = this.account().accountType || [];
-      if (option && !currentTypes.includes(option.label)) {
-        this.account.update(a => ({
-          ...a,
-          accountType: [...(a.accountType || []), option.label]
-        }));
-      }
-      this.selectedAccountType = '';
-    }
+  // Account group options - loaded from API
+  accountGroupOptions = signal<{ value: string; label: string }[]>([]);
+
+  // Handle account type change
+  onAccountTypeChange(value: string | number): void {
+    this.account.update(a => ({ ...a, accountType: String(value) }));
+    this.touched.update(t => ({ ...t, accountType: true }));
   }
 
-  // Remove account type
-  removeAccountType(type: string): void {
-    this.account.update(a => ({
-      ...a,
-      accountType: (a.accountType || []).filter(t => t !== type)
-    }));
+  // Clear account type
+  clearAccountType(): void {
+    this.account.update(a => ({ ...a, accountType: '' }));
+    this.touched.update(t => ({ ...t, accountType: true }));
+  }
+
+  // Handle account group change
+  onAccountGroupChange(value: string | number): void {
+    this.account.update(a => ({ ...a, accountGroupId: String(value) }));
+  }
+
+  // Clear account group
+  clearAccountGroup(): void {
+    this.account.update(a => ({ ...a, accountGroupId: '' }));
   }
 
   // Table actions
@@ -206,7 +236,15 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
   ];
 
+  orderActions: TableAction[] = [
+    { id: 'view', label: 'View', icon: 'eye' },
+    { id: 'edit', label: 'Edit', icon: 'pencil' }
+  ];
+
   ngOnInit(): void {
+    // Load account groups for dropdown
+    this.loadAccountGroups();
+
     // Subscribe to route param changes to handle navigation between add/edit
     this.route.paramMap
       .pipe(takeUntil(this.destroy$))
@@ -300,24 +338,46 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isActive.set(true);
     this.isLegalEntity.set(false);
     this.activeTab.set('contacts');
+    this.touched.set({});
     this.cdr.markForCheck();
+  }
+
+  private loadAccountGroups(): void {
+    this.accountGroupService.getAccountGroups(1, 100).subscribe({
+      next: (response) => {
+        this.accountGroupOptions.set(
+          (response.member || []).map(g => ({ value: g.id, label: g.name }))
+        );
+        this.cdr.markForCheck();
+      },
+      error: (err) => console.error('Error loading account groups:', err)
+    });
   }
 
   private loadAccount(id: string): void {
     this.isLoading.set(true);
     this.loadError.set(null);
+    this.touched.set({});
     this.clientService.getClient(id).subscribe({
       next: (client) => {
         this.account.set(this.mapClientToAccount(client));
-        this.contacts.set(this.mapClientUsersToContacts(client.users ?? []));
-        this.addresses.set([]);
-        this.shopOrders.set([]);
         this.manualEntries.set([]);
         this.machines.set([]);
         this.isActive.set(client.isActive ?? true);
-        this.isLegalEntity.set(false);
+        this.isLegalEntity.set(client.isLegalEntity ?? false);
         this.isLoading.set(false);
         this.cdr.markForCheck();
+
+        // Load contacts for this account
+        this.loadAccountContacts(id);
+
+        // Load addresses for this client
+        this.loadClientAddresses(id);
+
+        // Load orders for this client
+        if (client.code) {
+          this.loadClientOrders(client.code);
+        }
       },
       error: (err) => {
         this.loadError.set(err?.message || 'Account not found');
@@ -325,6 +385,101 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  private loadClientAddresses(clientId: string): void {
+    this.addressService.getAddressesByClient(clientId).subscribe({
+      next: (addresses) => {
+        this.addresses.set(this.mapClientAddressesToAddresses(addresses));
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error loading addresses:', err);
+        this.addresses.set([]);
+      }
+    });
+  }
+
+  private loadAccountContacts(accountId: string): void {
+    this.contactService.getContactsByAccount(accountId).subscribe({
+      next: (response) => {
+        const contacts = response.contacts.map(c => ({
+          id: String(c.id),
+          fullName: c.fullName || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || '–',
+          email: c.email ?? '',
+          phone: c.phone ?? '',
+          isBilling: false
+        }));
+        this.contacts.set(contacts);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error loading contacts:', err);
+        this.contacts.set([]);
+      }
+    });
+  }
+
+  private mapClientAddressesToAddresses(clientAddresses: ClientAddress[]): Address[] {
+    return clientAddresses.map(addr => ({
+      id: addr.id,
+      street: addr.street,
+      city: addr.city,
+      country: addr.country?.name ?? '',
+      isBilling: addr.isBilling,
+      isDelivery: addr.isDelivery
+    }));
+  }
+
+  private loadClientOrders(clientCode: string): void {
+    this.orderService.getOrders(1, 'createdAt', 'desc', { 'user.client.code': clientCode }).subscribe({
+      next: (response) => {
+        this.shopOrders.set(this.mapOrdersToShopOrders(response.orders));
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error loading orders:', err);
+        this.shopOrders.set([]);
+      }
+    });
+  }
+
+  private mapOrdersToShopOrders(orders: Order[]): ShopOrder[] {
+    return orders.map(order => ({
+      orderId: order.orderNumber,
+      type: order.isDraft ? 'manual' : 'order',
+      dateCreated: new Date(order.createdAt).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      }),
+      internalRef: order.id,
+      customer: {
+        name: order.user ? `${order.user.firstName ?? ''} ${order.user.lastName ?? ''}`.trim() || order.user.email : 'Unknown',
+        initials: order.user ? this.getInitials(order.user.firstName, order.user.lastName) : '??'
+      },
+      partsOrdered: order.items?.length ?? 0,
+      status: this.mapOrderStatus(order.status)
+    }));
+  }
+
+  private getInitials(firstName?: string, lastName?: string): string {
+    const first = firstName?.charAt(0)?.toUpperCase() ?? '';
+    const last = lastName?.charAt(0)?.toUpperCase() ?? '';
+    return first + last || '??';
+  }
+
+  private mapOrderStatus(status: string): 'completed' | 'delayed' | 'failed' | 'in-review' | 'archived' {
+    switch (status?.toLowerCase()) {
+      case 'completed': return 'completed';
+      case 'dispatched': return 'completed';
+      case 'processing': return 'in-review';
+      case 'confirmed': return 'in-review';
+      case 'pending': return 'delayed';
+      case 'cancelled': return 'failed';
+      case 'draft': return 'archived';
+      default: return 'in-review';
+    }
   }
 
   private mapClientToAccount(c: ClientDetail): Account {
@@ -336,20 +491,14 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       email: c.email ?? '',
       status: c.isActive ? 'active' : 'inactive',
       isActive: c.isActive,
+      isLegalEntity: c.isLegalEntity ?? false,
+      accountType: c.accountType ?? '',
+      accountGroupId: c.accountGroup?.id ?? '',
       phone: c.phoneNumber,
       web: (c as { web?: string }).web
     };
   }
 
-  private mapClientUsersToContacts(users: { id: string; firstName?: string; lastName?: string; email?: string }[]): AccountContact[] {
-    return users.map((u, idx) => ({
-      id: idx,
-      fullName: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email || '–',
-      email: u.email ?? '',
-      phone: '',
-      isBilling: false
-    }));
-  }
 
   // Computed values
   totalContacts = computed(() => this.contacts().length);
@@ -414,11 +563,29 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isLegalEntity.set(value);
   }
 
+  updateAccount(field: keyof Account, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.account.update(a => ({ ...a, [field]: value }));
+    this.touched.update(t => ({ ...t, [field]: true }));
+  }
+
+  markAllTouched(): void {
+    this.touched.set({ name: true, code: true, email: true, accountType: true });
+  }
+
+  hasError(field: string): boolean {
+    return !!this.touched()[field] && !!this.errors()[field];
+  }
+
+  getError(field: string): string {
+    return this.touched()[field] ? (this.errors()[field] || '') : '';
+  }
+
   onTabChange(tabId: string): void {
     this.activeTab.set(tabId);
   }
 
-  toggleDropdown(id: number): void {
+  toggleDropdown(id: number | string): void {
     if (this.openDropdownId() === id) {
       this.openDropdownId.set(null);
     } else {
@@ -446,19 +613,30 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     const address = event.row as Address;
     switch (event.actionId) {
       case 'edit':
-        console.log('Edit address:', address);
+        this.openAddressModal(address);
         this.closeDropdown();
         break;
       case 'delete':
-        console.log('Delete address:', address);
+        this.deleteAddress(address);
         this.closeDropdown();
         break;
     }
   }
 
-  onEdit(contact: AccountContact): void {
-    console.log('Edit contact:', contact);
+  onOrderActionClick(event: ActionClickEvent): void {
+    const order = event.row as ShopOrder;
     this.closeDropdown();
+    switch (event.actionId) {
+      case 'view':
+      case 'edit':
+        this.router.navigate(['/admin/shop-orders', order.internalRef, 'edit']);
+        break;
+    }
+  }
+
+  onEdit(contact: AccountContact): void {
+    this.closeDropdown();
+    this.router.navigate(['/admin/contacts', contact.id, 'edit']);
   }
 
   onDelete(contact: AccountContact): void {
@@ -467,32 +645,141 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onSave(): void {
+    this.saveAccount(false);
+  }
+
+  onSaveAndContinue(): void {
+    this.saveAccount(true);
+  }
+
+  private saveAccount(navigateToList: boolean): void {
+    this.markAllTouched();
+
     const account = this.account();
-    const data = {
-      code: account.code ?? '',
-      name: account.name,
-      email: account.email,
-      vatNumber: account.oib,
-      phoneNumber: account.phone ?? '',
-      isActive: this.isActive()
+    const validationErrors = this.errors();
+
+    if (Object.keys(validationErrors).length > 0) {
+      this.cdr.detectChanges();
+      return;
+    }
+
+    const data: Record<string, unknown> = {
+      code: account.code?.trim() ?? '',
+      name: account.name?.trim() ?? '',
+      email: account.email?.trim() || null,
+      vatNumber: account.oib?.trim() || null,
+      phoneNumber: account.phone?.trim() || null,
+      isActive: this.isActive(),
+      isLegalEntity: this.isLegalEntity(),
+      accountType: account.accountType || null,
+      accountGroup: account.accountGroupId ? `/api/v1/account_groups/${account.accountGroupId}` : null
     };
 
-    const operation = this.isEditMode() && this.accountId()
-      ? this.clientService.updateClient(this.accountId()!, data as any)
-      : this.clientService.createClient(data as any);
+    const isCreating = !this.isEditMode() || !this.accountId();
+    const operation = isCreating
+      ? this.clientService.createClient(data as any)
+      : this.clientService.updateClient(this.accountId()!, data as any);
 
     operation.subscribe({
-      next: () => this.router.navigate(['/admin/accounts/list']),
+      next: (result) => {
+        if (navigateToList) {
+          this.router.navigate(['/admin/accounts/list']);
+        } else if (isCreating && result?.id) {
+          // After creating, navigate to edit page for the new account
+          this.router.navigate(['/admin/accounts', result.id, 'edit']);
+        }
+        // If editing and not navigating, just stay on page (data already saved)
+      },
       error: (error) => console.error('Error saving account:', error)
     });
   }
 
-  onSaveAndContinue(): void {
-    console.log('Saving and continuing...');
+  onAddContact(): void {
+    if (this.activeTab() === 'addresses') {
+      this.openAddressModal();
+    } else {
+      // Navigate to create contact page with pre-selected account
+      const account = this.account();
+      this.router.navigate(['/admin/contacts/new'], {
+        queryParams: { accountId: account.id, accountName: account.name }
+      });
+    }
   }
 
-  onAddContact(): void {
-    console.log('Adding contact...');
+  // Address modal methods
+  openAddressModal(address?: Address): void {
+    this.selectedAddress.set(address || null);
+    this.isAddressModalOpen.set(true);
+    this.cdr.markForCheck();
+  }
+
+  closeAddressModal(): void {
+    this.isAddressModalOpen.set(false);
+    this.selectedAddress.set(null);
+    this.cdr.markForCheck();
+  }
+
+  onAddressSave(formData: AddressFormData): void {
+    this.isAddressSaving.set(true);
+    const clientId = this.accountId();
+
+    if (!clientId) {
+      console.error('Cannot save address: no client ID');
+      this.isAddressSaving.set(false);
+      return;
+    }
+
+    if (formData.id !== undefined) {
+      // Update existing address
+      this.addressService.updateAddress(String(formData.id), {
+        street: formData.street,
+        city: formData.city,
+        isBilling: formData.isBilling,
+        isDelivery: formData.isDelivery
+      }).subscribe({
+        next: () => {
+          this.loadClientAddresses(clientId);
+          this.isAddressSaving.set(false);
+          this.closeAddressModal();
+        },
+        error: (err) => {
+          console.error('Error updating address:', err);
+          this.isAddressSaving.set(false);
+        }
+      });
+    } else {
+      // Create new address
+      this.addressService.createAddressForClient(clientId, {
+        street: formData.street,
+        city: formData.city,
+        isBilling: formData.isBilling,
+        isDelivery: formData.isDelivery
+      }).subscribe({
+        next: () => {
+          this.loadClientAddresses(clientId);
+          this.isAddressSaving.set(false);
+          this.closeAddressModal();
+        },
+        error: (err) => {
+          console.error('Error creating address:', err);
+          this.isAddressSaving.set(false);
+        }
+      });
+    }
+  }
+
+  deleteAddress(address: Address): void {
+    this.addressService.deleteAddress(address.id).subscribe({
+      next: () => {
+        this.addresses.update(addresses =>
+          addresses.filter(a => a.id !== address.id)
+        );
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error deleting address:', err);
+      }
+    });
   }
 
   goBack(): void {

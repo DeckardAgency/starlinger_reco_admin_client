@@ -1,16 +1,16 @@
 import {
   Component,
   ChangeDetectionStrategy,
-  Input,
-  Output,
-  EventEmitter,
   forwardRef,
-  booleanAttribute,
   signal,
-  computed
+  computed,
+  input,
+  output,
+  effect
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
+import { IconComponent } from '../icon/icon.component';
 
 export interface SelectOption {
   value: string | number;
@@ -19,11 +19,12 @@ export interface SelectOption {
 }
 
 export type SelectSize = 'sm' | 'md' | 'lg';
+export type SelectVariant = 'default' | 'pill';
 
 @Component({
   selector: 'ui-select',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   templateUrl: './select.component.html',
   styleUrls: ['./select.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,28 +37,51 @@ export type SelectSize = 'sm' | 'md' | 'lg';
   ]
 })
 export class SelectComponent implements ControlValueAccessor {
-  @Input() options: SelectOption[] = [];
-  @Input() size: SelectSize = 'md';
-  @Input() placeholder = 'Select an option';
-  @Input() label = '';
-  @Input() hint = '';
-  @Input() error = '';
-  @Input() name = '';
-  @Input({ transform: booleanAttribute }) disabled = false;
-  @Input({ transform: booleanAttribute }) required = false;
+  // Signal inputs
+  options = input<SelectOption[]>([]);
+  size = input<SelectSize>('md');
+  variant = input<SelectVariant>('default');
+  placeholder = input<string>('Select an option');
+  label = input<string>('');
+  hint = input<string>('');
+  error = input<string>('');
+  name = input<string>('');
+  disabled = input<boolean>(false);
+  required = input<boolean>(false);
+  clearable = input<boolean>(false);
+  value = input<string | number>('');
 
-  @Output() selectChange = new EventEmitter<string | number>();
+  // Signal outputs
+  selectChange = output<string | number>();
+  cleared = output<void>();
 
-  protected value = signal<string | number>('');
+  // Internal state
+  protected _value = signal<string | number>('');
+  protected _disabled = signal(false);
   protected focused = signal(false);
+
+  constructor() {
+    // Sync external value input with internal _value signal
+    effect(() => {
+      const externalValue = this.value();
+      if (externalValue !== this._value()) {
+        this._value.set(externalValue || '');
+      }
+    });
+
+    // Sync external disabled input with internal _disabled signal
+    effect(() => {
+      this._disabled.set(this.disabled());
+    });
+  }
 
   protected selectClasses = computed(() => {
     const classes = [
       'ui-select__field',
-      `ui-select__field--${this.size}`
+      `ui-select__field--${this.size()}`
     ];
 
-    if (this.error) {
+    if (this.error()) {
       classes.push('ui-select__field--error');
     }
 
@@ -65,23 +89,34 @@ export class SelectComponent implements ControlValueAccessor {
       classes.push('ui-select__field--focused');
     }
 
-    if (this.disabled) {
+    if (this._disabled()) {
       classes.push('ui-select__field--disabled');
     }
 
-    if (!this.value()) {
+    if (!this._value()) {
       classes.push('ui-select__field--placeholder');
     }
 
+    if (this.variant() === 'pill') {
+      classes.push('ui-select__field--pill');
+    }
+
     return classes;
+  });
+
+  protected selectedLabel = computed(() => {
+    const val = this._value();
+    if (!val) return '';
+    const option = this.options().find(o => o.value === val);
+    return option?.label ?? String(val);
   });
 
   // ControlValueAccessor implementation
   private onChange: (value: string | number) => void = () => {};
   private onTouched: () => void = () => {};
 
-  writeValue(value: string | number): void {
-    this.value.set(value || '');
+  writeValue(val: string | number): void {
+    this._value.set(val || '');
   }
 
   registerOnChange(fn: (value: string | number) => void): void {
@@ -93,13 +128,13 @@ export class SelectComponent implements ControlValueAccessor {
   }
 
   setDisabledState(isDisabled: boolean): void {
-    this.disabled = isDisabled;
+    this._disabled.set(isDisabled);
   }
 
   onSelectChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
     const selectedValue = target.value;
-    this.value.set(selectedValue);
+    this._value.set(selectedValue);
     this.onChange(selectedValue);
     this.selectChange.emit(selectedValue);
   }
@@ -111,5 +146,14 @@ export class SelectComponent implements ControlValueAccessor {
   onBlur(): void {
     this.focused.set(false);
     this.onTouched();
+  }
+
+  onClear(event: Event): void {
+    event.stopPropagation();
+    event.preventDefault();
+    this._value.set('');
+    this.onChange('');
+    this.selectChange.emit('');
+    this.cleared.emit();
   }
 }

@@ -14,6 +14,7 @@
       (searchQueryChange)="onSearchChange($event)"
       (add)="onAddTaxType()"
       (bulkDelete)="onBulkDelete()"
+      [hideAddButtonOnMobile]="true"
     ></ui-list-header>
 
     <div class="table-container">
@@ -57,11 +58,6 @@
 <!-- Percent Template -->
 <ng-template #percentTemplate let-row>
   {{ formatPercent(row.percent) }}
-</ng-template>
-
-<!-- Remote Code Template -->
-<ng-template #remoteCodeTemplate let-row>
-  {{ row.remoteCode || '-' }}
 </ng-template>
 
 <!-- Actions Template -->

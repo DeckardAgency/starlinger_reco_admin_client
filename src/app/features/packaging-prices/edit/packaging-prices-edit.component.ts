@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
@@ -14,9 +14,9 @@ import { PackagingPriceService } from '@core/services/http/packaging-price.servi
 const EMPTY_PACKAGING_PRICE: PackagingPrice = {
   id: '',
   name: '',
-  sizeFrom: 0,
-  sizeTo: 0,
-  priceBase: 0
+  sizeFrom: null,
+  sizeTo: null,
+  priceBase: ''
 };
 
 @Component({
@@ -45,6 +45,23 @@ export class PackagingPricesEditComponent implements OnInit {
   packagingPriceId = signal<string | null>(null);
   packagingPrice = signal<PackagingPrice>(EMPTY_PACKAGING_PRICE);
   isLoading = signal(false);
+
+  // Validation state
+  touched = signal<Record<string, boolean>>({});
+  errors = computed(() => {
+    const pp = this.packagingPrice();
+    const errs: Record<string, string> = {};
+    if (!pp.name || pp.name.trim() === '') {
+      errs['name'] = 'Name is required';
+    }
+    if (!pp.priceBase || pp.priceBase.trim() === '') {
+      errs['priceBase'] = 'Price base is required';
+    } else if (parseFloat(pp.priceBase) < 0) {
+      errs['priceBase'] = 'Price base must be zero or positive';
+    }
+    return errs;
+  });
+  isValid = computed(() => Object.keys(this.errors()).length === 0);
 
   // Breadcrumb items
   breadcrumbItems: BreadcrumbItem[] = [
@@ -76,9 +93,9 @@ export class PackagingPricesEditComponent implements OnInit {
         this.packagingPrice.set({
           id: packagingPrice.id || id,
           name: packagingPrice.name || '',
-          sizeFrom: packagingPrice.sizeFrom || 0,
-          sizeTo: packagingPrice.sizeTo || 0,
-          priceBase: packagingPrice.priceBase || 0
+          sizeFrom: packagingPrice.sizeFrom ?? null,
+          sizeTo: packagingPrice.sizeTo ?? null,
+          priceBase: packagingPrice.priceBase || '0'
         });
         this.isLoading.set(false);
         this.cdr.markForCheck();
@@ -91,26 +108,60 @@ export class PackagingPricesEditComponent implements OnInit {
     });
   }
 
+  onNameChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.packagingPrice.update(pp => ({ ...pp, name: input.value }));
+  }
+
   onSizeFromChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.packagingPrice.update(pp => ({ ...pp, sizeFrom: parseFloat(input.value) || 0 }));
+    const value = input.value.trim();
+    this.packagingPrice.update(pp => ({ ...pp, sizeFrom: value === '' ? null : value }));
   }
 
   onSizeToChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.packagingPrice.update(pp => ({ ...pp, sizeTo: parseFloat(input.value) || 0 }));
+    const value = input.value.trim();
+    this.packagingPrice.update(pp => ({ ...pp, sizeTo: value === '' ? null : value }));
   }
 
   onPriceBaseChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.packagingPrice.update(pp => ({ ...pp, priceBase: parseFloat(input.value) || 0 }));
+    this.packagingPrice.update(pp => ({ ...pp, priceBase: input.value }));
+    this.markFieldTouched('priceBase');
+  }
+
+  // Validation helpers
+  markAllTouched(): void {
+    this.touched.set({ name: true, priceBase: true });
+  }
+
+  markFieldTouched(field: string): void {
+    this.touched.update(t => ({ ...t, [field]: true }));
+  }
+
+  getError(field: string): string {
+    return this.touched()[field] ? (this.errors()[field] || '') : '';
   }
 
   onSave(): void {
+    this.markAllTouched();
+    if (!this.isValid()) {
+      this.cdr.markForCheck();
+      return;
+    }
+
     const data = this.packagingPrice();
+    const payload: Record<string, unknown> = {
+      name: data.name || null,
+      sizeFrom: data.sizeFrom || null,
+      sizeTo: data.sizeTo || null,
+      priceBase: String(data.priceBase)
+    };
+
     const operation = this.isEditMode()
-      ? this.packagingPriceService.updatePackagingPrice(this.packagingPriceId()!, data)
-      : this.packagingPriceService.createPackagingPrice(data);
+      ? this.packagingPriceService.updatePackagingPrice(this.packagingPriceId()!, payload as any)
+      : this.packagingPriceService.createPackagingPrice(payload as any);
 
     operation.subscribe({
       next: () => this.router.navigate(['/admin/packaging-prices/list']),
@@ -126,4 +177,3 @@ export class PackagingPricesEditComponent implements OnInit {
     this.router.navigate(['/admin/packaging-prices/list']);
   }
 }
-

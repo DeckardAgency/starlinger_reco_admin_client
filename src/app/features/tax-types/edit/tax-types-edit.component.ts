@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -15,15 +15,19 @@ import { TaxTypeService } from '@core/services/http/tax-type.service';
 interface TaxTypeDetail {
   id: string;
   name: string;
-  percent: number;
+  percent: string;
+  remoteId: number | null;
   remoteCode: string | null;
+  isActive: boolean;
 }
 
 const EMPTY_TAX_TYPE: TaxTypeDetail = {
   id: '',
   name: '',
-  percent: 0,
-  remoteCode: null
+  percent: '0',
+  remoteId: null,
+  remoteCode: null,
+  isActive: true
 };
 
 @Component({
@@ -55,6 +59,22 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
   // Loading state
   isLoading = signal(false);
 
+  // Validation state
+  touched = signal<Record<string, boolean>>({});
+  errors = computed(() => {
+    const taxType = this.taxType();
+    const errs: Record<string, string> = {};
+    if (!taxType.name?.trim()) errs['name'] = 'Name is required';
+    const percentNum = parseFloat(taxType.percent);
+    if (taxType.percent === '' || taxType.percent === null || isNaN(percentNum)) {
+      errs['percent'] = 'Percent is required';
+    } else if (percentNum < 0) {
+      errs['percent'] = 'Percent must be zero or positive';
+    }
+    return errs;
+  });
+  isValid = computed(() => Object.keys(this.errors()).length === 0);
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -85,8 +105,10 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
         this.taxType.set({
           id: taxType.id || id,
           name: taxType.name || '',
-          percent: taxType.percent || 0,
-          remoteCode: taxType.remoteCode || null
+          percent: taxType.percent ?? '0',
+          remoteId: taxType.remoteId ?? null,
+          remoteCode: taxType.remoteCode || null,
+          isActive: taxType.isActive ?? true
         });
         this.isLoading.set(false);
         this.cdr.markForCheck();
@@ -103,31 +125,70 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
     this.router.navigate(['/admin/tax-types/list']);
   }
 
-  onSave(): void {
-    const data = this.taxType();
-    const operation = this.isEditMode()
-      ? this.taxTypeService.updateTaxType(this.taxTypeId!, data)
-      : this.taxTypeService.createTaxType(data);
+  // Validation helpers
+  markAllTouched(): void {
+    this.touched.set({ name: true, percent: true });
+  }
 
-    operation.subscribe({
-      next: () => this.router.navigate(['/admin/tax-types/list']),
-      error: (error) => console.error('Error saving tax type:', error)
-    });
+  markFieldTouched(field: string): void {
+    this.touched.update(t => ({ ...t, [field]: true }));
+  }
+
+  getError(field: string): string {
+    return this.touched()[field] ? (this.errors()[field] || '') : '';
+  }
+
+  onSave(): void {
+    this.saveTaxType(false);
   }
 
   onSaveAndContinue(): void {
-    console.log('Save and continue:', this.taxType());
+    this.saveTaxType(true);
+  }
+
+  private saveTaxType(navigateToList: boolean): void {
+    this.markAllTouched();
+    if (!this.isValid()) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const detail = this.taxType();
+
+    // Build payload with only writable fields — never send id
+    const data: Record<string, unknown> = {
+      name: detail.name,
+      percent: String(parseFloat(detail.percent) || 0),
+      remoteCode: detail.remoteCode
+    };
+
+    const isCreating = !this.isEditMode();
+    const operation = isCreating
+      ? this.taxTypeService.createTaxType(data as any)
+      : this.taxTypeService.updateTaxType(this.taxTypeId!, data as any);
+
+    operation.subscribe({
+      next: (result) => {
+        if (navigateToList) {
+          this.router.navigate(['/admin/tax-types/list']);
+        } else if (isCreating && result?.id) {
+          this.router.navigate(['/admin/tax-types', result.id, 'edit']);
+        }
+      },
+      error: (error) => console.error('Error saving tax type:', error)
+    });
   }
 
   onNameChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.taxType.update(t => ({ ...t, name: input.value }));
+    this.markFieldTouched('name');
   }
 
   onPercentChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = parseFloat(input.value.replace(',', '.')) || 0;
-    this.taxType.update(t => ({ ...t, percent: value }));
+    this.taxType.update(t => ({ ...t, percent: input.value }));
+    this.markFieldTouched('percent');
   }
 
   onRemoteCodeChange(event: Event): void {
@@ -135,7 +196,4 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
     this.taxType.update(t => ({ ...t, remoteCode: input.value || null }));
   }
 
-  formatPercent(value: number): string {
-    return value.toFixed(2).replace('.', ',');
-  }
 }

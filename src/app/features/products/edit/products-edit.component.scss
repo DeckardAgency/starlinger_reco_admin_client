@@ -117,18 +117,15 @@
   }
 }
 
-// Mobile form field vertical layout override
-@include admin.form-field-mobile-vertical;
-
 // =============================================================================
 // Select with Pill
 // =============================================================================
 .select-with-pill {
   @include admin.select-with-pill;
-}
 
-::ng-deep .select-with-pill .select-field {
-  @include admin.select-with-pill-field;
+  .select-field {
+    @include admin.select-with-pill-field;
+  }
 }
 
 // =============================================================================
@@ -167,15 +164,8 @@
       max-width: 100%;
     }
 
-    ::ng-deep .ui-tabs {
-      background: transparent;
-      border-bottom: none;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-
-      @media (max-width: 768px) {
-        flex-wrap: nowrap;
-      }
+    ui-tabs {
+      --tabs-border-bottom: none;
     }
   }
 
@@ -320,12 +310,35 @@
   &__image {
     width: 100%;
     aspect-ratio: 4 / 3;
+    overflow: hidden;
+  }
+
+  &__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   &__placeholder {
     width: 100%;
     height: 100%;
     background: linear-gradient(135deg, #f4f4f5 0%, #e4e4e7 100%);
+  }
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+
+  &__text {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    color: #71717a;
+    margin: 0;
   }
 }
 
@@ -336,97 +349,15 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 
-  ::ng-deep .data-table {
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    min-width: 600px;
-  }
-
-  ::ng-deep .data-table__header-row {
-    background: transparent;
-  }
-
-  ::ng-deep .data-table__header-cell {
-    min-height: auto;
-    padding: 16px;
-  }
-
-  ::ng-deep .data-table__row {
-    background: transparent;
-  }
-
-  ::ng-deep .data-table__cell {
-    height: auto;
-    padding: 16px;
-  }
+  // Use CSS custom properties for ui-data-table styling
+  --data-table-border: none;
+  --data-table-border-radius: 0;
+  --data-table-background: transparent;
+  --data-table-header-background: transparent;
+  --data-table-row-background: transparent;
+  --data-table-row-hover-background: transparent;
 }
 
-.doc-actions {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &__btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-
-    &:hover {
-      background: #f4f4f5;
-    }
-  }
-
-  &__dropdown {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    z-index: 100;
-    min-width: 160px;
-    background: white;
-    border: 1px solid #e4e4e7;
-    border-radius: 6px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    padding: 4px;
-  }
-
-  &__dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 8px 12px;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
-    font-family: 'Inter', sans-serif;
-    font-size: 14px;
-    font-weight: 400;
-    color: #09090b;
-    cursor: pointer;
-    text-align: left;
-
-    &:hover {
-      background: #f4f4f5;
-    }
-
-    &--danger {
-      color: #dc2626;
-
-      svg path {
-        stroke: #dc2626;
-      }
-    }
-  }
-}
 
 // =============================================================================
 // Discounts Table
@@ -516,10 +447,9 @@
 .related-section {
   background: transparent;
 
-  ::ng-deep .data-table {
-    border: 1px solid #e4e4e7;
-    border-radius: 8px;
-  }
+  // Use CSS custom properties for ui-data-table styling
+  --data-table-border: 1px solid #e4e4e7;
+  --data-table-border-radius: 8px;
 
   &--compact {
     margin-top: 0;
@@ -533,34 +463,13 @@
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       background: white;
-    }
 
-    ::ng-deep .data-table {
-      background: transparent;
-      border: none;
-      border-radius: 0;
-      min-width: 600px;
-    }
-
-    ::ng-deep .data-table__header-row {
-      background: white;
-    }
-
-    ::ng-deep .data-table__header-cell {
-      background: white;
-      border-top: none;
-      height: auto;
-      min-height: auto;
-      padding: 16px;
-    }
-
-    ::ng-deep .data-table__row {
-      background: #f4f4f5;
-    }
-
-    ::ng-deep .data-table__cell {
-      height: auto;
-      padding: 8px 16px;
+      --data-table-border: none;
+      --data-table-border-radius: 0;
+      --data-table-background: transparent;
+      --data-table-header-background: white;
+      --data-table-row-background: #f4f4f5;
+      --data-table-row-hover-background: #fafafa;
     }
   }
 }
@@ -569,40 +478,13 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 
-  ::ng-deep .data-table {
-    background: transparent;
-    min-width: 800px;
-  }
-
-  ::ng-deep .data-table__header-row {
-    background: white;
-  }
-
-  ::ng-deep .data-table__header-cell {
-    min-height: auto;
-    height: auto;
-    padding: 16px;
-    white-space: nowrap;
-  }
-
-  ::ng-deep .data-table__row {
-    background: transparent;
-
-    &:hover {
-      background: #fafafa;
-    }
-
-    &:has(.checkbox:checked) {
-      background: linear-gradient(0deg, rgba(9, 9, 11, 0.10) 0%, rgba(9, 9, 11, 0.10) 100%), #f4f4f5;
-    }
-  }
-
-  ::ng-deep .data-table__cell {
-    background: transparent;
-    height: auto;
-    padding: 8px 16px;
-    white-space: nowrap;
-  }
+  // Use CSS custom properties for ui-data-table styling
+  --data-table-border: none;
+  --data-table-border-radius: 0;
+  --data-table-background: transparent;
+  --data-table-header-background: white;
+  --data-table-row-background: transparent;
+  --data-table-row-hover-background: #fafafa;
 }
 
 // =============================================================================
@@ -764,8 +646,14 @@
     gap: 8px;
   }
 
+  &__input-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
   &__input {
-    width: 100%;
+    flex: 1;
     height: 40px;
     padding: 8px 12px;
     font-family: 'Inter', sans-serif;
@@ -773,13 +661,29 @@
     color: #232323;
     background: white;
     border: 1px solid #e4e4e7;
-    border-radius: 6px;
+    border-radius: 6px 0 0 6px;
     outline: none;
     box-sizing: border-box;
 
     &:focus {
       border-color: #dc2626;
     }
+  }
+
+  &__ext {
+    height: 40px;
+    padding: 8px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #71717a;
+    background: #f4f4f5;
+    border: 1px solid #e4e4e7;
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    white-space: nowrap;
   }
 
   &__footer {
@@ -790,18 +694,12 @@
   }
 }
 
-// Override modal styles for rename modal
-:host ::ng-deep ui-modal {
-  .ui-modal__container--sm {
-    border-radius: 6px !important;
-  }
-
-  .ui-modal__header,
-  .ui-modal__footer {
-    display: none !important;
-  }
-
-  .ui-modal__body {
-    padding: 21px 23px !important;
+// Override modal styles for rename modal using CSS custom properties
+.rename-modal-container {
+  ui-modal {
+    --modal-container-border-radius: 6px;
+    --modal-header-display: none;
+    --modal-footer-display: none;
+    --modal-body-padding: 21px 23px;
   }
 }

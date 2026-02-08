@@ -1,17 +1,17 @@
-@use '../../../ui-kit/admin-shared' as admin;
-
 :host {
-  @include admin.admin-host;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .active-inquiries-page {
-  @include admin.admin-page;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: #f4f4f5;
   padding-bottom: 24px;
 }
 
-// =============================================================================
-// CONTENT
-// =============================================================================
 .page-content {
   display: flex;
   flex-direction: column;
@@ -20,9 +20,6 @@
   flex: 1;
 }
 
-// =============================================================================
-// CARDS GRID
-// =============================================================================
 .cards-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -37,15 +34,20 @@
   }
 }
 
-// =============================================================================
-// SKELETON LOADING
-// =============================================================================
 .card-skeleton {
   background: white;
   border: 1px solid #e4e4e7;
   border-radius: 6px;
   height: 220px;
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+.empty-state {
+  padding: 24px;
+  text-align: center;
+  color: #71717a;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
 }
 
 @keyframes pulse {

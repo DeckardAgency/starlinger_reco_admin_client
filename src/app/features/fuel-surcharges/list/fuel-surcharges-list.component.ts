@@ -43,7 +43,9 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
-  @ViewChild('fuelSurchargeTemplate') fuelSurchargeTemplate!: TemplateRef<any>;
+  @ViewChild('sizeFromTemplate') sizeFromTemplate!: TemplateRef<any>;
+  @ViewChild('sizeToTemplate') sizeToTemplate!: TemplateRef<any>;
+  @ViewChild('priceBaseTemplate') priceBaseTemplate!: TemplateRef<any>;
 
   // Search state
   searchQuery = signal('');
@@ -88,7 +90,7 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
 
     if (query) {
       result = result.filter(fs =>
-        fs.name.toLowerCase().includes(query) ||
+        (fs.name || '').toLowerCase().includes(query) ||
         String(fs.id).includes(query)
       );
     }
@@ -143,17 +145,16 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   private initColumns(): void {
     this.columns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
-      { key: 'id', label: 'id', sortable: true, width: '112px' },
       { key: 'name', label: 'Name', sortable: true },
-      { key: 'date', label: 'Date', sortable: true },
-      { key: 'fuelSurcharge', label: 'Fuel surcharge', sortable: true, template: this.fuelSurchargeTemplate },
+      { key: 'sizeFrom', label: 'Size from', sortable: true, template: this.sizeFromTemplate },
+      { key: 'sizeTo', label: 'Size to', sortable: true, template: this.sizeToTemplate },
+      { key: 'priceBase', label: 'Price base', sortable: true, template: this.priceBaseTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
 
   onSearchChange(query: string): void {
     this.searchQuery.set(query);
-    console.log('Searching:', this.searchQuery);
   }
 
   onSortChange(event: SortEvent): void {
@@ -196,16 +197,36 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   }
 
   onDelete(fuelSurcharge: FuelSurcharge): void {
-    console.log('Delete fuel surcharge:', fuelSurcharge);
+    if (!confirm('Are you sure you want to delete this fuel surcharge?')) {
+      this.closeDropdown();
+      return;
+    }
+    this.fuelSurchargeService.deleteFuelSurcharge(String(fuelSurcharge.id)).subscribe({
+      next: () => {
+        this.fuelSurcharges.update(list => list.filter(fs => fs.id !== fuelSurcharge.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting fuel surcharge:', error)
+    });
     this.closeDropdown();
   }
 
   onBulkDelete(): void {
     const selected = this.fuelSurcharges().filter(fs => fs.selected);
-    console.log('Bulk delete fuel surcharges:', selected);
-    const remaining = this.fuelSurcharges().filter(fs => !fs.selected);
-    this.fuelSurcharges.set(remaining);
-    this.selectAll.set(false);
+    if (selected.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selected.length} fuel surcharge(s)?`)) return;
+
+    const deleteOps = selected.map(fs =>
+      this.fuelSurchargeService.deleteFuelSurcharge(String(fs.id)).toPromise()
+    );
+    Promise.all(deleteOps).then(() => {
+      this.fuelSurcharges.update(list => list.filter(fs => !fs.selected));
+      this.selectAll.set(false);
+      this.cdr.markForCheck();
+    }).catch(error => {
+      console.error('Error bulk deleting fuel surcharges:', error);
+      this.loadFuelSurcharges();
+    });
   }
 
   onHeaderDropdownToggle(isOpen: boolean): void {
@@ -235,11 +256,10 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
     this.selectAll.set(updated.every(fs => fs.selected));
   }
 
-  formatFuelSurcharge(value: number): string {
-    return value.toFixed(4).replace('.', ',');
-  }
-
-  onExport(): void {
-    console.log('Export fuel surcharges');
+  formatDecimal(value: string | number | undefined | null): string {
+    if (value == null || value === '') return '';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(num)) return '';
+    return num.toFixed(4).replace('.', ',');
   }
 }

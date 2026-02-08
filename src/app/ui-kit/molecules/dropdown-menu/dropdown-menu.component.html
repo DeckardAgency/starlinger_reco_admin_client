@@ -1,11 +1,16 @@
-<div class="dropdown-menu" *ngIf="isOpen">
-  <button
-    *ngFor="let item of items"
-    class="dropdown-menu__item"
-    type="button"
-    (click)="onItemClick(item)"
-  >
-    <span class="dropdown-menu__icon" [innerHTML]="item.icon"></span>
-    <span class="dropdown-menu__label">{{ item.label }}</span>
-  </button>
-</div>
+@if (isOpen) {
+  <div class="dropdown-menu">
+    @for (item of items; track item.id) {
+      <button
+        class="dropdown-menu__item"
+        type="button"
+        (click)="onItemClick(item)"
+      >
+        <span class="dropdown-menu__icon">
+          <ui-icon [name]="item.iconName" size="sm"></ui-icon>
+        </span>
+        <span class="dropdown-menu__label">{{ item.label }}</span>
+      </button>
+    }
+  </div>
+}

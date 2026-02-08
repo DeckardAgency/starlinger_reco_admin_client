@@ -74,8 +74,6 @@ export class OrderCardComponent {
     if (this.routePrefix === '/customer') {
       return `/customer/inquiry/${this.data.id.replace('#', '')}`;
     }
-    return this.data.type === 'order' 
-      ? `${this.routePrefix}/shop-orders/${this.data.id}`
-      : `${this.routePrefix}/inquiries/${this.data.id}`;
+    return `${this.routePrefix}/shop-orders/${this.data.id}/edit`;
   }
 }

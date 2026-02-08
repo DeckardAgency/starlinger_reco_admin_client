@@ -18,16 +18,20 @@ export type IconSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | string;
     ></span>
   `,
   styles: [`
+    :host {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      line-height: 0;
+    }
+
     .ui-icon {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-    }
-
-    :host ::ng-deep svg {
-      width: 100%;
-      height: 100%;
+      line-height: 0;
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush

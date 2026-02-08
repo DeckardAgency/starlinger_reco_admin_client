@@ -14,6 +14,7 @@
       (searchQueryChange)="onSearchChange($event)"
       (add)="onAddPaymentType()"
       (bulkDelete)="onBulkDelete()"
+      [hideAddButtonOnMobile]="true"
     ></ui-list-header>
 
     <div class="table-container">
@@ -58,7 +59,7 @@
 <ng-template #activeTemplate let-row>
   <div class="toggle-cell">
     <ui-toggle
-      [checked]="row.active"
+      [checked]="row.isActive"
       (toggleChange)="toggleActive(row, $event)">
     </ui-toggle>
   </div>

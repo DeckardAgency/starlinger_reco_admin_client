@@ -59,15 +59,12 @@
     height: 44px;
   }
 
-  // Active state
+  // Active state - icons use currentColor so setting color on ui-icon works
   &--active {
     color: #dc2626;
 
     ui-icon {
-      ::ng-deep svg path {
-        fill: #dc2626;
-        stroke: #dc2626;
-      }
+      color: #dc2626;
     }
   }
 

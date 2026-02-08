@@ -238,12 +238,54 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   }
 
   onClone(product: Product): void {
-    console.log('Clone product:', product);
     this.closeDropdown();
+    this.productService.getProductById(product.id).subscribe({
+      next: (fullProduct) => {
+        const cloneData: Record<string, unknown> = {
+          name: `Copy of ${fullProduct.name}`,
+          partNo: fullProduct.partNo ? `${fullProduct.partNo}-copy` : '',
+          slug: fullProduct.slug ? `${fullProduct.slug}-copy` : undefined,
+          isActive: false,
+          readyForShop: false,
+          qty: fullProduct.qty,
+          qtyStep: fullProduct.qtyStep,
+          quoteItemLimit: fullProduct.quoteItemLimit,
+          fixedQty: fullProduct.fixedQty,
+          weight: fullProduct.weight || null,
+          productGroupId: fullProduct.productGroupId || null,
+          catalogCode: fullProduct.catalogCode || null,
+          price: fullProduct.price,
+          retailPrice: fullProduct.retailPrice,
+          taxTypeId: fullProduct.taxTypeId || null,
+          currency: fullProduct.currency || null,
+          discountPercent: fullProduct.discountPercent,
+          discountPrice: fullProduct.discountPrice,
+          shortDescription: fullProduct.shortDescription || null
+        };
+
+        this.productService.createProduct(cloneData as any).subscribe({
+          next: (newProduct) => {
+            this.router.navigate(['/admin/products', newProduct.id, 'edit']);
+          },
+          error: (err) => console.error('Error cloning product:', err)
+        });
+      },
+      error: (err) => console.error('Error fetching product for clone:', err)
+    });
   }
 
   onDelete(product: Product): void {
-    console.log('Delete product:', product);
+    if (!confirm(`Are you sure you want to delete "${product.name}"?`)) {
+      this.closeDropdown();
+      return;
+    }
+    this.productService.deleteProduct(String(product.id)).subscribe({
+      next: () => {
+        this.products.update(list => list.filter(p => p.id !== product.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting product:', error)
+    });
     this.closeDropdown();
   }
 

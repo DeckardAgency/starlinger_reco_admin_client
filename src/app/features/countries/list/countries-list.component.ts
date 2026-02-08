@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
-import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import {
   ListHeaderComponent,
@@ -25,7 +24,6 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
     FormsModule,
     RouterModule,
     DataTableComponent,
-    BadgeComponent,
     BreadcrumbsComponent,
     ListHeaderComponent,
     TableFooterComponent,
@@ -44,7 +42,6 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
-  @ViewChild('europeanUnionTemplate') europeanUnionTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
 
   // Search state
@@ -156,11 +153,8 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
   private initColumns(): void {
     this.columns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
-      { key: 'id', label: 'ID', sortable: false, width: '112px' },
       { key: 'name', label: 'Name', sortable: false },
       { key: 'code', label: 'Code', sortable: false, width: '192px' },
-      { key: 'europeanUnion', label: 'European union', sortable: false, width: '192px', template: this.europeanUnionTemplate },
-      { key: 'dhlZone', label: 'DHL zone', sortable: false, width: '192px' },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
@@ -213,16 +207,36 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
   }
 
   onDelete(country: Country): void {
-    console.log('Delete country:', country);
+    if (!confirm(`Are you sure you want to delete "${country.name}"?`)) {
+      this.closeDropdown();
+      return;
+    }
+    this.countryService.deleteCountry(String(country.id)).subscribe({
+      next: () => {
+        this.countries.update(list => list.filter(c => c.id !== country.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting country:', error)
+    });
     this.closeDropdown();
   }
 
   onBulkDelete(): void {
     const selected = this.countries().filter(c => c.selected);
-    console.log('Bulk delete countries:', selected);
-    const remaining = this.countries().filter(c => !c.selected);
-    this.countries.set(remaining);
-    this.selectAll.set(false);
+    if (selected.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selected.length} country/countries?`)) return;
+
+    const deleteOps = selected.map(c =>
+      this.countryService.deleteCountry(String(c.id)).toPromise()
+    );
+    Promise.all(deleteOps).then(() => {
+      this.countries.update(list => list.filter(c => !c.selected));
+      this.selectAll.set(false);
+      this.cdr.markForCheck();
+    }).catch(error => {
+      console.error('Error bulk deleting countries:', error);
+      this.loadCountries();
+    });
   }
 
   onHeaderDropdownToggle(isOpen: boolean): void {

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, OnInit, OnDestroy, inject, ViewChild, TemplateRef, AfterViewInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, OnInit, OnDestroy, inject, ViewChild, TemplateRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
@@ -10,9 +10,16 @@ import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { DataTableComponent, TableColumn } from '@app/ui-kit/organisms/data-table/data-table.component';
+import { SelectComponent, SelectOption } from '@app/ui-kit/atoms/select/select.component';
 import { OrderService } from '@core/services/http/order.service';
 import { InquiryService, Inquiry } from '@core/services/http/inquiry.service';
+import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
+import { PaymentTypeService } from '@core/services/http/payment-type.service';
+import { UserService } from '@core/services/http/user.service';
+import { ClientService } from '@core/services/http/client.service';
+import { AddressService } from '@core/services/http/address.service';
 import { Order } from '@core/models/order.model';
+import { ClientAddress } from '@core/models/client.model';
 
 // Interfaces
 interface OrderProduct {
@@ -47,10 +54,13 @@ interface ShopOrderDetail {
   partsOrdered: number;
   status: string;
   enableSale: boolean;
-  account: string;
-  contact: string;
+  accountId: string;  // Client ID for dropdown
+  account: string;    // Client name for display
+  contactId: string;  // User ID for dropdown
+  contact: string;    // User name for display
   contactDropdown: string;
   billingAddress: string;
+  shippingAddress: string;
   date: string;
   paymentType: string;
   deliveryType: string;
@@ -70,10 +80,13 @@ const EMPTY_ORDER: ShopOrderDetail = {
   partsOrdered: 0,
   status: 'new',
   enableSale: false,
+  accountId: '',
   account: '',
+  contactId: '',
   contact: '',
   contactDropdown: '',
   billingAddress: '',
+  shippingAddress: '',
   date: '',
   paymentType: '',
   deliveryType: '',
@@ -98,7 +111,8 @@ const EMPTY_ORDER: ShopOrderDetail = {
     ToggleComponent,
     FormFieldComponent,
     IconComponent,
-    DataTableComponent
+    DataTableComponent,
+    SelectComponent
   ],
   templateUrl: './shop-orders-edit.component.html',
   styleUrls: ['./shop-orders-edit.component.scss'],
@@ -110,10 +124,16 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private router = inject(Router);
   private orderService = inject(OrderService);
   private inquiryService = inject(InquiryService);
+  private deliveryTypeService = inject(DeliveryTypeService);
+  private paymentTypeService = inject(PaymentTypeService);
+  private userService = inject(UserService);
+  private clientService = inject(ClientService);
+  private addressService = inject(AddressService);
   private destroy$ = new Subject<void>();
 
   isLoading = signal(true);
   loadError = signal<string | null>(null);
+  isInquiry = signal(false);  // Track if we're editing an inquiry vs order
 
   // Template references for custom cell rendering
   @ViewChild('unitPriceTemplate') unitPriceTemplate!: TemplateRef<any>;
@@ -134,49 +154,95 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   // Log messages table columns (initialized in ngAfterViewInit)
   logColumns: TableColumn[] = [];
 
-  // Dropdown options
-  contactOptions = [
-    { value: 'martina', label: 'Martina Kemper - Unistrap Gmbh' },
-    { value: 'john', label: 'John Doe - Unistrap Gmbh' },
-    { value: 'jane', label: 'Jane Smith - Unistrap Gmbh' }
-  ];
+  // Dropdown options - loaded from backend
+  accountOptions = signal<SelectOption[]>([]);
+  contactOptions = signal<SelectOption[]>([]);
+  billingAddressOptions = signal<SelectOption[]>([]);
+  shippingAddressOptions = signal<SelectOption[]>([]);
 
-  billingAddressOptions = [
-    { value: 'wien', label: '1060 Wien, Sonnenuhrgasse 4' },
-    { value: 'graz', label: '8010 Graz, Hauptplatz 1' },
-    { value: 'linz', label: '4020 Linz, Landstraße 15' }
-  ];
+  // Store loaded client addresses
+  private loadedAddresses: ClientAddress[] = [];
 
-  statusOptions = [
-    { value: 'new', label: 'New' },
-    { value: 'in-progress', label: 'In Progress' },
+  // Store loaded clients to look up client code when account changes
+  private loadedClients: Array<{ id: string; code: string }> = [];
+  // Store loaded users to look up addresses when contact changes
+  private loadedUsers: Array<{ id: string; address?: string }> = [];
+
+  // Order status options
+  orderStatusOptions: SelectOption[] = [
+    { value: 'pending', label: 'Pending' },
+    { value: 'processing', label: 'Processing' },
+    { value: 'dispatched', label: 'Dispatched' },
     { value: 'completed', label: 'Completed' },
     { value: 'cancelled', label: 'Cancelled' }
   ];
 
-  paymentTypeOptions = [
-    { value: 'bank-transfer', label: 'Bank transfer' },
-    { value: 'credit-card', label: 'Credit card' },
-    { value: 'paypal', label: 'PayPal' }
+  // Inquiry status options (based on backend state machine)
+  inquiryStatusOptions: SelectOption[] = [
+    { value: 'draft', label: 'Draft' },
+    { value: 'submitted', label: 'Submitted' },
+    { value: 'in_review', label: 'In Review' },
+    { value: 'more_info', label: 'More Info Needed' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'canceled', label: 'Cancelled' }
   ];
 
-  deliveryTypeOptions = [
-    { value: 'dhl', label: 'DHL' },
-    { value: 'fedex', label: 'FedEx' },
-    { value: 'ups', label: 'UPS' },
-    { value: 'pickup', label: 'Pickup' }
-  ];
+  // Computed status options based on entity type
+  get statusOptions(): SelectOption[] {
+    return this.isInquiry() ? this.inquiryStatusOptions : this.orderStatusOptions;
+  }
+
+  // Dropdown options - loaded from backend
+  paymentTypeOptions = signal<SelectOption[]>([]);
+  deliveryTypeOptions = signal<SelectOption[]>([]);
 
   // Selected values for ngModel
+  selectedAccount = '';
   selectedContact = '';
   selectedBillingAddress = '';
+  selectedShippingAddress = '';
   selectedStatus = '';
   selectedPaymentType = '';
   selectedDeliveryType = '';
 
+  // Validation state
+  touched = signal<Record<string, boolean>>({});
+  errors = computed(() => {
+    const errs: Record<string, string> = {};
+    if (!this.selectedAccount) errs['account'] = 'Account is required';
+    if (!this.selectedContact) errs['contact'] = 'Contact is required';
+    if (!this.selectedBillingAddress) errs['billingAddress'] = 'Billing address is required';
+    if (!this.selectedShippingAddress) errs['shippingAddress'] = 'Shipping address is required';
+    if (!this.selectedStatus) errs['status'] = 'Status is required';
+    return errs;
+  });
+  isValid = computed(() => Object.keys(this.errors()).length === 0);
 
+  showError(field: string): boolean {
+    return !!this.touched()[field] && !!this.errors()[field];
+  }
+
+  getError(field: string): string {
+    return this.touched()[field] ? (this.errors()[field] || '') : '';
+  }
+
+  markAllTouched(): void {
+    this.touched.set({
+      account: true,
+      contact: true,
+      billingAddress: true,
+      shippingAddress: true,
+      status: true
+    });
+  }
 
   ngOnInit(): void {
+    // Load dropdown options from backend
+    this.loadClients();
+    this.loadDeliveryTypes();
+    this.loadPaymentTypes();
+
     this.route.paramMap
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
@@ -185,6 +251,194 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
           this.loadOrder(orderId);
         }
       });
+  }
+
+  private loadDeliveryTypes(): void {
+    this.deliveryTypeService.getDeliveryTypes(1, 100)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const options = response.member
+            .filter(dt => dt.isActive)
+            .map(dt => ({ value: dt.id, label: dt.name }));
+          this.deliveryTypeOptions.set(options);
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('[ShopOrdersEdit] Error loading delivery types:', err)
+      });
+  }
+
+  private loadPaymentTypes(): void {
+    this.paymentTypeService.getPaymentTypes(1, 100)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const options = response.member
+            .filter(pt => pt.isActive)
+            .map(pt => ({ value: pt.id, label: pt.name }));
+          this.paymentTypeOptions.set(options);
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('[ShopOrdersEdit] Error loading payment types:', err)
+      });
+  }
+
+  private loadClients(): void {
+    this.clientService.getClients(1)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          // Store clients for code lookup when account changes
+          this.loadedClients = response.clients
+            .filter(c => c.isActive)
+            .map(c => ({ id: c.id, code: c.code }));
+
+          // Map clients to account options
+          const options = this.loadedClients.map(c => {
+            const client = response.clients.find(cl => cl.id === c.id);
+            return {
+              value: c.id,
+              label: client?.name || c.code
+            };
+          });
+          this.accountOptions.set(options);
+
+          // If order is already loaded with an accountId, ensure it's properly selected
+          // and load addresses for that client
+          const currentOrder = this.order();
+          if (currentOrder.accountId) {
+            this.selectedAccount = currentOrder.accountId;
+            const client = this.loadedClients.find(c => c.id === currentOrder.accountId);
+            if (client?.code) {
+              this.loadContactsAndAddresses(client.code, client.id);
+            }
+          }
+
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('[ShopOrdersEdit] Error loading clients:', err)
+      });
+  }
+
+  private loadContactsAndAddresses(clientCode: string, clientId?: string): void {
+    if (!clientCode) return;
+
+    // Load contacts (users) for this client
+    this.userService.getUsers({ clientCode, itemsPerPage: 100 })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          // Store users for address lookup when contact changes
+          this.loadedUsers = response.member
+            .filter(u => u.isActive !== false)
+            .map(u => ({ id: u.id, address: u.address }));
+
+          // Map users to contact options
+          const contacts = this.loadedUsers.map(u => {
+            const member = response.member.find(m => m.id === u.id);
+            return {
+              value: u.id,
+              label: member ? (`${member.firstName} ${member.lastName}`.trim() || member.email) : u.id
+            };
+          });
+          this.contactOptions.set(contacts);
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('[ShopOrdersEdit] Error loading contacts:', err)
+      });
+
+    // Load addresses for this client from the Address API
+    if (clientId) {
+      this.loadClientAddresses(clientId);
+    }
+  }
+
+  private loadClientAddresses(clientId: string): void {
+    this.addressService.getAddressesByClient(clientId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (addresses) => {
+          this.loadedAddresses = addresses;
+
+          // Filter billing addresses (isBilling = true or all if none marked as billing)
+          const billingAddresses = addresses.filter(a => a.isBilling && a.isActive);
+          const billingOptions = billingAddresses.length > 0
+            ? billingAddresses.map(a => ({
+                value: a.id,
+                label: `${a.street}, ${a.city}${a.country?.name ? ', ' + a.country.name : ''}`
+              }))
+            : addresses.filter(a => a.isActive).map(a => ({
+                value: a.id,
+                label: `${a.street}, ${a.city}${a.country?.name ? ', ' + a.country.name : ''}`
+              }));
+          this.billingAddressOptions.set(billingOptions);
+
+          // Filter shipping/delivery addresses (isDelivery = true or all if none marked)
+          const shippingAddresses = addresses.filter(a => a.isDelivery && a.isActive);
+          const shippingOptions = shippingAddresses.length > 0
+            ? shippingAddresses.map(a => ({
+                value: a.id,
+                label: `${a.street}, ${a.city}${a.country?.name ? ', ' + a.country.name : ''}`
+              }))
+            : addresses.filter(a => a.isActive).map(a => ({
+                value: a.id,
+                label: `${a.street}, ${a.city}${a.country?.name ? ', ' + a.country.name : ''}`
+              }));
+          this.shippingAddressOptions.set(shippingOptions);
+
+          // Try to match the order's address strings to Address entity IDs
+          const currentOrder = this.order();
+          if (currentOrder.billingAddress) {
+            const matchedBilling = this.findMatchingAddressId(currentOrder.billingAddress, addresses);
+            if (matchedBilling) {
+              this.selectedBillingAddress = matchedBilling;
+            }
+          }
+          if (currentOrder.shippingAddress) {
+            const matchedShipping = this.findMatchingAddressId(currentOrder.shippingAddress, addresses);
+            if (matchedShipping) {
+              this.selectedShippingAddress = matchedShipping;
+            }
+          }
+
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('[ShopOrdersEdit] Error loading addresses:', err)
+      });
+  }
+
+  private findMatchingAddressId(addressString: string, addresses: ClientAddress[]): string | null {
+    if (!addressString) return null;
+
+    // Normalize the address string for comparison
+    const normalizedSearch = addressString.toLowerCase().trim();
+
+    for (const addr of addresses) {
+      // Build possible address string formats to match against
+      const formats = [
+        `${addr.street}, ${addr.city}`,
+        `${addr.street}, ${addr.postalCode} ${addr.city}`,
+        `${addr.street}, ${addr.postalCode} ${addr.city}, ${addr.country?.name || ''}`,
+        `${addr.street}, ${addr.city}, ${addr.country?.name || ''}`,
+        `${addr.street}, ${addr.postalCode}, ${addr.city}`,
+        `${addr.street}, ${addr.city}${addr.country?.name ? ', ' + addr.country.name : ''}`
+      ];
+
+      for (const format of formats) {
+        const normalizedFormat = format.toLowerCase().trim();
+        // Check if the order address contains the key parts of this address
+        if (normalizedSearch.includes(addr.street.toLowerCase()) &&
+            normalizedSearch.includes(addr.city.toLowerCase())) {
+          return addr.id;
+        }
+        // Also check for exact match
+        if (normalizedSearch === normalizedFormat) {
+          return addr.id;
+        }
+      }
+    }
+
+    return null;
   }
 
   ngAfterViewInit(): void {
@@ -217,19 +471,46 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private loadOrder(id: string): void {
     this.isLoading.set(true);
     this.loadError.set(null);
+    this.isInquiry.set(false);  // Reset
 
     this.orderService.getOrder(id).subscribe({
       next: (order) => {
+        this.isInquiry.set(false);
         const detail = this.mapOrderToDetail(order);
         this.applyOrderDetail(detail);
+        // Load contacts and addresses based on client
+        const clientCode = (order.user as { client?: { code?: string } })?.client?.code;
+        const clientId = (order.user as { client?: { id?: string } })?.client?.id;
+        if (clientCode) {
+          this.loadContactsAndAddresses(clientCode, clientId);
+        }
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
       error: () => {
         this.inquiryService.getInquiry(id).subscribe({
           next: (inquiry) => {
+            this.isInquiry.set(true);  // Mark as inquiry
             const detail = this.mapInquiryToDetail(inquiry);
             this.applyOrderDetail(detail);
+            // Load contacts and addresses - fetch user details to get client code and ID
+            if (inquiry.user?.id) {
+              this.userService.getUserById(inquiry.user.id)
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({
+                  next: (user) => {
+                    if (user?.client?.code) {
+                      // Update the accountId and selectedAccount now that we have the client ID
+                      if (user.client.id) {
+                        this.selectedAccount = user.client.id;
+                        this.order.update(o => ({ ...o, accountId: user.client!.id! }));
+                        this.cdr.markForCheck();
+                      }
+                      this.loadContactsAndAddresses(user.client.code, user.client.id);
+                    }
+                  }
+                });
+            }
             this.isLoading.set(false);
             this.cdr.markForCheck();
           },
@@ -277,10 +558,13 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       partsOrdered: partsCount,
       status: o.status || 'pending',
       enableSale: !o.isDraft,
+      accountId: (o.user as { client?: { id?: string } })?.client?.id ?? '',
       account: (o.user as { client?: { name?: string } })?.client?.name ?? '',
+      contactId: (o.user as { id?: string })?.id ?? '',
       contact: userName,
       contactDropdown: userName,
       billingAddress: o.billingAddress ?? '',
+      shippingAddress: o.shippingAddress ?? '',
       date: this.formatDate(o.createdAt),
       paymentType: '',
       deliveryType: '',
@@ -319,10 +603,13 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       partsOrdered: partsCount,
       status: i.status || 'pending',
       enableSale: !i.isDraft,
+      accountId: '',  // Will be set after clients are loaded
       account: i.user?.client?.companyName ?? '',
+      contactId: i.user?.id ?? '',
       contact: userName,
       contactDropdown: userName,
       billingAddress: '',
+      shippingAddress: '',
       date: this.formatDate(i.createdAt),
       paymentType: '',
       deliveryType: '',
@@ -351,8 +638,10 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       { label: 'Shop orders', route: '/admin/shop-orders' },
       { label: orderData.internalRef ? `#${orderData.internalRef}` : orderData.id }
     ];
-    this.selectedContact = orderData.contactDropdown;
+    this.selectedAccount = orderData.accountId;
+    this.selectedContact = orderData.contactId;
     this.selectedBillingAddress = orderData.billingAddress;
+    this.selectedShippingAddress = orderData.shippingAddress;
     this.selectedStatus = orderData.status;
     this.selectedPaymentType = orderData.paymentType;
     this.selectedDeliveryType = orderData.deliveryType;
@@ -360,78 +649,122 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   // Dropdown change handlers
-  onContactChange(): void {
-    const option = this.contactOptions.find(o => o.value === this.selectedContact);
+  onAccountChange(value: string | number): void {
+    const option = this.accountOptions().find(o => o.value === value);
     if (option) {
-      this.order.update(o => ({ ...o, contact: option.label, contactDropdown: this.selectedContact }));
+      this.selectedAccount = String(value);
+      this.order.update(o => ({ ...o, accountId: String(value), account: option.label }));
+      this.touched.update(t => ({ ...t, account: true }));
+
+      // Clear contact and addresses when account changes
+      this.selectedContact = '';
+      this.selectedBillingAddress = '';
+      this.selectedShippingAddress = '';
+      this.contactOptions.set([]);
+      this.billingAddressOptions.set([]);
+      this.shippingAddressOptions.set([]);
+      this.order.update(o => ({ ...o, contactId: '', contact: '', contactDropdown: '', billingAddress: '', shippingAddress: '' }));
+
+      // Load contacts and addresses for the selected client
+      const client = this.loadedClients.find(c => c.id === String(value));
+      if (client?.code) {
+        this.loadContactsAndAddresses(client.code, client.id);
+      }
     }
   }
 
-  onBillingAddressChange(): void {
-    this.order.update(o => ({ ...o, billingAddress: this.selectedBillingAddress }));
+  clearAccount(): void {
+    this.selectedAccount = '';
+    this.selectedContact = '';
+    this.selectedBillingAddress = '';
+    this.selectedShippingAddress = '';
+    this.contactOptions.set([]);
+    this.billingAddressOptions.set([]);
+    this.shippingAddressOptions.set([]);
+    this.order.update(o => ({ ...o, accountId: '', account: '', contactId: '', contact: '', contactDropdown: '', billingAddress: '', shippingAddress: '' }));
+    this.touched.update(t => ({ ...t, account: true, contact: true, billingAddress: true, shippingAddress: true }));
   }
 
-  onStatusChange(): void {
-    this.order.update(o => ({ ...o, status: this.selectedStatus }));
+  onContactChange(value: string | number): void {
+    const option = this.contactOptions().find(o => o.value === value);
+    if (option) {
+      this.selectedContact = String(value);
+      this.order.update(o => ({ ...o, contactId: String(value), contact: option.label, contactDropdown: String(value) }));
+      this.touched.update(t => ({ ...t, contact: true }));
+    }
   }
 
-  onPaymentTypeChange(): void {
-    this.order.update(o => ({ ...o, paymentType: this.selectedPaymentType }));
+  onBillingAddressChange(value: string | number): void {
+    this.selectedBillingAddress = String(value);
+    // Find the address and store the full address string for the order
+    const address = this.loadedAddresses.find(a => a.id === String(value));
+    const addressStr = address
+      ? `${address.street}, ${address.city}${address.country?.name ? ', ' + address.country.name : ''}`
+      : String(value);
+    this.order.update(o => ({ ...o, billingAddress: addressStr }));
+    this.touched.update(t => ({ ...t, billingAddress: true }));
   }
 
-  onDeliveryTypeChange(): void {
-    this.order.update(o => ({ ...o, deliveryType: this.selectedDeliveryType }));
+  onShippingAddressChange(value: string | number): void {
+    this.selectedShippingAddress = String(value);
+    // Find the address and store the full address string for the order
+    const address = this.loadedAddresses.find(a => a.id === String(value));
+    const addressStr = address
+      ? `${address.street}, ${address.city}${address.country?.name ? ', ' + address.country.name : ''}`
+      : String(value);
+    this.order.update(o => ({ ...o, shippingAddress: addressStr }));
+    this.touched.update(t => ({ ...t, shippingAddress: true }));
   }
 
-  // Remove pill handlers
-  removeContact(): void {
+  clearShippingAddress(): void {
+    this.selectedShippingAddress = '';
+    this.order.update(o => ({ ...o, shippingAddress: '' }));
+    this.touched.update(t => ({ ...t, shippingAddress: true }));
+  }
+
+  onStatusChange(value: string | number): void {
+    this.selectedStatus = String(value);
+    this.order.update(o => ({ ...o, status: String(value) }));
+    this.touched.update(t => ({ ...t, status: true }));
+  }
+
+  onPaymentTypeChange(value: string | number): void {
+    this.selectedPaymentType = String(value);
+    this.order.update(o => ({ ...o, paymentType: String(value) }));
+  }
+
+  onDeliveryTypeChange(value: string | number): void {
+    this.selectedDeliveryType = String(value);
+    this.order.update(o => ({ ...o, deliveryType: String(value) }));
+  }
+
+  // Clear handlers
+  clearContact(): void {
     this.selectedContact = '';
     this.order.update(o => ({ ...o, contact: '', contactDropdown: '' }));
+    this.touched.update(t => ({ ...t, contact: true }));
   }
 
-  removeBillingAddress(): void {
+  clearBillingAddress(): void {
     this.selectedBillingAddress = '';
     this.order.update(o => ({ ...o, billingAddress: '' }));
+    this.touched.update(t => ({ ...t, billingAddress: true }));
   }
 
-  removeStatus(): void {
+  clearStatus(): void {
     this.selectedStatus = '';
     this.order.update(o => ({ ...o, status: '' }));
+    this.touched.update(t => ({ ...t, status: true }));
   }
 
-  removePaymentType(): void {
+  clearPaymentType(): void {
     this.selectedPaymentType = '';
     this.order.update(o => ({ ...o, paymentType: '' }));
   }
 
-  removeDeliveryType(): void {
+  clearDeliveryType(): void {
     this.selectedDeliveryType = '';
     this.order.update(o => ({ ...o, deliveryType: '' }));
-  }
-
-  getContactLabel(): string {
-    const option = this.contactOptions.find(o => o.value === this.selectedContact);
-    return option ? option.label : '';
-  }
-
-  getBillingAddressLabel(): string {
-    const option = this.billingAddressOptions.find(o => o.value === this.selectedBillingAddress);
-    return option ? option.label : '';
-  }
-
-  getStatusLabel(): string {
-    const option = this.statusOptions.find(o => o.value === this.selectedStatus);
-    return option ? option.label : '';
-  }
-
-  getPaymentTypeLabel(): string {
-    const option = this.paymentTypeOptions.find(o => o.value === this.selectedPaymentType);
-    return option ? option.label : '';
-  }
-
-  getDeliveryTypeLabel(): string {
-    const option = this.deliveryTypeOptions.find(o => o.value === this.selectedDeliveryType);
-    return option ? option.label : '';
   }
 
   // Event handlers
@@ -461,7 +794,65 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   onSave(): void {
-    console.log('Save order...', this.order());
+    const orderData = this.order();
+
+    // Mark all fields as touched to show validation errors
+    this.markAllTouched();
+    this.cdr.markForCheck();
+
+    // Check if form is valid
+    if (!this.isValid()) {
+      const errorMessages = Object.values(this.errors()).join('\n');
+      alert('Please fix the following errors:\n' + errorMessages);
+      return;
+    }
+
+    if (this.isInquiry()) {
+      // Save as inquiry - note: status changes require state machine transitions
+      // Don't include status in direct updates as the backend validates transitions
+      const updatePayload: Partial<Inquiry> = {
+        isDraft: !orderData.enableSale,
+        notes: orderData.logMessages[0]?.message || ''
+      };
+
+      // Add user reference (user links to account via client)
+      updatePayload.user = `/api/v1/users/${this.selectedContact}` as any;
+
+      this.inquiryService.updateInquiry(orderData.id, updatePayload).subscribe({
+        next: (updatedInquiry) => {
+          console.log('Inquiry saved successfully:', updatedInquiry);
+          alert('Inquiry saved successfully!');
+        },
+        error: (error) => {
+          console.error('Error saving inquiry:', error);
+          alert('Error saving inquiry: ' + (error?.error?.detail || error?.error?.message || error?.message || 'Unknown error'));
+        }
+      });
+    } else {
+      // Save as order - build payload with all changed fields
+      const updatePayload: Record<string, any> = {
+        status: orderData.status,
+        billingAddress: orderData.billingAddress,
+        shippingAddress: orderData.shippingAddress,
+        isDraft: !orderData.enableSale,
+        // User reference - this determines the account (user's client)
+        user: `/api/v1/users/${this.selectedContact}`
+      };
+
+      console.log('[ShopOrdersEdit] Saving order ID:', orderData.id);
+      console.log('[ShopOrdersEdit] Payload:', JSON.stringify(updatePayload, null, 2));
+
+      this.orderService.updateOrder(orderData.id, updatePayload as Partial<Order>).subscribe({
+        next: (updatedOrder) => {
+          console.log('[ShopOrdersEdit] Order saved successfully:', updatedOrder);
+          alert('Order saved successfully!');
+        },
+        error: (error) => {
+          console.error('[ShopOrdersEdit] Error saving order:', error);
+          alert('Error saving order: ' + (error?.error?.detail || error?.error?.message || error?.message || 'Unknown error'));
+        }
+      });
+    }
   }
 
   getStatusBadgeVariant(status: string): 'success' | 'warning' | 'danger' | 'info' | 'secondary' {

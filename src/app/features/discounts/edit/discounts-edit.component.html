@@ -25,16 +25,60 @@
       </div>
 
       <div class="form-card__fields">
-        <ui-form-field label="Name" layout="horizontal">
+        <ui-form-field label="Name" layout="horizontal" [required]="true" [error]="getError('name')">
           <input type="text" [ngModel]="discount().name" (ngModelChange)="onNameChange($event)" placeholder="Enter name">
         </ui-form-field>
 
         <ui-form-field label="Date from" layout="horizontal">
-          <input type="text" [ngModel]="discount().dateFrom" (ngModelChange)="onDateFromChange($event)" placeholder="DD/MM/YYYY">
+          <div class="datepicker" (click)="$event.stopPropagation()">
+            <div class="datepicker__input" (click)="toggleDateFromCalendar($event)">
+              <input type="text" readonly [value]="formatDateDisplay(discount().dateFrom)" placeholder="DD/MM/YYYY">
+              @if (discount().dateFrom) {
+                <button type="button" class="datepicker__clear" (click)="clearDateFrom($event)">
+                  <ui-icon name="close" size="xs"></ui-icon>
+                </button>
+              }
+              <ui-icon name="calendar" size="sm" class="datepicker__icon"></ui-icon>
+            </div>
+            @if (showDateFromCalendar()) {
+              <div class="datepicker__dropdown">
+                <ui-calendar
+                  [selectedDate]="dateFromDate()"
+                  [firstDayOfWeek]="1"
+                  [showTodayButton]="true"
+                  [showClearButton]="false"
+                  (dateSelected)="onDateFromSelected($event)"
+                  (close)="showDateFromCalendar.set(false)"
+                ></ui-calendar>
+              </div>
+            }
+          </div>
         </ui-form-field>
 
         <ui-form-field label="Date to" layout="horizontal">
-          <input type="text" [ngModel]="discount().dateTo" (ngModelChange)="onDateToChange($event)" placeholder="DD/MM/YYYY">
+          <div class="datepicker" (click)="$event.stopPropagation()">
+            <div class="datepicker__input" (click)="toggleDateToCalendar($event)">
+              <input type="text" readonly [value]="formatDateDisplay(discount().dateTo)" placeholder="DD/MM/YYYY">
+              @if (discount().dateTo) {
+                <button type="button" class="datepicker__clear" (click)="clearDateTo($event)">
+                  <ui-icon name="close" size="xs"></ui-icon>
+                </button>
+              }
+              <ui-icon name="calendar" size="sm" class="datepicker__icon"></ui-icon>
+            </div>
+            @if (showDateToCalendar()) {
+              <div class="datepicker__dropdown">
+                <ui-calendar
+                  [selectedDate]="dateToDate()"
+                  [firstDayOfWeek]="1"
+                  [showTodayButton]="true"
+                  [showClearButton]="false"
+                  (dateSelected)="onDateToSelected($event)"
+                  (close)="showDateToCalendar.set(false)"
+                ></ui-calendar>
+              </div>
+            }
+          </div>
         </ui-form-field>
 
         <ui-form-field label="Discount %" layout="horizontal">
@@ -56,7 +100,7 @@
             </div>
             <select class="select-field" [(ngModel)]="selectedAccountGroup" (change)="onAccountGroupChange()">
               <option value="" disabled selected>Select</option>
-              <option *ngFor="let opt of accountGroupOptions" [value]="opt.value">{{ opt.label }}</option>
+              <option *ngFor="let opt of accountGroupOptions()" [value]="opt.value">{{ opt.label }}</option>
             </select>
             <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
           </div>
@@ -73,7 +117,7 @@
             </div>
             <select class="select-field" [(ngModel)]="selectedAccount" (change)="onAccountChange()">
               <option value="" disabled selected>Select</option>
-              <option *ngFor="let opt of accountOptions" [value]="opt.value">{{ opt.label }}</option>
+              <option *ngFor="let opt of accountOptions()" [value]="opt.value">{{ opt.label }}</option>
             </select>
             <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
           </div>

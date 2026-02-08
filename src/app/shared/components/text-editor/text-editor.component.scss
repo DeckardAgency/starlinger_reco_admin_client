@@ -1,11 +1,23 @@
 // text-editor.component.scss
+// CSS Custom Properties with defaults
+:host {
+  display: block;
+  --text-editor-border: none;
+  --text-editor-border-radius: 0;
+  --text-editor-background: #fff;
+  --text-editor-toolbar-background: #ffffff;
+  --text-editor-toolbar-border-bottom: none;
+  --text-editor-content-background: #f4f4f5;
+  --text-editor-content-min-height: 164px;
+}
+
 .text-editor {
   display: flex;
   flex-direction: column;
-  border: none;
-  border-radius: 0;
+  border: var(--text-editor-border);
+  border-radius: var(--text-editor-border-radius);
   overflow: hidden;
-  background-color: #fff;
+  background-color: var(--text-editor-background);
   width: 100%;
   height: auto;
   min-height: 250px;
@@ -27,7 +39,8 @@
     display: flex;
     flex-wrap: wrap;
     padding: 16px;
-    background-color: #ffffff;
+    background-color: var(--text-editor-toolbar-background);
+    border-bottom: var(--text-editor-toolbar-border-bottom);
     gap: 8px;
     align-items: center;
 
@@ -152,10 +165,10 @@
 
   // Element: Content area
   &__content {
-    background-color: #f4f4f5;
+    background-color: var(--text-editor-content-background);
     flex: 1;
     padding: 16px;
-    min-height: 164px;
+    min-height: var(--text-editor-content-min-height);
     overflow-y: auto;
     outline: none;
     font-family: 'Inter', sans-serif;

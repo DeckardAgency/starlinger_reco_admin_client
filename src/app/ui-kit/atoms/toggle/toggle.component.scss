@@ -1,3 +1,13 @@
+// CSS Custom Properties with defaults
+:host {
+  display: inline-flex;
+
+  // Default values for CSS custom properties
+  --toggle-label-color: #18181B;
+  --toggle-label-min-width: auto;
+  --toggle-label-font-weight: 400;
+}
+
 .ui-toggle {
   display: inline-flex;
   align-items: center;
@@ -20,7 +30,9 @@
   // Label
   &__label {
     font-size: 14px;
-    color: #18181B;
+    color: var(--toggle-label-color);
+    min-width: var(--toggle-label-min-width);
+    font-weight: var(--toggle-label-font-weight);
     user-select: none;
   }
 

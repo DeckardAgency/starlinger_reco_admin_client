@@ -38,6 +38,12 @@ export class ListHeaderComponent {
   @Input({ transform: booleanAttribute }) showAddButton = true;
 
   /**
+   * Whether to hide the add button on mobile (< 768px)
+   * Useful when a mobile footer provides the add action
+   */
+  @Input({ transform: booleanAttribute }) hideAddButtonOnMobile = false;
+
+  /**
    * Whether to show the search input
    */
   @Input({ transform: booleanAttribute }) showSearch = true;

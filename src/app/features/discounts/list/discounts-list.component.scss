@@ -1,45 +1,40 @@
-@use '../../../ui-kit/admin-shared' as admin;
-
 :host {
-  @include admin.admin-host;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .discounts-page {
-  @include admin.admin-page;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: #f4f4f5;
 }
 
 .page-content {
-  @include admin.list-page-content;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  flex: 1;
 }
 
 .table-container {
-  @include admin.tabs-table-container;
-}
+  background: transparent;
+  border: 1px solid #E4E4E7;
+  border-radius: 8px;
+  overflow: hidden;
 
-@include admin.tabs-table-data-table;
-
-::ng-deep .data-table {
-  background: #f4f4f5;
-
-  &__header-row,
-  &__header-cell {
-    background: white;
-  }
-
-  &__row {
-    &:hover {
-      background: white;
-    }
-  }
+  // Set CSS custom properties for ui-data-table
+  --data-table-background: #f4f4f5;
+  --data-table-header-background: white;
+  --data-table-row-background: transparent;
+  --data-table-row-hover-background: white;
 }
 
 // Mobile responsive
 @media (max-width: 768px) {
   .page-content {
     padding-bottom: 76px;
-  }
-
-  ::ng-deep .list-header__right .btn--primary {
-    display: none;
   }
 }

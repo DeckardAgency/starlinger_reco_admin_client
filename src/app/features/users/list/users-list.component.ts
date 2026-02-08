@@ -294,7 +294,17 @@ export class UsersListComponent implements OnInit, AfterViewInit {
   }
 
   onDelete(user: AdminUser): void {
-    console.log('Delete user:', user);
+    if (!confirm(`Are you sure you want to delete "${user.firstName} ${user.lastName}"?`)) {
+      this.closeDropdown();
+      return;
+    }
+    this.userService.deleteUser(String(user.id)).subscribe({
+      next: () => {
+        this.users.update(list => list.filter(u => u.id !== user.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting user:', error)
+    });
     this.closeDropdown();
   }
 

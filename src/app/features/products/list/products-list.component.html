@@ -21,6 +21,7 @@
       (searchQueryChange)="onSearchChange($event)"
       (add)="onAddProduct()"
       (bulkDelete)="onBulkDelete()"
+      [hideAddButtonOnMobile]="true"
     >
       <button class="btn btn--icon" (click)="onExport()" type="button">
         <ui-icon name="download" size="sm"></ui-icon>

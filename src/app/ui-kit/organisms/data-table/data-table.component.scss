@@ -1,8 +1,25 @@
+// CSS Custom Properties with defaults
+:host {
+  display: block;
+
+  // Default values for CSS custom properties
+  --data-table-border: none;
+  --data-table-border-radius: 0;
+  --data-table-background: transparent;
+  --data-table-header-background: #FFF;
+  --data-table-row-background: transparent;
+  --data-table-row-hover-background: #FAFAFA;
+  --data-table-cell-padding: 16px;
+  --data-table-cell-border-color: #E4E4E7;
+}
+
 .data-table {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  background: transparent;
+  background: var(--data-table-background);
+  border: var(--data-table-border);
+  border-radius: var(--data-table-border-radius);
 
   &__table {
     width: 100%;
@@ -16,15 +33,15 @@
   }
 
   &__header-row {
-    background: #FFF;
+    background: var(--data-table-header-background);
   }
 
   &__header-cell {
     min-height: 52px;
     min-width: 85px;
-    padding: 16px;
-    border-bottom: 1px solid #E4E4E7;
-    background: #FFF;
+    padding: var(--data-table-cell-padding);
+    border-bottom: 1px solid var(--data-table-cell-border-color);
+    background: var(--data-table-header-background);
     text-align: left;
     vertical-align: middle;
 
@@ -33,7 +50,7 @@
       user-select: none;
 
       &:hover {
-        background: #FAFAFA;
+        filter: brightness(0.98);
       }
     }
 
@@ -52,7 +69,7 @@
 
   &__header-text {
     color: #232323;
-    font-family: Inter;
+    font-family: Inter, sans-serif;
     font-size: 14px;
     font-weight: 500;
     line-height: 20px;
@@ -75,8 +92,10 @@
   }
 
   &__row {
+    background: var(--data-table-row-background);
+
     &:hover {
-      background: #FAFAFA;
+      background: var(--data-table-row-hover-background);
     }
 
     &--empty {
@@ -97,8 +116,8 @@
   &__cell {
     height: 52px;
     min-width: 85px;
-    padding: 16px;
-    border-bottom: 1px solid #E4E4E7;
+    padding: var(--data-table-cell-padding);
+    border-bottom: 1px solid var(--data-table-cell-border-color);
     vertical-align: middle;
 
     // Mobile: ensure cells don't compress too much
@@ -112,7 +131,7 @@
     color: #232323;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-family: Inter;
+    font-family: Inter, sans-serif;
     font-size: 14px;
     font-weight: 400;
     line-height: 20px;

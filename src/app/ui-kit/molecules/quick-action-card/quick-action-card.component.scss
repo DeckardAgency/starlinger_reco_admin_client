@@ -3,10 +3,9 @@
   flex: 1;
   width: 100%;
 
-  ::ng-deep ui-card,
-  ::ng-deep .ui-card {
-    flex: 1;
-    width: 100%;
+  ui-card {
+    --card-flex: 1;
+    --card-width: 100%;
   }
 }
 

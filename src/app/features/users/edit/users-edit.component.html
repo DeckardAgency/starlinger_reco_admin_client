@@ -17,7 +17,7 @@
     [showDiscard]="false"
     (back)="goBack()"
     (save)="onSave()"
-    (saveAndContinue)="onSave()"
+    (saveAndContinue)="onSaveAndContinue()"
   ></ui-detail-header>
 
   <!-- Loading / Error -->
@@ -41,7 +41,7 @@
           <h2 class="form-card__title">User details</h2>
           <div class="form-card__content">
             <!-- First Name -->
-            <ui-form-field label="First name" layout="horizontal">
+            <ui-form-field label="First name" layout="horizontal" [required]="true" [error]="getError('firstName')">
               <input
                 type="text"
                 [value]="user().firstName"
@@ -51,7 +51,7 @@
             </ui-form-field>
 
             <!-- Last Name -->
-            <ui-form-field label="Last name" layout="horizontal">
+            <ui-form-field label="Last name" layout="horizontal" [required]="true" [error]="getError('lastName')">
               <input
                 type="text"
                 [value]="user().lastName"
@@ -71,7 +71,7 @@
             </ui-form-field>
 
             <!-- Email -->
-            <ui-form-field label="Email" layout="horizontal">
+            <ui-form-field label="Email" layout="horizontal" [required]="true" [error]="getError('email')">
               <input
                 type="email"
                 [value]="user().email"
@@ -87,7 +87,7 @@
           <h2 class="form-card__title">Password</h2>
           <div class="form-card__content">
             <!-- Password -->
-            <ui-form-field label="Password" layout="horizontal">
+            <ui-form-field label="Password" layout="horizontal" [required]="!isEditMode()" [error]="getError('password')">
               <div class="input-with-icon">
                 <input
                   [type]="showPassword() ? 'text' : 'password'"
@@ -102,7 +102,7 @@
             </ui-form-field>
 
             <!-- Repeat Password -->
-            <ui-form-field label="Repeat password" layout="horizontal">
+            <ui-form-field label="Repeat password" layout="horizontal" [required]="!isEditMode()" [error]="getError('repeatPassword')">
               <div class="input-with-icon">
                 <input
                   [type]="showRepeatPassword() ? 'text' : 'password'"
@@ -156,7 +156,7 @@
   <!-- Mobile Sticky Footer -->
   <ui-mobile-footer
     (primaryClick)="onSave()"
-    (secondaryClick)="onSave()"
+    (secondaryClick)="onSaveAndContinue()"
   ></ui-mobile-footer>
   }
 </div>

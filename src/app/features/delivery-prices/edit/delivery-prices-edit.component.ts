@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -10,56 +10,43 @@ import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcru
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
-import { DeliveryPrice } from '@core/models/delivery-price.model';
+import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
+import { DeliveryPrice, DeliveryPriceDeliveryType } from '@core/models/delivery-price.model';
 import { DeliveryPriceService } from '@core/services/http/delivery-price.service';
+import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
+import { DHL_ZONES } from '@core/models/country.model';
 
 interface DeliveryPriceDetail {
   id: string;
   name: string;
-  dhlZone: string;
   deliveryType: string;
-  sizeFrom: number;
-  sizeTo: number;
-  priceBase: number;
-  stepStartsAt: number;
-  forEveryNextSize: number;
-  priceBaseStep: number;
+  dhlZone: string;
+  sizeFrom: string;
+  sizeTo: string;
+  priceBase: string;
+  stepStartsAt: string;
+  forEveryNextSize: string;
+  priceBaseStep: string;
 }
 
 const EMPTY_DELIVERY_PRICE: DeliveryPriceDetail = {
   id: '',
   name: '',
-  dhlZone: '',
   deliveryType: '',
-  sizeFrom: 0,
-  sizeTo: 0,
-  priceBase: 0,
-  stepStartsAt: 0,
-  forEveryNextSize: 0,
-  priceBaseStep: 0
+  dhlZone: '',
+  sizeFrom: '',
+  sizeTo: '',
+  priceBase: '',
+  stepStartsAt: '',
+  forEveryNextSize: '',
+  priceBaseStep: ''
 };
 
-// Options for dropdowns
+// Options interface for dropdowns
 interface SelectOption {
   value: string;
   label: string;
 }
-
-const DHL_ZONE_OPTIONS: SelectOption[] = [
-  { value: 'Zone 1', label: 'Zone 1' },
-  { value: 'Zone 2', label: 'Zone 2' },
-  { value: 'Zone 3', label: 'Zone 3' },
-  { value: 'Zone 4', label: 'Zone 4' },
-  { value: 'Zone 5', label: 'Zone 5' },
-  { value: 'Zone 6', label: 'Zone 6' },
-  { value: 'Zone 7', label: 'Zone 7' },
-  { value: 'Zone 8', label: 'Zone 8' }
-];
-
-const DELIVERY_TYPE_OPTIONS: SelectOption[] = [
-  { value: 'Standard', label: 'Standard' },
-  { value: 'Express', label: 'Express' }
-];
 
 @Component({
   selector: 'app-delivery-prices-edit',
@@ -72,7 +59,8 @@ const DELIVERY_TYPE_OPTIONS: SelectOption[] = [
     BreadcrumbsComponent,
     DetailHeaderComponent,
     MobileFooterComponent,
-    IconComponent
+    IconComponent,
+    SelectComponent
   ],
   templateUrl: './delivery-prices-edit.component.html',
   styleUrls: ['./delivery-prices-edit.component.scss'],
@@ -91,11 +79,23 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
   // Loading state
   isLoading = signal(false);
 
-  // Dropdown options
-  dhlZoneOptions = DHL_ZONE_OPTIONS;
-  deliveryTypeOptions = DELIVERY_TYPE_OPTIONS;
+  // Validation state
+  touched = signal<Record<string, boolean>>({});
+  errors = computed(() => {
+    const dp = this.deliveryPrice();
+    const errs: Record<string, string> = {};
+    if (!dp.name?.trim()) errs['name'] = 'Name is required';
+    if (!dp.priceBase?.trim()) errs['priceBase'] = 'Price base is required';
+    if (!dp.deliveryType) errs['deliveryType'] = 'Delivery type is required';
+    return errs;
+  });
+  isValid = computed(() => Object.keys(this.errors()).length === 0);
 
-  // Selected values for native select elements
+  // Dropdown options
+  dhlZoneOptions: SelectOption[] = DHL_ZONES.map(z => ({ value: z.value, label: z.label }));
+  deliveryTypeOptions = signal<SelectOption[]>([]);
+
+  // Selected values for select elements
   selectedDhlZone = '';
   selectedDeliveryType = '';
 
@@ -103,10 +103,13 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private deliveryPriceService: DeliveryPriceService
+    private deliveryPriceService: DeliveryPriceService,
+    private deliveryTypeService: DeliveryTypeService
   ) {}
 
   ngOnInit(): void {
+    this.loadDeliveryTypes();
+
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       if (params['id'] && params['id'] !== 'new') {
         this.isEditMode.set(true);
@@ -114,6 +117,21 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
         this.loadDeliveryPrice(this.deliveryPriceId!);
       }
     });
+  }
+
+  private loadDeliveryTypes(): void {
+    this.deliveryTypeService.getDeliveryTypes(1, 100)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const options = response.member
+            .filter(dt => dt.isActive)
+            .map(dt => ({ value: dt.id, label: dt.name }));
+          this.deliveryTypeOptions.set(options);
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('Error loading delivery types:', err)
+      });
   }
 
   ngOnDestroy(): void {
@@ -126,20 +144,32 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
 
     this.deliveryPriceService.getDeliveryPriceById(id).subscribe({
       next: (deliveryPrice) => {
+        // Extract delivery type ID from the nested object or IRI
+        let deliveryTypeId = '';
+        if (deliveryPrice.deliveryType) {
+          if (typeof deliveryPrice.deliveryType === 'object' && deliveryPrice.deliveryType !== null) {
+            deliveryTypeId = (deliveryPrice.deliveryType as DeliveryPriceDeliveryType).id || '';
+          } else if (typeof deliveryPrice.deliveryType === 'string') {
+            // Could be an IRI like "/api/v1/delivery_types/uuid" or just a UUID
+            const iriMatch = (deliveryPrice.deliveryType as string).match(/\/([^/]+)$/);
+            deliveryTypeId = iriMatch ? iriMatch[1] : (deliveryPrice.deliveryType as string);
+          }
+        }
+
         this.deliveryPrice.set({
           id: deliveryPrice.id || id,
           name: deliveryPrice.name || '',
-          dhlZone: deliveryPrice.dhlZone || '',
-          deliveryType: deliveryPrice.deliveryType || '',
-          sizeFrom: deliveryPrice.sizeFrom || 0,
-          sizeTo: deliveryPrice.sizeTo || 0,
-          priceBase: deliveryPrice.priceBase || 0,
-          stepStartsAt: deliveryPrice.stepStartsAt || 0,
-          forEveryNextSize: deliveryPrice.forEveryNextSize || 0,
-          priceBaseStep: deliveryPrice.priceBaseStep || 0
+          deliveryType: deliveryTypeId,
+          dhlZone: deliveryPrice.dhlZone != null ? String(deliveryPrice.dhlZone) : '',
+          sizeFrom: deliveryPrice.sizeFrom || '',
+          sizeTo: deliveryPrice.sizeTo || '',
+          priceBase: deliveryPrice.priceBase || '',
+          stepStartsAt: deliveryPrice.stepStartsAt || '',
+          forEveryNextSize: deliveryPrice.forEveryNextSize || '',
+          priceBaseStep: deliveryPrice.priceBaseStep || ''
         });
-        this.selectedDhlZone = deliveryPrice.dhlZone || '';
-        this.selectedDeliveryType = deliveryPrice.deliveryType || '';
+        this.selectedDhlZone = deliveryPrice.dhlZone != null ? String(deliveryPrice.dhlZone) : '';
+        this.selectedDeliveryType = deliveryTypeId;
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
@@ -155,23 +185,75 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
     this.router.navigate(['/admin/delivery-prices/list']);
   }
 
+  // Validation helpers
+  markAllTouched(): void {
+    this.touched.set({ name: true, priceBase: true, deliveryType: true });
+  }
+
+  markFieldTouched(field: string): void {
+    this.touched.update(t => ({ ...t, [field]: true }));
+  }
+
+  getError(field: string): string {
+    return this.touched()[field] ? (this.errors()[field] || '') : '';
+  }
+
   onSave(): void {
+    this.saveDeliveryPrice(false);
+  }
+
+  onSaveAndContinue(): void {
+    this.saveDeliveryPrice(true);
+  }
+
+  private saveDeliveryPrice(navigateToList: boolean): void {
+    this.markAllTouched();
+    if (!this.isValid()) {
+      this.cdr.markForCheck();
+      return;
+    }
+
     const data = this.deliveryPrice();
-    const operation = this.isEditMode()
-      ? this.deliveryPriceService.updateDeliveryPrice(this.deliveryPriceId!, data)
-      : this.deliveryPriceService.createDeliveryPrice(data);
+
+    // Build explicit payload with only writable fields - never send id
+    const payload: Record<string, unknown> = {
+      name: data.name || null,
+      deliveryType: data.deliveryType || null,
+      dhlZone: data.dhlZone !== '' ? parseInt(data.dhlZone, 10) : null,
+      sizeFrom: data.sizeFrom || null,
+      sizeTo: data.sizeTo || null,
+      priceBase: data.priceBase || null,
+      stepStartsAt: data.stepStartsAt || null,
+      forEveryNextSize: data.forEveryNextSize || null,
+      priceBaseStep: data.priceBaseStep || null
+    };
+
+    const isCreating = !this.isEditMode();
+    const operation = isCreating
+      ? this.deliveryPriceService.createDeliveryPrice(payload as Partial<DeliveryPrice>)
+      : this.deliveryPriceService.updateDeliveryPrice(this.deliveryPriceId!, payload as Partial<DeliveryPrice>);
 
     operation.subscribe({
-      next: () => this.router.navigate(['/admin/delivery-prices/list']),
+      next: (result) => {
+        if (navigateToList) {
+          this.router.navigate(['/admin/delivery-prices/list']);
+        } else if (isCreating && result?.id) {
+          this.router.navigate(['/admin/delivery-prices', result.id, 'edit']);
+        }
+      },
       error: (error) => console.error('Error saving delivery price:', error)
     });
   }
 
-  onSaveAndContinue(): void {
-    console.log('Save and continue:', this.deliveryPrice());
+  // Input handlers
+  onFieldChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const field = input.name;
+    if (field) {
+      this.deliveryPrice.update(dp => ({ ...dp, [field]: input.value }));
+    }
   }
 
-  // Input handlers
   onNameChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.deliveryPrice.update(dp => ({ ...dp, name: input.value }));
@@ -179,65 +261,55 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
 
   onSizeFromChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = parseFloat(input.value) || 0;
-    this.deliveryPrice.update(dp => ({ ...dp, sizeFrom: value }));
+    this.deliveryPrice.update(dp => ({ ...dp, sizeFrom: input.value }));
   }
 
   onSizeToChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = parseFloat(input.value) || 0;
-    this.deliveryPrice.update(dp => ({ ...dp, sizeTo: value }));
+    this.deliveryPrice.update(dp => ({ ...dp, sizeTo: input.value }));
   }
 
   onPriceBaseChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = parseFloat(input.value.replace(',', '.')) || 0;
-    this.deliveryPrice.update(dp => ({ ...dp, priceBase: value }));
+    this.deliveryPrice.update(dp => ({ ...dp, priceBase: input.value }));
+    this.markFieldTouched('priceBase');
   }
 
   onStepStartsAtChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = parseFloat(input.value) || 0;
-    this.deliveryPrice.update(dp => ({ ...dp, stepStartsAt: value }));
+    this.deliveryPrice.update(dp => ({ ...dp, stepStartsAt: input.value }));
   }
 
   onForEveryNextSizeChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = parseFloat(input.value) || 0;
-    this.deliveryPrice.update(dp => ({ ...dp, forEveryNextSize: value }));
+    this.deliveryPrice.update(dp => ({ ...dp, forEveryNextSize: input.value }));
   }
 
   onPriceBaseStepChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = parseFloat(input.value.replace(',', '.')) || 0;
-    this.deliveryPrice.update(dp => ({ ...dp, priceBaseStep: value }));
+    this.deliveryPrice.update(dp => ({ ...dp, priceBaseStep: input.value }));
   }
 
   // Select handlers
-  onDhlZoneChange(): void {
-    if (this.selectedDhlZone) {
-      this.deliveryPrice.update(dp => ({ ...dp, dhlZone: this.selectedDhlZone }));
-    }
+  onDhlZoneChange(value: string | number): void {
+    this.selectedDhlZone = String(value);
+    this.deliveryPrice.update(dp => ({ ...dp, dhlZone: String(value) }));
   }
 
-  removeDhlZone(): void {
-    this.deliveryPrice.update(dp => ({ ...dp, dhlZone: '' }));
+  clearDhlZone(): void {
     this.selectedDhlZone = '';
+    this.deliveryPrice.update(dp => ({ ...dp, dhlZone: '' }));
   }
 
-  onDeliveryTypeChange(): void {
-    if (this.selectedDeliveryType) {
-      this.deliveryPrice.update(dp => ({ ...dp, deliveryType: this.selectedDeliveryType }));
-    }
+  onDeliveryTypeChange(value: string | number): void {
+    this.selectedDeliveryType = String(value);
+    this.deliveryPrice.update(dp => ({ ...dp, deliveryType: String(value) }));
+    this.markFieldTouched('deliveryType');
   }
 
-  removeDeliveryType(): void {
-    this.deliveryPrice.update(dp => ({ ...dp, deliveryType: '' }));
+  clearDeliveryType(): void {
     this.selectedDeliveryType = '';
-  }
-
-  formatNumber(value: number): string {
-    return value.toFixed(2).replace('.', ',');
+    this.deliveryPrice.update(dp => ({ ...dp, deliveryType: '' }));
+    this.markFieldTouched('deliveryType');
   }
 }
-

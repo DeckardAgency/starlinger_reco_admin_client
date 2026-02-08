@@ -12,6 +12,7 @@
       [isBulkDeleteDisabled]="!hasSelected()"
       [searchQuery]="searchQuery()"
       searchWidth="346px"
+      [hideAddButtonOnMobile]="true"
       (searchQueryChange)="onSearchChange($event)"
       (add)="onAddCountry()"
       (bulkDelete)="onBulkDelete()"
@@ -63,15 +64,6 @@
     [checked]="row.selected"
     (change)="toggleCountrySelection(row)"
   ></ui-table-checkbox-selection>
-</ng-template>
-
-<!-- European Union Template -->
-<ng-template #europeanUnionTemplate let-row>
-  <ui-badge
-    [variant]="row.europeanUnion ? 'success' : 'danger'"
-    size="sm">
-    {{ row.europeanUnion ? 'Yes' : 'No' }}
-  </ui-badge>
 </ng-template>
 
 <!-- Actions Template -->

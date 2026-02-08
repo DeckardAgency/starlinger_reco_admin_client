@@ -12,7 +12,8 @@ export interface Account {
   // Extended fields for detail view
   isActive?: boolean;
   isLegalEntity?: boolean;
-  accountType?: string[];
+  accountType?: string;
+  accountGroupId?: string;
   phone?: string;
   otherPhone?: string;
   otherEmail?: string;
@@ -21,7 +22,7 @@ export interface Account {
 }
 
 export interface AccountContact {
-  id: number;
+  id: number | string;
   fullName: string;
   email: string;
   phone: string;

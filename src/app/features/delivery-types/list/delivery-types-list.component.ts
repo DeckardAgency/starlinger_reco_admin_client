@@ -130,7 +130,7 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
 
     this.deliveryTypeService.getDeliveryTypes(1, 100).subscribe({
       next: (response) => {
-        const items = (response.member || []).map(d => ({ ...d, selected: false, documents: d.documents || [] }));
+        const items = (response.member || []).map(d => ({ ...d, selected: false }));
         this.deliveryTypes.set(items);
         this.isLoading.set(false);
         this.cdr.markForCheck();
@@ -152,9 +152,8 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
   private initColumns(): void {
     this.columns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
-      { key: 'id', label: 'ID', sortable: false, width: '112px' },
       { key: 'name', label: 'Name', sortable: false },
-      { key: 'active', label: 'Active', sortable: false, width: '192px', template: this.activeTemplate },
+      { key: 'isActive', label: 'Active', sortable: false, width: '192px', template: this.activeTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
@@ -207,16 +206,36 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
   }
 
   onDelete(deliveryType: DeliveryType): void {
-    console.log('Delete delivery type:', deliveryType);
+    if (!confirm(`Are you sure you want to delete "${deliveryType.name}"?`)) {
+      this.closeDropdown();
+      return;
+    }
+    this.deliveryTypeService.deleteDeliveryType(String(deliveryType.id)).subscribe({
+      next: () => {
+        this.deliveryTypes.update(list => list.filter(d => d.id !== deliveryType.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting delivery type:', error)
+    });
     this.closeDropdown();
   }
 
   onBulkDelete(): void {
     const selected = this.deliveryTypes().filter(d => d.selected);
-    console.log('Bulk delete delivery types:', selected);
-    const remaining = this.deliveryTypes().filter(d => !d.selected);
-    this.deliveryTypes.set(remaining);
-    this.selectAll.set(false);
+    if (selected.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selected.length} delivery type(s)?`)) return;
+
+    const deleteOps = selected.map(d =>
+      this.deliveryTypeService.deleteDeliveryType(String(d.id)).toPromise()
+    );
+    Promise.all(deleteOps).then(() => {
+      this.deliveryTypes.update(list => list.filter(d => !d.selected));
+      this.selectAll.set(false);
+      this.cdr.markForCheck();
+    }).catch(error => {
+      console.error('Error bulk deleting delivery types:', error);
+      this.loadDeliveryTypes();
+    });
   }
 
   onHeaderDropdownToggle(isOpen: boolean): void {
@@ -247,10 +266,15 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
   }
 
   toggleActive(deliveryType: DeliveryType, value: boolean): void {
-    const updated = this.deliveryTypes().map(d =>
-      d.id === deliveryType.id ? { ...d, active: value } : d
-    );
-    this.deliveryTypes.set(updated);
+    this.deliveryTypeService.updateDeliveryType(String(deliveryType.id), { isActive: value }).subscribe({
+      next: () => {
+        this.deliveryTypes.update(list => list.map(d =>
+          d.id === deliveryType.id ? { ...d, isActive: value } : d
+        ));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error toggling active:', error)
+    });
   }
 
   onPageChange(page: number): void {

@@ -1,7 +1,15 @@
+// CSS Custom Properties with defaults
+:host {
+  display: block;
+  --card-flex: initial;
+  --card-width: 100%;
+}
+
 .ui-card {
   display: flex;
   flex-direction: column;
-  width: 100%;
+  flex: var(--card-flex);
+  width: var(--card-width);
   border-radius: 12px;
   overflow: hidden;
   background-color: #FFFFFF;

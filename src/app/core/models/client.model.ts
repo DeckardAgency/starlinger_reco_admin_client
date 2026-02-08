@@ -1,6 +1,58 @@
 import { User } from '@models/auth.model';
 import { PaginationLinks } from '@models/pagination.model';
 
+// Address interface for client addresses
+export interface ClientAddress {
+    '@context'?: string;
+    '@id'?: string;
+    '@type'?: string;
+    id: string;
+    street: string;
+    city: string;
+    postalCode?: string;
+    country?: {
+        '@id'?: string;
+        id: string;
+        name: string;
+        code: string;
+    };
+    isBilling: boolean;
+    isDelivery: boolean;
+    isActive: boolean;
+    name?: string;
+    phone?: string;
+    email?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface CreateAddressDto {
+    client: string; // IRI reference to client
+    street: string;
+    city: string;
+    postalCode?: string;
+    country?: string; // IRI reference to country
+    isBilling?: boolean;
+    isDelivery?: boolean;
+    isActive?: boolean;
+    name?: string;
+    phone?: string;
+    email?: string;
+}
+
+export interface UpdateAddressDto {
+    street?: string;
+    city?: string;
+    postalCode?: string;
+    country?: string; // IRI reference to country
+    isBilling?: boolean;
+    isDelivery?: boolean;
+    isActive?: boolean;
+    name?: string;
+    phone?: string;
+    email?: string;
+}
+
 // Base Client interface
 export interface Client {
     '@context'?: string;
@@ -17,6 +69,13 @@ export interface Client {
     maxActiveUsers?: number | null;
     isActive: boolean;
     isArchived: boolean;
+    isLegalEntity?: boolean;
+    accountType?: string;
+    accountGroup?: {
+        '@id'?: string;
+        id: string;
+        name: string;
+    } | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -25,6 +84,7 @@ export interface Client {
 export interface ClientDetail extends Client {
     users?: ClientUser[];
     productPrices?: ProductPrice[];
+    addresses?: ClientAddress[];
 }
 
 // User reference within Client
@@ -98,6 +158,9 @@ export interface CreateClientDto {
     maxActiveUsers?: number | null;
     isActive?: boolean;
     isArchived?: boolean;
+    isLegalEntity?: boolean;
+    accountType?: string;
+    accountGroup?: string | null;
 }
 
 export interface UpdateClientDto {
@@ -111,6 +174,9 @@ export interface UpdateClientDto {
     maxActiveUsers?: number | null;
     isActive?: boolean;
     isArchived?: boolean;
+    isLegalEntity?: boolean;
+    accountType?: string;
+    accountGroup?: string | null;
 }
 
 // Error responses

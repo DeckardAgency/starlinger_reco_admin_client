@@ -71,24 +71,14 @@
     padding-bottom: 16px;
     border-bottom: 1px solid #e4e4e7;
 
-    // Align toggle labels with form field labels
-    ::ng-deep .ui-toggle__label {
-      min-width: 100px;
-      color: #71717a;
-    }
-
     @media (max-width: 768px) {
       flex-direction: column;
       align-items: flex-start;
       height: auto;
       gap: 12px;
 
-      ::ng-deep .ui-toggle {
+      ui-toggle {
         width: 100%;
-
-        &__label {
-          min-width: 100px;
-        }
       }
     }
 
@@ -101,40 +91,6 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-  }
-}
-
-@include admin.detail-form-styles;
-
-// =============================================================================
-// Select with Pills
-// =============================================================================
-.select-with-pills {
-  @include admin.select-with-pill;
-}
-
-::ng-deep .select-with-pills .select-field {
-  @include admin.select-with-pill-field;
-}
-
-// =============================================================================
-// Pill Tags
-// =============================================================================
-.pill-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.pill {
-  @include admin.pill;
-  pointer-events: none;
-
-  svg {
-    width: 12px;
-    height: 12px;
   }
 }
 
@@ -154,8 +110,10 @@
 
 .tabs-header {
   @include admin.tabs-header;
-  height: 56px;
-  padding-right: 8px;
+  min-height: 56px;
+  padding-right: 16px;
+  align-items: stretch;
+  border-bottom: none; // Remove mixin border, tabs have their own underline
 
   @media (max-width: 768px) {
     flex-wrap: nowrap;
@@ -170,24 +128,27 @@
 
   ui-tabs {
     flex: 1;
-    height: 100%;
     min-width: 0;
+    --tabs-border-bottom: 1px solid #e4e4e7;
+  }
 
-    ::ng-deep .ui-tabs {
-      height: 100%;
-      border-bottom: none;
+  &__add-btn {
+    flex-shrink: 0;
+    align-self: center;
 
-      &__tab {
-        height: 100%;
-        flex: 0 0 auto;
-      }
+    @media (max-width: 768px) {
+      display: none;
     }
   }
-
-  }
+}
 
 .tabs-action-row {
   padding: 16px;
+  display: none;
+
+  @media (max-width: 768px) {
+    display: block;
+  }
 
   .btn--full-width {
     width: 100%;
@@ -202,18 +163,12 @@
   overflow-x: auto;
   background: transparent;
 
-  ::ng-deep .data-table {
-    border: none;
-    border-radius: 0;
-  }
-
-  ::ng-deep .data-table__row--empty {
-    background: transparent !important;
-
-    .data-table__cell--empty {
-      background: transparent !important;
-    }
-  }
+  // Use CSS custom properties for ui-data-table styling
+  --data-table-border: none;
+  --data-table-border-radius: 0;
+  --data-table-background: transparent;
+  --data-table-row-background: transparent;
+  --data-table-row-hover-background: transparent;
 }
 
 // Empty state for tables
@@ -225,26 +180,6 @@
   color: #71717a;
   font-family: 'Inter', sans-serif;
   font-size: 14px;
-}
-
-// Override ui-data-table styles
-::ng-deep ui-data-table {
-  .data-table {
-    background: transparent;
-
-    &__row--empty {
-      background: transparent !important;
-
-      &:hover {
-        background: transparent !important;
-      }
-
-      .data-table__cell,
-      .data-table__cell--empty {
-        background: transparent !important;
-      }
-    }
-  }
 }
 
 // =============================================================================

@@ -1,3 +1,12 @@
+// CSS Custom Properties with defaults
+:host {
+  display: contents;
+  --modal-container-border-radius: 16px;
+  --modal-header-display: flex;
+  --modal-footer-display: flex;
+  --modal-body-padding: 24px;
+}
+
 .ui-modal {
   &__overlay {
     position: fixed;
@@ -16,7 +25,7 @@
     flex-direction: column;
     max-height: calc(100vh - 48px);
     background-color: #FFFFFF;
-    border-radius: 16px;
+    border-radius: var(--modal-container-border-radius);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     overflow: hidden;
 
@@ -51,7 +60,7 @@
   }
 
   &__header {
-    display: flex;
+    display: var(--modal-header-display);
     align-items: center;
     gap: 16px;
     padding: 20px 24px;
@@ -96,12 +105,12 @@
 
   &__body {
     flex: 1;
-    padding: 24px;
+    padding: var(--modal-body-padding);
     overflow-y: auto;
   }
 
   &__footer {
-    display: flex;
+    display: var(--modal-footer-display);
     align-items: center;
     justify-content: flex-end;
     gap: 12px;

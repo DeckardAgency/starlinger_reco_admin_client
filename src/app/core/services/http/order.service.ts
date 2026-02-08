@@ -211,6 +211,13 @@ export class OrderService {
     }
 
     /**
+     * Delete an order
+     */
+    deleteOrder(id: string): Observable<void> {
+        return this.http.delete<void>(`${this.apiUrl}/${id}`);
+    }
+
+    /**
      * Export order to PDF
      */
     exportOrderPdf(orderId: string): Observable<Blob> {

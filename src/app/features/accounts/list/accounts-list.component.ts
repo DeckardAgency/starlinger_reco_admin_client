@@ -197,9 +197,22 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     if (event.action.id === 'edit') {
       this.router.navigate(['/admin/accounts', account.id, 'edit']);
     } else if (event.action.id === 'delete') {
-      console.log('Delete account:', account);
+      this.deleteAccount(account);
     }
     this.closeDropdown();
+  }
+
+  private deleteAccount(account: Account): void {
+    if (!confirm(`Are you sure you want to delete "${account.name}"?`)) {
+      return;
+    }
+    this.clientService.deleteClient(String(account.id)).subscribe({
+      next: () => {
+        this.accounts.update(list => list.filter(a => a.id !== account.id));
+        this.cdr.markForCheck();
+      },
+      error: (error) => console.error('Error deleting account:', error)
+    });
   }
 
   formatCurrency(value: number | undefined): string {

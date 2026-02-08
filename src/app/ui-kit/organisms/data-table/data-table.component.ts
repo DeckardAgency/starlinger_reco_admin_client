@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, TemplateRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, TemplateRef, HostBinding } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface TableColumn {
@@ -15,6 +15,19 @@ export interface SortEvent {
   direction: 'asc' | 'desc' | null;
 }
 
+/**
+ * Data table component with CSS custom properties for styling customization.
+ *
+ * Available CSS custom properties (set on parent or :host):
+ * --data-table-border: Table border (default: none)
+ * --data-table-border-radius: Table border radius (default: 0)
+ * --data-table-background: Table background (default: transparent)
+ * --data-table-header-background: Header row background (default: #FFF)
+ * --data-table-row-background: Data row background (default: transparent)
+ * --data-table-row-hover-background: Row hover background (default: #FAFAFA)
+ * --data-table-cell-padding: Cell padding (default: 16px)
+ * --data-table-cell-border-color: Cell border color (default: #E4E4E7)
+ */
 @Component({
   selector: 'ui-data-table',
   standalone: true,
@@ -30,6 +43,32 @@ export class DataTableComponent {
   @Input() sortDirection: 'asc' | 'desc' | null = null;
   @Input() showHeaders: boolean = true;
   @Input() emptyMessage: string = 'No results';
+
+  // Styling inputs - these set CSS custom properties on the host element
+  @Input() border?: string;
+  @Input() borderRadius?: string;
+  @Input() background?: string;
+  @Input() headerBackground?: string;
+  @Input() rowBackground?: string;
+  @Input() rowHoverBackground?: string;
+
+  @HostBinding('style.--data-table-border')
+  get borderStyle() { return this.border; }
+
+  @HostBinding('style.--data-table-border-radius')
+  get borderRadiusStyle() { return this.borderRadius; }
+
+  @HostBinding('style.--data-table-background')
+  get backgroundStyle() { return this.background; }
+
+  @HostBinding('style.--data-table-header-background')
+  get headerBackgroundStyle() { return this.headerBackground; }
+
+  @HostBinding('style.--data-table-row-background')
+  get rowBackgroundStyle() { return this.rowBackground; }
+
+  @HostBinding('style.--data-table-row-hover-background')
+  get rowHoverBackgroundStyle() { return this.rowHoverBackground; }
 
   @Output() sort = new EventEmitter<SortEvent>();
 

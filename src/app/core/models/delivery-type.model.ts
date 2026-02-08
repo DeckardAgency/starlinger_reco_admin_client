@@ -1,15 +1,25 @@
 export interface DeliveryType {
   id: string;
   name: string;
-  active: boolean;
+  isActive: boolean;
+  isDelivery: boolean;
+  maxWeight?: string;
+  grossFactor?: string | number;
+  sortOrder: number;
+  shortDescription?: string;
+  remoteCode?: string;
+  remoteId?: string;
+  color?: string;
+  hideIfNotApplicable: boolean;
+  allowRecurringPayment: boolean;
   readyForShop: boolean;
-  express: boolean;
-  enableFreeDelivery: boolean;
-  grossFactor: number;
-  order: number;
-  shortDescription: string;
-  documents: DeliveryTypeDocument[];
+  useAsDefault: boolean;
+  warehouse?: string;
+  legacyId?: number;
+  createdAt?: string;
+  updatedAt?: string;
   selected?: boolean;
+  documents?: DeliveryTypeDocument[];
 }
 
 export interface DeliveryTypeDocument {
@@ -17,6 +27,7 @@ export interface DeliveryTypeDocument {
   fileType: string;
   name: string;
   size: string;
+  filePath?: string;
   selected?: boolean;
 }
 

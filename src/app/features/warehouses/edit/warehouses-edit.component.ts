@@ -1,6 +1,7 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, ChangeDetectorRef, ViewChild, TemplateRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef, ViewChild, TemplateRef, AfterViewInit, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpEventType } from '@angular/common/http';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -11,14 +12,16 @@ import { ModalComponent } from '@app/ui-kit/organisms/modal/modal.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
-import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
+import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { TabsComponent, TabItem } from '@app/ui-kit/molecules/tabs/tabs.component';
 import { TableCheckboxSelectionComponent } from '@app/ui-kit/molecules/table-checkbox-selection/table-checkbox-selection.component';
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { TextEditorComponent } from '@shared/components/text-editor/text-editor.component';
 import { WarehouseDocument } from '@core/models/warehouse.model';
 import { WarehouseService } from '@core/services/http/warehouse.service';
+import { MediaService } from '@core/services/http/media.service';
+import { environment } from '@env/environment';
 
 interface WarehouseDetail {
   id: string;
@@ -29,10 +32,10 @@ interface WarehouseDetail {
   phone: string;
   email: string;
   url: string;
+  description: string;
   readyForShop: boolean;
-  active: boolean;
-  enableForCheckout: boolean;
-  shortDescription: string;
+  keepUrl: boolean;
+  autoGenerateUrl: boolean;
   documents: WarehouseDocument[];
 }
 
@@ -45,10 +48,10 @@ const EMPTY_WAREHOUSE: WarehouseDetail = {
   phone: '',
   email: '',
   url: '',
+  description: '',
   readyForShop: false,
-  active: false,
-  enableForCheckout: false,
-  shortDescription: '',
+  keepUrl: false,
+  autoGenerateUrl: false,
   documents: []
 };
 
@@ -65,8 +68,8 @@ const EMPTY_WAREHOUSE: WarehouseDetail = {
     BreadcrumbsComponent,
     DetailHeaderComponent,
     MobileFooterComponent,
-    IconComponent,
     ToggleComponent,
+    IconComponent,
     TabsComponent,
     TableCheckboxSelectionComponent,
     TableActionsDropdownComponent,
@@ -82,6 +85,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
+  @ViewChild('documentFileInput') documentFileInput?: ElementRef<HTMLInputElement>;
 
   // Mode
   isEditMode = signal(false);
@@ -93,14 +97,18 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
   // Loading state
   isLoading = signal(false);
 
+  // Validation state
+  touched = signal<Record<string, boolean>>({});
+  errors = computed(() => {
+    const warehouse = this.warehouse();
+    const errs: Record<string, string> = {};
+    if (!warehouse.name?.trim()) errs['name'] = 'Name is required';
+    return errs;
+  });
+  isValid = computed(() => Object.keys(this.errors()).length === 0);
+
   // Active tab
   activeTab = signal<'description' | 'documents'>('description');
-
-  // Tabs configuration
-  tabs: TabItem[] = [
-    { id: 'description', label: 'Short description' },
-    { id: 'documents', label: 'Warehouse documents' }
-  ];
 
   // Documents table columns
   documentColumns: TableColumn[] = [];
@@ -114,10 +122,17 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
   // Rename modal state
   isRenameModalOpen = signal(false);
   renameValue = signal('');
+  renameExtension = signal('');
   renameDocumentId = signal<string | null>(null);
 
   // Selection state
   selectAll = signal(false);
+
+  // Tabs configuration
+  tabs: TabItem[] = [
+    { id: 'description', label: 'Short description' },
+    { id: 'documents', label: 'Warehouse documents' }
+  ];
 
   // Document actions
   documentActions: TableAction[] = [
@@ -130,7 +145,8 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private warehouseService: WarehouseService
+    private warehouseService: WarehouseService,
+    private mediaService: MediaService
   ) {}
 
   ngOnInit(): void {
@@ -167,7 +183,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.isLoading.set(true);
 
     this.warehouseService.getWarehouseById(id).subscribe({
-      next: (warehouse) => {
+      next: (warehouse: any) => {
         this.warehouse.set({
           id: warehouse.id || id,
           name: warehouse.name || '',
@@ -177,11 +193,16 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
           phone: warehouse.phone || '',
           email: warehouse.email || '',
           url: warehouse.url || '',
-          readyForShop: warehouse.readyForShop || false,
-          active: warehouse.active || false,
-          enableForCheckout: warehouse.enableForCheckout || false,
-          shortDescription: warehouse.shortDescription || '',
-          documents: (warehouse.documents || []).map(d => ({ ...d, selected: false }))
+          description: warehouse.description || '',
+          readyForShop: warehouse.readyForShop ?? false,
+          keepUrl: warehouse.keepUrl ?? false,
+          autoGenerateUrl: warehouse.autoGenerateUrl ?? false,
+          documents: ((warehouse as any).documents || []).map((m: any) => ({
+            id: typeof m === 'string' ? m.split('/').pop() : m.id,
+            fileType: this.getFileType(typeof m === 'object' ? m.mimeType : '', typeof m === 'object' ? m.filename : ''),
+            name: typeof m === 'object' ? (m.filename || 'unknown') : 'unknown',
+            size: typeof m === 'object' && m.fileSize ? this.formatFileSize(m.fileSize) : '-'
+          }))
         });
         this.isLoading.set(false);
         this.cdr.markForCheck();
@@ -194,24 +215,94 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     });
   }
 
+  private getFileType(mimeType: string, filename: string): string {
+    if (mimeType) {
+      if (mimeType.includes('pdf')) return 'PDF';
+      if (mimeType.includes('png')) return 'PNG';
+      if (mimeType.includes('jpeg') || mimeType.includes('jpg')) return 'JPG';
+      if (mimeType.includes('webp')) return 'WEBP';
+      if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'XLS';
+      if (mimeType.includes('word')) return 'DOC';
+      if (mimeType.includes('csv')) return 'CSV';
+      if (mimeType.includes('text')) return 'TXT';
+    }
+    const ext = filename?.split('.').pop()?.toUpperCase();
+    return ext || 'FILE';
+  }
+
   onBack(): void {
     this.router.navigate(['/admin/warehouses/list']);
   }
 
-  onSave(): void {
-    const data = this.warehouse();
-    const operation = this.isEditMode()
-      ? this.warehouseService.updateWarehouse(this.warehouseId!, data)
-      : this.warehouseService.createWarehouse(data);
+  // Validation helpers
+  markAllTouched(): void {
+    this.touched.set({ name: true });
+  }
 
-    operation.subscribe({
-      next: () => this.router.navigate(['/admin/warehouses/list']),
-      error: (error) => console.error('Error saving warehouse:', error)
-    });
+  markFieldTouched(field: string): void {
+    this.touched.update(t => ({ ...t, [field]: true }));
+  }
+
+  getError(field: string): string {
+    return this.touched()[field] ? (this.errors()[field] || '') : '';
+  }
+
+  onSave(): void {
+    this.saveWarehouse(false);
   }
 
   onSaveAndContinue(): void {
-    console.log('Save and continue:', this.warehouse());
+    this.saveWarehouse(true);
+  }
+
+  private buildPayload(): Record<string, any> {
+    const w = this.warehouse();
+    const mediaIriPrefix = `${environment.apiPath}/media_items/`;
+    return {
+      name: w.name,
+      contactPerson: w.contactPerson || null,
+      address: w.address || null,
+      city: w.city || null,
+      phone: w.phone || null,
+      email: w.email || null,
+      url: w.url || null,
+      description: w.description || null,
+      readyForShop: w.readyForShop,
+      keepUrl: w.keepUrl,
+      autoGenerateUrl: w.autoGenerateUrl,
+      documents: w.documents.map(d => mediaIriPrefix + d.id)
+    };
+  }
+
+  private saveWarehouse(navigateToList: boolean): void {
+    this.markAllTouched();
+    if (!this.isValid()) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const payload = this.buildPayload();
+    const isCreating = !this.isEditMode();
+
+    const operation = isCreating
+      ? this.warehouseService.createWarehouse(payload)
+      : this.warehouseService.updateWarehouse(this.warehouseId!, payload);
+
+    operation.subscribe({
+      next: (result) => {
+        if (navigateToList) {
+          this.router.navigate(['/admin/warehouses/list']);
+        } else if (isCreating && result?.id) {
+          this.router.navigate(['/admin/warehouses', result.id, 'edit']);
+        } else if (!isCreating && this.warehouseId) {
+          this.loadWarehouse(this.warehouseId);
+        }
+      },
+      error: (error) => {
+        console.error('Error saving warehouse:', error);
+        alert('Failed to save warehouse');
+      }
+    });
   }
 
   setActiveTab(tabId: string): void {
@@ -223,23 +314,24 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.warehouse.update(w => ({ ...w, readyForShop: !w.readyForShop }));
   }
 
-  toggleActive(): void {
-    this.warehouse.update(w => ({ ...w, active: !w.active }));
+  toggleKeepUrl(): void {
+    this.warehouse.update(w => ({ ...w, keepUrl: !w.keepUrl }));
   }
 
-  toggleEnableForCheckout(): void {
-    this.warehouse.update(w => ({ ...w, enableForCheckout: !w.enableForCheckout }));
+  toggleAutoGenerateUrl(): void {
+    this.warehouse.update(w => ({ ...w, autoGenerateUrl: !w.autoGenerateUrl }));
   }
 
   // Input handlers
-  onContactPersonChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.warehouse.update(w => ({ ...w, contactPerson: input.value }));
-  }
-
   onNameChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.warehouse.update(w => ({ ...w, name: input.value }));
+    this.markFieldTouched('name');
+  }
+
+  onContactPersonChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.warehouse.update(w => ({ ...w, contactPerson: input.value }));
   }
 
   onAddressChange(event: Event): void {
@@ -268,16 +360,54 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   onShortDescriptionChange(content: string): void {
-    this.warehouse.update(w => ({ ...w, shortDescription: content }));
+    this.warehouse.update(w => ({ ...w, description: content }));
   }
 
   // Document handlers
   onAddDocument(): void {
-    console.log('Add document');
+    this.documentFileInput?.nativeElement?.click();
   }
 
-  onHeaderDropdownToggle(isOpen: boolean): void {
-    this.isHeaderDropdownOpen.set(isOpen);
+  onDocumentFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files?.length) return;
+
+    const files = Array.from(input.files);
+    let uploaded = 0;
+
+    files.forEach(file => {
+      this.mediaService.uploadFile(file)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (httpEvent) => {
+            if (httpEvent.type === HttpEventType.Response && httpEvent.body) {
+              const media = httpEvent.body;
+              this.warehouse.update(w => ({
+                ...w,
+                documents: [...w.documents, {
+                  id: media.id,
+                  fileType: this.getFileType(media.mimeType || '', media.filename || file.name),
+                  name: media.filename || file.name,
+                  size: this.formatFileSize(file.size)
+                }]
+              }));
+              uploaded++;
+              if (uploaded === files.length) {
+                this.updateWarehouseMedia();
+              }
+              this.cdr.markForCheck();
+            }
+          },
+          error: (err) => console.error('Error uploading document:', err)
+        });
+    });
+
+    input.value = '';
+  }
+
+  toggleHeaderDropdown(event: Event): void {
+    event.stopPropagation();
+    this.isHeaderDropdownOpen.set(!this.isHeaderDropdownOpen());
   }
 
   onSelectAllDocuments(): void {
@@ -315,7 +445,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
 
   onDocumentActionClick(event: ActionClickEvent): void {
     const doc = event.row as WarehouseDocument;
-    switch (event.actionId) {
+    switch (event.action.id) {
       case 'rename':
         this.renameDocument(doc.id);
         break;
@@ -328,25 +458,68 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     }
   }
 
+  onHeaderDropdownToggle(isOpen: boolean): void {
+    this.isHeaderDropdownOpen.set(isOpen);
+  }
+
   renameDocument(docId: string): void {
     const doc = this.warehouse().documents.find(d => d.id === docId);
     if (doc) {
+      const { name, ext } = this.splitFilename(doc.name);
       this.renameDocumentId.set(docId);
-      this.renameValue.set(doc.name);
+      this.renameValue.set(name);
+      this.renameExtension.set(ext);
       this.isRenameModalOpen.set(true);
     }
     this.activeDocActionId.set(null);
   }
 
   downloadDocument(docId: string): void {
-    const doc = this.warehouse().documents.find(d => d.id === docId);
-    console.log('Download document:', doc);
+    this.mediaService.getMediaItem(docId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (media) => {
+          if (media.filePath) {
+            this.triggerDownload(media.filePath, media.filename || 'document');
+          }
+        },
+        error: (err) => console.error('Error downloading document:', err)
+      });
     this.activeDocActionId.set(null);
   }
 
+  private triggerDownload(url: string, filename: string): void {
+    this.mediaService.downloadFile(url)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(blobUrl);
+        },
+        error: (err) => console.error('Error downloading file:', err)
+      });
+  }
+
   deleteDocument(docId: string): void {
-    const updated = this.warehouse().documents.filter(d => d.id !== docId);
-    this.warehouse.update(w => ({ ...w, documents: updated }));
+    this.mediaService.deleteMediaItem(docId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.warehouse.update(w => ({
+            ...w,
+            documents: w.documents.filter(d => d.id !== docId)
+          }));
+          this.updateWarehouseMedia();
+          this.cdr.markForCheck();
+        },
+        error: (err) => console.error('Error deleting document:', err)
+      });
     this.activeDocActionId.set(null);
   }
 
@@ -357,12 +530,24 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
 
   confirmRename(): void {
     const docId = this.renameDocumentId();
-    if (docId) {
-      const updated = this.warehouse().documents.map(d =>
-        d.id === docId ? { ...d, name: this.renameValue() } : d
-      );
-      this.warehouse.update(w => ({ ...w, documents: updated }));
-    }
+    const baseName = this.renameValue();
+    const ext = this.renameExtension();
+
+    if (!docId || !baseName) return;
+
+    const fullName = ext ? `${baseName}.${ext}` : baseName;
+
+    const updated = this.warehouse().documents.map(d =>
+      d.id === docId ? { ...d, name: fullName } : d
+    );
+    this.warehouse.update(w => ({ ...w, documents: updated }));
+
+    this.mediaService.updateMediaItem(docId, { filename: fullName } as any)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        error: (err) => console.error('Error renaming document:', err)
+      });
+
     this.cancelRename();
   }
 
@@ -370,10 +555,61 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.isRenameModalOpen.set(false);
     this.renameDocumentId.set(null);
     this.renameValue.set('');
+    this.renameExtension.set('');
   }
 
   closeDropdowns(): void {
     this.isHeaderDropdownOpen.set(false);
     this.activeDocActionId.set(null);
+  }
+
+  hasSelectedDocuments(): boolean {
+    return this.warehouse().documents.some(d => d.selected);
+  }
+
+  deleteSelectedDocuments(): void {
+    const selected = this.warehouse().documents.filter(d => d.selected);
+    if (selected.length === 0) return;
+
+    selected.forEach(doc => {
+      this.mediaService.deleteMediaItem(doc.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          error: (err) => console.error('Error deleting document:', err)
+        });
+    });
+
+    this.warehouse.update(w => ({
+      ...w,
+      documents: w.documents.filter(d => !d.selected)
+    }));
+    this.updateWarehouseMedia();
+    this.cdr.markForCheck();
+  }
+
+  private formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return parseFloat((bytes / Math.pow(1024, i)).toFixed(1)) + ' ' + units[i];
+  }
+
+  private splitFilename(filename: string): { name: string; ext: string } {
+    const lastDot = filename.lastIndexOf('.');
+    if (lastDot <= 0) return { name: filename, ext: '' };
+    return { name: filename.substring(0, lastDot), ext: filename.substring(lastDot + 1) };
+  }
+
+  private updateWarehouseMedia(): void {
+    if (!this.warehouseId) return;
+
+    const mediaIriPrefix = `${environment.apiPath}/media_items/`;
+    const documents = this.warehouse().documents.map(d => mediaIriPrefix + d.id);
+
+    this.warehouseService.updateWarehouse(this.warehouseId, { documents } as any)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        error: (err) => console.error('Error updating warehouse media:', err)
+      });
   }
 }
