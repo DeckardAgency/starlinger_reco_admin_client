@@ -12,7 +12,6 @@ import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { DataTableComponent, TableColumn } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { SelectComponent, SelectOption } from '@app/ui-kit/atoms/select/select.component';
 import { OrderService } from '@core/services/http/order.service';
-import { InquiryService, Inquiry } from '@core/services/http/inquiry.service';
 import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
 import { PaymentTypeService } from '@core/services/http/payment-type.service';
 import { UserService } from '@core/services/http/user.service';
@@ -32,7 +31,7 @@ interface OrderProduct {
   price: number;
 }
 
-interface MachineGroup {
+interface ProductGroup {
   id: string;
   name: string;
   products: OrderProduct[];
@@ -67,7 +66,7 @@ interface ShopOrderDetail {
   priceWithoutTax: number;
   totalPrice: number;
   priceTax: number;
-  machineGroups: MachineGroup[];
+  productGroups: ProductGroup[];
   orderTotal: number;
   amountPaid: number;
   logMessages: LogMessage[];
@@ -93,7 +92,7 @@ const EMPTY_ORDER: ShopOrderDetail = {
   priceWithoutTax: 0,
   totalPrice: 0,
   priceTax: 0,
-  machineGroups: [],
+  productGroups: [],
   orderTotal: 0,
   amountPaid: 0,
   logMessages: []
@@ -123,7 +122,6 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private orderService = inject(OrderService);
-  private inquiryService = inject(InquiryService);
   private deliveryTypeService = inject(DeliveryTypeService);
   private paymentTypeService = inject(PaymentTypeService);
   private userService = inject(UserService);
@@ -133,7 +131,6 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
 
   isLoading = signal(true);
   loadError = signal<string | null>(null);
-  isInquiry = signal(false);  // Track if we're editing an inquiry vs order
 
   // Template references for custom cell rendering
   @ViewChild('unitPriceTemplate') unitPriceTemplate!: TemplateRef<any>;
@@ -177,20 +174,8 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     { value: 'cancelled', label: 'Cancelled' }
   ];
 
-  // Inquiry status options (based on backend state machine)
-  inquiryStatusOptions: SelectOption[] = [
-    { value: 'draft', label: 'Draft' },
-    { value: 'submitted', label: 'Submitted' },
-    { value: 'in_review', label: 'In Review' },
-    { value: 'more_info', label: 'More Info Needed' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'canceled', label: 'Cancelled' }
-  ];
-
-  // Computed status options based on entity type
   get statusOptions(): SelectOption[] {
-    return this.isInquiry() ? this.inquiryStatusOptions : this.orderStatusOptions;
+    return this.orderStatusOptions;
   }
 
   // Dropdown options - loaded from backend
@@ -471,11 +456,9 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private loadOrder(id: string): void {
     this.isLoading.set(true);
     this.loadError.set(null);
-    this.isInquiry.set(false);  // Reset
 
     this.orderService.getOrder(id).subscribe({
       next: (order) => {
-        this.isInquiry.set(false);
         const detail = this.mapOrderToDetail(order);
         this.applyOrderDetail(detail);
         // Load contacts and addresses based on client
@@ -487,39 +470,10 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
-      error: () => {
-        this.inquiryService.getInquiry(id).subscribe({
-          next: (inquiry) => {
-            this.isInquiry.set(true);  // Mark as inquiry
-            const detail = this.mapInquiryToDetail(inquiry);
-            this.applyOrderDetail(detail);
-            // Load contacts and addresses - fetch user details to get client code and ID
-            if (inquiry.user?.id) {
-              this.userService.getUserById(inquiry.user.id)
-                .pipe(takeUntil(this.destroy$))
-                .subscribe({
-                  next: (user) => {
-                    if (user?.client?.code) {
-                      // Update the accountId and selectedAccount now that we have the client ID
-                      if (user.client.id) {
-                        this.selectedAccount = user.client.id;
-                        this.order.update(o => ({ ...o, accountId: user.client!.id! }));
-                        this.cdr.markForCheck();
-                      }
-                      this.loadContactsAndAddresses(user.client.code, user.client.id);
-                    }
-                  }
-                });
-            }
-            this.isLoading.set(false);
-            this.cdr.markForCheck();
-          },
-          error: (err) => {
-            this.loadError.set(err?.message || 'Order or inquiry not found');
-            this.isLoading.set(false);
-            this.cdr.markForCheck();
-          }
-        });
+      error: (err) => {
+        this.loadError.set(err?.message || 'Order not found');
+        this.isLoading.set(false);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -527,7 +481,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private mapOrderToDetail(o: Order): ShopOrderDetail {
     const userName = o.user ? `${(o.user as { firstName?: string }).firstName || ''} ${(o.user as { lastName?: string }).lastName || ''}`.trim() || 'Unknown' : 'Unknown';
     const partsCount = o.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) ?? 0;
-    const machineGroups: MachineGroup[] = (o.items || []).map((item, idx) => ({
+    const productGroups: ProductGroup[] = (o.items || []).map((item, idx) => ({
       id: item.id || String(idx),
       name: item.product?.name || 'Product',
       products: [{
@@ -571,53 +525,8 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       priceWithoutTax: 0,
       totalPrice: o.totalAmount ?? 0,
       priceTax: 0,
-      machineGroups,
+      productGroups,
       orderTotal: o.totalAmount ?? 0,
-      amountPaid: 0,
-      logMessages
-    };
-  }
-
-  private mapInquiryToDetail(i: Inquiry): ShopOrderDetail {
-    const userName = i.user ? `${i.user.firstName || ''} ${i.user.lastName || ''}`.trim() || 'Unknown' : 'Unknown';
-    const partsCount = i.machines?.reduce((sum, m) => sum + (m.products?.reduce((p, q) => p + (q.quantity || 0), 0) || 0), 0) ?? 0;
-    const machineGroups: MachineGroup[] = (i.machines || []).map((m, idx) => ({
-      id: m.id || String(idx),
-      name: m.serialNumber || 'Machine',
-      products: (m.products || []).map(p => ({
-        partNo: p.partNo ?? '',
-        productName: p.name ?? '',
-        weight: '',
-        quantity: p.quantity ?? 0,
-        unitPrice: p.unitPrice ?? 0,
-        discount: '0',
-        price: (p.quantity ?? 0) * (p.unitPrice ?? 0)
-      })),
-      isExpanded: true
-    }));
-    const logMessages: LogMessage[] = [{ status: i.status, statusVariant: 'info', dateTime: i.createdAt, user: userName, message: i.notes || '' }];
-    return {
-      id: i.id,
-      internalRef: String(i.inquiryNumber ?? i.id),
-      dateCreated: this.formatDate(i.createdAt),
-      partsOrdered: partsCount,
-      status: i.status || 'pending',
-      enableSale: !i.isDraft,
-      accountId: '',  // Will be set after clients are loaded
-      account: i.user?.client?.companyName ?? '',
-      contactId: i.user?.id ?? '',
-      contact: userName,
-      contactDropdown: userName,
-      billingAddress: '',
-      shippingAddress: '',
-      date: this.formatDate(i.createdAt),
-      paymentType: '',
-      deliveryType: '',
-      priceWithoutTax: 0,
-      totalPrice: 0,
-      priceTax: 0,
-      machineGroups,
-      orderTotal: 0,
       amountPaid: 0,
       logMessages
     };
@@ -772,10 +681,10 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.order.update(o => ({ ...o, enableSale: value }));
   }
 
-  toggleMachineGroup(groupId: string): void {
+  toggleProductGroup(groupId: string): void {
     this.order.update(o => ({
       ...o,
-      machineGroups: o.machineGroups.map(g =>
+      productGroups: o.productGroups.map(g =>
         g.id === groupId ? { ...g, isExpanded: !g.isExpanded } : g
       )
     }));
@@ -807,52 +716,29 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       return;
     }
 
-    if (this.isInquiry()) {
-      // Save as inquiry - note: status changes require state machine transitions
-      // Don't include status in direct updates as the backend validates transitions
-      const updatePayload: Partial<Inquiry> = {
-        isDraft: !orderData.enableSale,
-        notes: orderData.logMessages[0]?.message || ''
-      };
+    // Save as order - build payload with all changed fields
+    const updatePayload: Record<string, any> = {
+      status: orderData.status,
+      billingAddress: orderData.billingAddress,
+      shippingAddress: orderData.shippingAddress,
+      isDraft: !orderData.enableSale,
+      // User reference - this determines the account (user's client)
+      user: `/api/v1/users/${this.selectedContact}`
+    };
 
-      // Add user reference (user links to account via client)
-      updatePayload.user = `/api/v1/users/${this.selectedContact}` as any;
+    console.log('[ShopOrdersEdit] Saving order ID:', orderData.id);
+    console.log('[ShopOrdersEdit] Payload:', JSON.stringify(updatePayload, null, 2));
 
-      this.inquiryService.updateInquiry(orderData.id, updatePayload).subscribe({
-        next: (updatedInquiry) => {
-          console.log('Inquiry saved successfully:', updatedInquiry);
-          alert('Inquiry saved successfully!');
-        },
-        error: (error) => {
-          console.error('Error saving inquiry:', error);
-          alert('Error saving inquiry: ' + (error?.error?.detail || error?.error?.message || error?.message || 'Unknown error'));
-        }
-      });
-    } else {
-      // Save as order - build payload with all changed fields
-      const updatePayload: Record<string, any> = {
-        status: orderData.status,
-        billingAddress: orderData.billingAddress,
-        shippingAddress: orderData.shippingAddress,
-        isDraft: !orderData.enableSale,
-        // User reference - this determines the account (user's client)
-        user: `/api/v1/users/${this.selectedContact}`
-      };
-
-      console.log('[ShopOrdersEdit] Saving order ID:', orderData.id);
-      console.log('[ShopOrdersEdit] Payload:', JSON.stringify(updatePayload, null, 2));
-
-      this.orderService.updateOrder(orderData.id, updatePayload as Partial<Order>).subscribe({
-        next: (updatedOrder) => {
-          console.log('[ShopOrdersEdit] Order saved successfully:', updatedOrder);
-          alert('Order saved successfully!');
-        },
-        error: (error) => {
-          console.error('[ShopOrdersEdit] Error saving order:', error);
-          alert('Error saving order: ' + (error?.error?.detail || error?.error?.message || error?.message || 'Unknown error'));
-        }
-      });
-    }
+    this.orderService.updateOrder(orderData.id, updatePayload as Partial<Order>).subscribe({
+      next: (updatedOrder) => {
+        console.log('[ShopOrdersEdit] Order saved successfully:', updatedOrder);
+        alert('Order saved successfully!');
+      },
+      error: (error) => {
+        console.error('[ShopOrdersEdit] Error saving order:', error);
+        alert('Error saving order: ' + (error?.error?.detail || error?.error?.message || error?.message || 'Unknown error'));
+      }
+    });
   }
 
   getStatusBadgeVariant(status: string): 'success' | 'warning' | 'danger' | 'info' | 'secondary' {
@@ -869,4 +755,3 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     return `€ ${value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 }
-

@@ -41,7 +41,6 @@ export interface Product {
   updatedAt: string;
   imageGallery: MediaItem[];
   documents: MediaItem[];
-  machines: string[];
 }
 
 export interface ProductsCollection {

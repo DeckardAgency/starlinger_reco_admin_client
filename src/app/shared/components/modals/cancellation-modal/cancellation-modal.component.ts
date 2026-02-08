@@ -40,7 +40,7 @@ export class CancellationModalComponent implements OnChanges {
 
     @Input() isOpen = false;
     @Input() itemNumber = '';
-    @Input() itemType: 'order' | 'inquiry' = 'order';
+    @Input() itemType: string = 'order';
     @Input() saving = false;
 
     @Output() closeModal = new EventEmitter<void>();

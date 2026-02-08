@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import { Page, Response, expect } from '@playwright/test';
 
 export class BasePage {
   constructor(protected page: Page) {}
@@ -7,32 +7,31 @@ export class BasePage {
     await this.page.waitForLoadState('networkidle');
   }
 
-  async waitForApiResponse(urlPattern: string | RegExp) {
-    return this.page.waitForResponse(
-      (response) =>
-        (typeof urlPattern === 'string'
-          ? response.url().includes(urlPattern)
-          : urlPattern.test(response.url())) && response.status() < 400
+  /**
+   * Wait for an API response matching the URL pattern and assert it succeeded.
+   * Unlike the old version, this does NOT swallow errors — if the API call
+   * fails or never happens, the test fails.
+   */
+  async waitForApiSuccess(urlPattern: string, method?: string): Promise<Response> {
+    const response = await this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes(urlPattern) &&
+        (!method || resp.request().method() === method),
+      { timeout: 15000 }
     );
+    expect(response.status(), `API ${method ?? 'GET'} ${urlPattern} returned ${response.status()}`).toBeLessThan(400);
+    return response;
   }
 
-  async clickAndWaitForNavigation(selector: string) {
-    await Promise.all([
-      this.page.waitForURL(/.*/),
-      this.page.click(selector),
-    ]);
-  }
-
-  async getToastMessage(): Promise<string | null> {
-    const toast = this.page.locator('.toast, .alert, [role="alert"]').first();
-    if (await toast.isVisible({ timeout: 3000 }).catch(() => false)) {
-      return toast.textContent();
-    }
-    return null;
+  /**
+   * Register a handler to accept the next native browser confirm() dialog.
+   * Must be called BEFORE the action that triggers the dialog.
+   */
+  acceptNextDialog() {
+    this.page.once('dialog', (dialog) => dialog.accept());
   }
 
   async waitForTableData() {
-    // Wait for table to have data rows
     await this.page.waitForSelector('table tbody tr, ui-data-table tbody tr', { timeout: 10000 });
   }
 }

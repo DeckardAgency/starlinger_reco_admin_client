@@ -1,16 +1,15 @@
 import { Component, ChangeDetectionStrategy, ViewChild, TemplateRef, signal, OnInit, AfterViewInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { forkJoin } from 'rxjs';
 import { SectionHeaderComponent, TabsComponent, BadgeComponent, AvatarComponent, TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit';
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms';
-import { DashboardService, DashboardOrder, DashboardInquiry } from '@core/services/http/dashboard.service';
+import { DashboardService, DashboardOrder } from '@core/services/http/dashboard.service';
 
 export type HistoryStatus = 'completed' | 'cancelled' | 'in-review';
-export type HistoryType = 'order' | 'manual';
+export type HistoryType = 'order';
 
 export interface HistoryItem {
-  inquiryId: string;
+  id: string;
   type: HistoryType;
   dateCreated: string;
   internalReference: string;
@@ -68,12 +67,9 @@ export class HistoryComponent implements OnInit, AfterViewInit {
   private loadData(): void {
     this.isLoading.set(true);
 
-    forkJoin({
-      orders: this.dashboardService.getRecentOrders(30),
-      inquiries: this.dashboardService.getRecentInquiries(30)
-    }).subscribe({
-      next: ({ orders, inquiries }) => {
-        const items = this.mapToHistoryItems(orders, inquiries);
+    this.dashboardService.getRecentOrders(30).subscribe({
+      next: (orders) => {
+        const items = this.mapToHistoryItems(orders);
         this.allData.set(items);
         this.isLoading.set(false);
         this.cdr.markForCheck();
@@ -87,9 +83,9 @@ export class HistoryComponent implements OnInit, AfterViewInit {
     });
   }
 
-  private mapToHistoryItems(orders: DashboardOrder[], inquiries: DashboardInquiry[]): HistoryItem[] {
+  private mapToHistoryItems(orders: DashboardOrder[]): HistoryItem[] {
     const orderItems: HistoryItem[] = orders.map(o => ({
-      inquiryId: o.id,
+      id: o.id,
       type: 'order' as HistoryType,
       dateCreated: this.formatDate(o.createdAt),
       internalReference: o.orderNumber || o.id.slice(0, 8),
@@ -99,18 +95,7 @@ export class HistoryComponent implements OnInit, AfterViewInit {
       status: this.mapStatus(o.status)
     }));
 
-    const inquiryItems: HistoryItem[] = inquiries.map(i => ({
-      inquiryId: i.id,
-      type: 'manual' as HistoryType,
-      dateCreated: this.formatDate(i.createdAt),
-      internalReference: i.inquiryNumber || i.id.slice(0, 8),
-      customerInitials: this.getInitials(i.user),
-      customerName: this.getUserName(i.user),
-      partsOrdered: 0,
-      status: this.mapStatus(i.status)
-    }));
-
-    return [...orderItems, ...inquiryItems].sort((a, b) => {
+    return orderItems.sort((a, b) => {
       const parse = (d: string) => { const [day, month, year] = d.split('-'); return new Date(Number(year), Number(month) - 1, Number(day)).getTime(); };
       return parse(b.dateCreated) - parse(a.dateCreated);
     });
@@ -143,13 +128,12 @@ export class HistoryComponent implements OnInit, AfterViewInit {
     const s = (status || '').toLowerCase();
     if (['completed', 'delivered', 'answered'].includes(s)) return 'completed';
     if (['cancelled', 'canceled', 'rejected'].includes(s)) return 'cancelled';
-    if (['in_review', 'in-review', 'more_info', 'in_progress'].includes(s)) return 'in-review';
     return 'in-review';
   }
 
   ngAfterViewInit(): void {
     this.columns.set([
-      { key: 'inquiryId', label: 'Inquiry ID' },
+      { key: 'id', label: 'ID' },
       { key: 'type', label: 'Type', template: this.typeCell },
       { key: 'dateCreated', label: 'Date Created', sortable: true },
       { key: 'internalReference', label: 'Internal reference number' },
@@ -181,11 +165,11 @@ export class HistoryComponent implements OnInit, AfterViewInit {
   }
 
   getTypeBadgeVariant(type: HistoryType): 'success' | 'info' {
-    return type === 'order' ? 'success' : 'info';
+    return 'success';
   }
 
   getTypeLabel(type: HistoryType): string {
-    return type === 'order' ? 'Order' : 'Manual';
+    return 'Order';
   }
 
   getStatusBadgeVariant(status: HistoryStatus): 'success' | 'danger' | 'warning' {

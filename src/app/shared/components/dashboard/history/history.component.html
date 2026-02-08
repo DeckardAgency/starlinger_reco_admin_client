@@ -51,8 +51,8 @@
   <ui-table-actions-dropdown
     [actions]="tableActions"
     [row]="row"
-    [isOpen]="openMenuRowId() === row.inquiryId"
-    (toggle)="toggleMenu(row.inquiryId)"
+    [isOpen]="openMenuRowId() === row.id"
+    (toggle)="toggleMenu(row.id)"
     (actionClick)="onActionClick($event)"
     (close)="closeMenu()"
   ></ui-table-actions-dropdown>

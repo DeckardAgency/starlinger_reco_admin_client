@@ -330,13 +330,6 @@ export const routes: Routes = [
         title: 'Admin | Packaging Price Detail'
       },
 
-      // Active Inquiries (list only)
-      { path: 'active-inquiries', redirectTo: 'active-inquiries/list', pathMatch: 'full' },
-      {
-        path: 'active-inquiries/list',
-        loadComponent: () => import('@features/active-inquiries/list/active-inquiries-list.component').then(m => m.ActiveInquiriesListComponent),
-        title: 'Admin | Active Inquiries'
-      }
     ]
   },
 

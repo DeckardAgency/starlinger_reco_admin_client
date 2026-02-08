@@ -5,19 +5,31 @@ export interface ModuleConfig {
   name: string;
   listPath: string;
   apiEndpoint: string;
+  /** The primary text field used for creating unique test records (used in list verification). */
+  primaryField: string;
   formFields: FormFieldConfig[];
+  /** Set to false for modules that only have "Save" (no "Save and continue"). Defaults to true. */
+  hasSaveAndContinue?: boolean;
 }
 
 export interface FormFieldConfig {
   name: string;
+  /** Exact placeholder text. If empty string, field is located by label or index. */
   placeholder: string;
   type?: 'text' | 'number' | 'select' | 'toggle' | 'textarea';
   required?: boolean;
+  /** When multiple inputs share the same placeholder, use nth(fieldIndex) to select the right one. */
+  fieldIndex?: number;
+  /** For inputs without placeholders, locate by label text inside ui-form-field container. */
+  label?: string;
 }
 
 /**
  * Generic Admin Module Page Object
- * Handles list view, create form, and edit form for any admin module
+ * Handles list view, create form, and edit form for any admin module.
+ *
+ * Key design principle: NO silent error swallowing.
+ * If an element doesn't exist or an API call fails, the test fails.
  */
 export class AdminModulePage extends BasePage {
   constructor(page: Page, private config: ModuleConfig) {
@@ -27,20 +39,20 @@ export class AdminModulePage extends BasePage {
   // ==================== Navigation ====================
 
   async gotoList() {
+    // Start listening for the API response BEFORE navigating to avoid race conditions.
+    // By the time networkidle fires, the response has already arrived.
+    const responsePromise = this.page.waitForResponse(
+      (resp) => resp.url().includes(this.config.apiEndpoint) && resp.request().method() === 'GET',
+      { timeout: 15000 }
+    );
     await this.page.goto(`/admin/${this.config.listPath}/list`);
-    await this.waitForPageLoad();
-    await this.waitForListData();
+    const response = await responsePromise;
+    expect(response.status(), `List API ${this.config.apiEndpoint} returned ${response.status()}`).toBeLessThan(400);
   }
 
   async gotoCreate() {
     await this.page.goto(`/admin/${this.config.listPath}/new`);
     await this.waitForPageLoad();
-  }
-
-  async gotoEdit(id: string) {
-    await this.page.goto(`/admin/${this.config.listPath}/${id}/edit`);
-    await this.waitForPageLoad();
-    await this.waitForFormData();
   }
 
   // ==================== List View ====================
@@ -54,22 +66,15 @@ export class AdminModulePage extends BasePage {
   }
 
   get addButton(): Locator {
-    return this.page.locator('ui-list-header button:has-text("Add"), button:has-text("Add")').first();
+    return this.page.locator('ui-list-header button.btn--primary').first();
   }
 
   get searchInput(): Locator {
-    return this.page.locator('ui-list-header input[type="text"], input[placeholder*="Search"]').first();
+    return this.page.locator('ui-list-header input[type="text"]').first();
   }
 
   actionsDropdown(index: number = 0): Locator {
     return this.page.locator('ui-table-actions-dropdown').nth(index);
-  }
-
-  async waitForListData() {
-    await this.page.waitForResponse(
-      resp => resp.url().includes(this.config.apiEndpoint) && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
   }
 
   async clickAdd() {
@@ -80,36 +85,40 @@ export class AdminModulePage extends BasePage {
   async openRowActions(index: number = 0) {
     const dropdown = this.actionsDropdown(index);
     await dropdown.locator('button').first().click();
+    // Wait for dropdown menu to appear
+    await expect(this.page.locator('.dropdown-menu').first()).toBeVisible({ timeout: 3000 });
   }
 
   async clickEdit(index: number = 0) {
     await this.openRowActions(index);
-    await this.page.locator('text="Edit"').first().click();
+    await this.page.locator('.dropdown-menu__item:has-text("Edit")').first().click();
     await expect(this.page).toHaveURL(new RegExp(`/${this.config.listPath}/[\\w-]+/edit`), { timeout: 10000 });
     await this.page.waitForLoadState('networkidle');
-    // Wait for form to be visible (not for specific data)
-    await this.page.waitForTimeout(1000);
+    // Wait for form fields to be present
+    await this.waitForFormData();
   }
 
-  async clickDelete(index: number = 0) {
+  /**
+   * Click delete on a row. Handles the native browser confirm() dialog.
+   * The dialog handler is set up BEFORE clicking, which is the correct order.
+   */
+  async clickDeleteAndConfirm(index: number = 0) {
     await this.openRowActions(index);
-    await this.page.locator('text="Delete"').first().click();
-  }
-
-  async confirmDelete() {
-    const confirmBtn = this.page.locator('button:has-text("Confirm"), button:has-text("Yes"), button:has-text("Delete")').last();
-    if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmBtn.click();
-    }
-    await this.page.waitForResponse(
-      resp => resp.url().includes(this.config.apiEndpoint) && resp.request().method() === 'DELETE',
-      { timeout: 10000 }
-    ).catch(() => {});
+    // Set up dialog handler and response listener BEFORE triggering delete
+    this.acceptNextDialog();
+    const responsePromise = this.page.waitForResponse(
+      (resp) => resp.url().includes(this.config.apiEndpoint) && resp.request().method() === 'DELETE',
+      { timeout: 15000 }
+    );
+    await this.page.locator('.dropdown-menu__item:has-text("Delete")').first().click();
+    const response = await responsePromise;
+    expect(response.status(), `DELETE ${this.config.apiEndpoint} returned ${response.status()}`).toBeLessThan(400);
   }
 
   async search(query: string) {
     await this.searchInput.fill(query);
-    await this.page.waitForTimeout(500);
+    // Search is client-side — just wait for Angular to re-render
+    await this.page.waitForTimeout(300);
   }
 
   async getRowCount(): Promise<number> {
@@ -121,6 +130,7 @@ export class AdminModulePage extends BasePage {
     return count > 0;
   }
 
+  /** Find the index of a row containing the given text. Returns -1 if not found. */
   async findRowWithText(text: string): Promise<number> {
     const count = await this.getRowCount();
     for (let i = 0; i < count; i++) {
@@ -132,22 +142,42 @@ export class AdminModulePage extends BasePage {
     return -1;
   }
 
-  // ==================== Form View ====================
-
-  get saveButton(): Locator {
-    return this.page.getByRole('button', { name: 'Save', exact: true });
+  /** Assert that a row containing the given text exists in the table (auto-retrying). */
+  async verifyRowExists(text: string) {
+    await expect(
+      this.page.locator('ui-data-table tbody tr, table tbody tr').filter({ hasText: text }).first()
+    ).toBeVisible({ timeout: 10000 });
   }
 
-  get saveAndContinueButton(): Locator {
-    return this.page.getByRole('button', { name: 'Save and continue' });
+  /** Assert that NO row contains the given text (auto-retrying). */
+  async verifyRowNotExists(text: string) {
+    await expect(
+      this.page.locator('ui-data-table tbody tr, table tbody tr').filter({ hasText: text })
+    ).toHaveCount(0, { timeout: 10000 });
+  }
+
+  // ==================== Form View ====================
+
+  /** "Save" button (primary) — behaviour varies by module */
+  get saveButton(): Locator {
+    // Products uses section-header instead of ui-detail-header
+    return this.page.locator('ui-detail-header button.btn--primary, .section-header button.btn--primary').first();
+  }
+
+  /** "Save and continue" button — behaviour varies by module */
+  get saveAndGoToListButton(): Locator {
+    // Match button in header area only (not mobile footer which has the same text)
+    return this.page.locator('ui-detail-header, .section-header').first()
+      .getByRole('button', { name: 'Save and continue' });
   }
 
   get backButton(): Locator {
-    return this.page.locator('ui-detail-header button').first();
+    return this.page.locator('ui-detail-header button.btn--icon, .section-header button.btn--icon').first();
   }
 
-  getInput(placeholder: string): Locator {
-    return this.page.locator(`input[placeholder="${placeholder}"]`);
+  getInput(placeholder: string, fieldIndex?: number): Locator {
+    const loc = this.page.locator(`input[placeholder="${placeholder}"]`);
+    return fieldIndex !== undefined ? loc.nth(fieldIndex) : loc;
   }
 
   getTextarea(placeholder: string): Locator {
@@ -155,37 +185,41 @@ export class AdminModulePage extends BasePage {
   }
 
   getSelect(): Locator {
-    return this.page.locator('select.select-field').first();
-  }
-
-  getToggle(label: string): Locator {
-    return this.page.locator(`ui-toggle`).filter({ hasText: label });
+    return this.page.locator('select.ui-select__field').first();
   }
 
   async waitForFormData() {
-    // Wait for form inputs to be populated
-    const firstField = this.config.formFields[0];
-    if (firstField) {
-      const input = this.getInput(firstField.placeholder);
-      await expect(async () => {
-        const value = await input.inputValue();
-        expect(value.length).toBeGreaterThan(0);
-      }).toPass({ timeout: 10000 });
+    // Wait for the first text input field to be populated (edit mode)
+    const firstTextField = this.config.formFields.find(f => f.type !== 'select' && f.type !== 'toggle' && f.placeholder);
+    if (firstTextField) {
+      const input = firstTextField.type === 'textarea'
+        ? this.getTextarea(firstTextField.placeholder)
+        : this.getInput(firstTextField.placeholder);
+      await expect(input).toBeVisible({ timeout: 10000 });
     }
   }
 
-  async fillField(placeholder: string, value: string) {
-    const input = this.getInput(placeholder);
+  async fillField(placeholder: string, value: string, fieldIndex?: number) {
+    const input = this.getInput(placeholder, fieldIndex);
+    await expect(input).toBeVisible({ timeout: 5000 });
+    await input.fill(value);
+  }
+
+  async fillFieldByLabel(label: string, value: string) {
+    const input = this.page.locator('ui-form-field').filter({ hasText: label }).locator('input').first();
+    await expect(input).toBeVisible({ timeout: 5000 });
     await input.fill(value);
   }
 
   async fillTextarea(placeholder: string, value: string) {
     const textarea = this.getTextarea(placeholder);
+    await expect(textarea).toBeVisible({ timeout: 5000 });
     await textarea.fill(value);
   }
 
-  async selectOption(index: number = 0) {
-    const select = this.page.locator('select.select-field').nth(index);
+  async selectFirstOption(index: number = 0) {
+    const select = this.page.locator('select.ui-select__field').nth(index);
+    await expect(select).toBeVisible({ timeout: 5000 });
     await select.selectOption({ index: 1 });
   }
 
@@ -195,8 +229,12 @@ export class AdminModulePage extends BasePage {
       if (value !== undefined) {
         if (field.type === 'textarea') {
           await this.fillTextarea(field.placeholder, value);
+        } else if (field.type === 'select' || field.type === 'toggle') {
+          continue;
+        } else if (field.label) {
+          await this.fillFieldByLabel(field.label, value);
         } else {
-          await this.fillField(field.placeholder, value);
+          await this.fillField(field.placeholder, value, field.fieldIndex);
         }
       }
     }
@@ -206,21 +244,36 @@ export class AdminModulePage extends BasePage {
     await this.saveButton.click();
   }
 
+  /**
+   * Click Save, wait for the API response to succeed, then verify navigation to list.
+   * NO error swallowing — if the API returns 4xx/5xx, the test fails.
+   */
   async saveAndExpectList() {
-    // Click save and wait for both API response and navigation
-    await Promise.all([
-      this.page.waitForResponse(
-        resp => resp.url().includes(this.config.apiEndpoint) &&
-                (resp.request().method() === 'POST' ||
-                 resp.request().method() === 'PATCH' ||
-                 resp.request().method() === 'PUT'),
-        { timeout: 15000 }
-      ).catch(() => {}),
-      this.saveButton.click(),
-    ]);
+    // Set up the listener BEFORE clicking, filtered to write methods only
+    const responsePromise = this.page.waitForResponse(
+      (resp) => resp.url().includes(this.config.apiEndpoint) &&
+                ['POST', 'PATCH', 'PUT'].includes(resp.request().method()),
+      { timeout: 15000 }
+    );
 
-    // Wait for redirect to list
-    await expect(this.page).toHaveURL(new RegExp(`/${this.config.listPath}`), { timeout: 15000 });
+    if (this.config.hasSaveAndContinue !== false) {
+      // "Save and continue" navigates to list automatically
+      await this.saveAndGoToListButton.click();
+    } else {
+      // Modules without "Save and continue" — click "Save" (stays on form)
+      await this.saveButton.click();
+    }
+
+    const response = await responsePromise;
+    expect(response.status(), `Save API ${this.config.apiEndpoint} returned ${response.status()}`).toBeLessThan(400);
+
+    if (this.config.hasSaveAndContinue !== false) {
+      await expect(this.page).toHaveURL(new RegExp(`/${this.config.listPath}/list`), { timeout: 15000 });
+    } else {
+      // Navigate to list manually since Save stays on form
+      await this.page.goto(`/admin/${this.config.listPath}/list`);
+    }
+    await this.page.waitForLoadState('networkidle');
   }
 
   async goBack() {
@@ -228,9 +281,9 @@ export class AdminModulePage extends BasePage {
     await expect(this.page).toHaveURL(new RegExp(`/${this.config.listPath}/list`), { timeout: 10000 });
   }
 
-  async getCurrentInputValue(placeholder: string): Promise<string> {
-    const input = this.getInput(placeholder);
-    await input.waitFor({ state: 'visible', timeout: 10000 });
+  async getCurrentInputValue(placeholder: string, fieldIndex?: number): Promise<string> {
+    const input = this.getInput(placeholder, fieldIndex);
+    await expect(input).toBeVisible({ timeout: 10000 });
     return input.inputValue();
   }
 }
@@ -238,22 +291,23 @@ export class AdminModulePage extends BasePage {
 // ==================== Module Configurations ====================
 
 export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
-  // Simple CRUD Modules
   countries: {
     name: 'Countries',
     listPath: 'countries',
     apiEndpoint: '/countries',
+    primaryField: 'name',
     formFields: [
       { name: 'name', placeholder: 'Enter name', required: true },
       { name: 'code', placeholder: 'Enter code', required: true },
       { name: 'iso3Code', placeholder: 'Enter ISO code' },
-      { name: 'taxPercent', placeholder: '0,00', type: 'number' },
+      { name: 'taxPercent', placeholder: '0.00', type: 'number' },
     ],
   },
   warehouses: {
     name: 'Warehouses',
     listPath: 'warehouses',
     apiEndpoint: '/warehouses',
+    primaryField: 'name',
     formFields: [
       { name: 'contactPerson', placeholder: 'Enter contact person' },
       { name: 'name', placeholder: 'Enter name', required: true },
@@ -267,9 +321,10 @@ export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
     name: 'Delivery Types',
     listPath: 'delivery-types',
     apiEndpoint: '/delivery_types',
+    primaryField: 'name',
     formFields: [
       { name: 'name', placeholder: 'Enter name', required: true },
-      { name: 'grossFactor', placeholder: '1,00', type: 'number' },
+      { name: 'grossFactor', placeholder: '1.00', type: 'number' },
       { name: 'order', placeholder: '0', type: 'number' },
     ],
   },
@@ -277,6 +332,7 @@ export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
     name: 'Payment Types',
     listPath: 'payment-types',
     apiEndpoint: '/payment_types',
+    primaryField: 'name',
     formFields: [
       { name: 'name', placeholder: 'Enter name', required: true },
     ],
@@ -285,15 +341,17 @@ export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
     name: 'Tax Types',
     listPath: 'tax-types',
     apiEndpoint: '/tax_types',
+    primaryField: 'name',
     formFields: [
       { name: 'name', placeholder: 'Enter name', required: true },
-      { name: 'percent', placeholder: '0,00', type: 'number' },
+      { name: 'percent', placeholder: '0', type: 'number' },
     ],
   },
   discounts: {
     name: 'Discounts',
     listPath: 'discounts',
     apiEndpoint: '/discounts',
+    primaryField: 'name',
     formFields: [
       { name: 'name', placeholder: 'Enter name', required: true },
     ],
@@ -302,6 +360,7 @@ export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
     name: 'Product Groups',
     listPath: 'product-groups',
     apiEndpoint: '/product_groups',
+    primaryField: 'name',
     formFields: [
       { name: 'name', placeholder: 'Enter category name', required: true },
       { name: 'code', placeholder: 'Enter category code' },
@@ -312,48 +371,56 @@ export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
     name: 'Delivery Prices',
     listPath: 'delivery-prices',
     apiEndpoint: '/delivery_prices',
+    primaryField: 'name',
     formFields: [
       { name: 'name', placeholder: 'Enter name', required: true },
-      { name: 'sizeFrom', placeholder: '0', type: 'number' },
-      { name: 'sizeTo', placeholder: '0', type: 'number' },
-      { name: 'priceBase', placeholder: '0,00', type: 'number' },
+      { name: 'sizeFrom', placeholder: '0', type: 'number', fieldIndex: 0 },
+      { name: 'sizeTo', placeholder: '0', type: 'number', fieldIndex: 1 },
+      { name: 'priceBase', placeholder: '0.00', type: 'number', fieldIndex: 0 },
     ],
   },
   packagingPrices: {
     name: 'Packaging Prices',
     listPath: 'packaging-prices',
     apiEndpoint: '/packaging_prices',
+    primaryField: 'name',
+    hasSaveAndContinue: false,
     formFields: [
-      { name: 'sizeFrom', placeholder: '0', type: 'number' },
-      { name: 'sizeTo', placeholder: '0', type: 'number' },
-      { name: 'priceBase', placeholder: '0', type: 'number' },
+      { name: 'name', placeholder: 'Enter name', required: true },
+      { name: 'priceBase', placeholder: '', type: 'number', label: 'Price base', required: true },
     ],
   },
   fuelSurcharges: {
     name: 'Fuel Surcharges',
     listPath: 'fuel-surcharges',
     apiEndpoint: '/fuel_surcharges',
+    primaryField: 'name',
+    hasSaveAndContinue: false,
     formFields: [
-      { name: 'date', placeholder: '01/01/2025' },
-      { name: 'fuelSurcharge', placeholder: '1,025', type: 'number' },
+      { name: 'name', placeholder: 'Enter name' },
+      { name: 'sizeTo', placeholder: '0.0000', type: 'number', fieldIndex: 0 },
+      { name: 'priceBase', placeholder: '0.0000', type: 'number', fieldIndex: 1 },
     ],
   },
-  // Complex CRUD Modules (have custom form logic)
   users: {
     name: 'Users',
     listPath: 'users',
     apiEndpoint: '/users',
+    primaryField: 'firstName',
+    hasSaveAndContinue: false,
     formFields: [
       { name: 'firstName', placeholder: 'Enter first name', required: true },
       { name: 'lastName', placeholder: 'Enter last name', required: true },
-      { name: 'email', placeholder: 'Enter email', required: true },
       { name: 'username', placeholder: 'Enter username' },
+      { name: 'email', placeholder: 'Enter email', required: true },
     ],
   },
   contacts: {
     name: 'Contacts',
     listPath: 'contacts',
-    apiEndpoint: '/users',
+    apiEndpoint: '/contacts',
+    primaryField: 'firstName',
+    hasSaveAndContinue: false,
     formFields: [
       { name: 'firstName', placeholder: 'First name' },
       { name: 'lastName', placeholder: 'Last name' },
@@ -365,6 +432,8 @@ export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
     name: 'Accounts',
     listPath: 'accounts',
     apiEndpoint: '/clients',
+    primaryField: 'name',
+    hasSaveAndContinue: false,
     formFields: [
       { name: 'name', placeholder: 'Company title', required: true },
       { name: 'code', placeholder: 'Code' },
@@ -376,9 +445,10 @@ export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
     name: 'Products',
     listPath: 'products',
     apiEndpoint: '/products',
+    primaryField: 'name',
     formFields: [
-      { name: 'name', placeholder: 'Name', required: true },
-      { name: 'code', placeholder: 'Code' },
+      { name: 'name', placeholder: 'Enter product name', required: true },
+      { name: 'code', placeholder: 'Enter code' },
     ],
   },
 };

@@ -97,15 +97,15 @@
 }
 
 // =============================================================================
-// Machine Groups
+// Product Groups
 // =============================================================================
-.machine-groups {
+.product-groups {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.machine-group {
+.product-group {
   @include admin.expandable-group;
 }
 

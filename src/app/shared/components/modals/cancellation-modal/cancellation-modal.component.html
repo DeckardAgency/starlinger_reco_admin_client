@@ -7,7 +7,7 @@
                     <line x1="15" y1="9" x2="9" y2="15"></line>
                     <line x1="9" y1="9" x2="15" y2="15"></line>
                 </svg>
-                Cancel {{ itemType === 'inquiry' ? 'Inquiry' : 'Order' }}
+                Cancel Order
             </h2>
             <button class="modal__close" (click)="onClose()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -18,7 +18,7 @@
 
         <div class="modal__body">
             <div class="modal__order-info" *ngIf="itemNumber">
-                <span class="modal__order-label">{{ itemType === 'inquiry' ? 'Inquiry' : 'Order' }}:</span>
+                <span class="modal__order-label">Order:</span>
                 <span class="modal__order-number">{{ itemNumber }}</span>
             </div>
 
@@ -36,7 +36,7 @@
                         id="cancellationReason"
                         class="form-textarea"
                         formControlName="cancellationReason"
-                        [placeholder]="'Please provide a reason for canceling this ' + (itemType === 'inquiry' ? 'inquiry' : 'order') + '...'"
+                        placeholder="Please provide a reason for canceling this order..."
                         rows="4"
                         [class.form-textarea--error]="hasError('cancellationReason')">
                     </textarea>
@@ -49,11 +49,11 @@
 
         <div class="modal__footer">
             <button class="btn btn--secondary" (click)="onClose()" [disabled]="saving">
-                Keep {{ itemType === 'inquiry' ? 'Inquiry' : 'Order' }}
+                Keep Order
             </button>
             <button class="btn btn--danger" (click)="onSubmit()" [disabled]="saving">
                 <span *ngIf="saving" class="btn__spinner"></span>
-                {{ saving ? 'Canceling...' : 'Cancel ' + (itemType === 'inquiry' ? 'Inquiry' : 'Order') }}
+                {{ saving ? 'Canceling...' : 'Cancel Order' }}
             </button>
         </div>
     </div>

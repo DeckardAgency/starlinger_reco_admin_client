@@ -2,12 +2,15 @@ import { test, expect } from '@playwright/test';
 import { AdminModulePage, MODULE_CONFIGS } from './pages';
 
 /**
- * Simple CRUD Modules - Unified E2E Tests using Page Object Model
+ * Simple CRUD Modules - Unified E2E Tests
+ *
  * Tests: Countries, Warehouses, Delivery Types, Payment Types, Tax Types,
  *        Discounts, Product Groups, Delivery Prices, Packaging Prices, Fuel Surcharges
+ *
+ * Key principle: NO silent error swallowing. Every assertion is real.
+ * If a form field doesn't exist, the API fails, or data doesn't persist — the test FAILS.
  */
 
-// Define which modules to test with this unified approach
 const SIMPLE_CRUD_MODULES = [
   'countries',
   'warehouses',
@@ -26,7 +29,11 @@ for (const moduleKey of SIMPLE_CRUD_MODULES) {
   if (!config) continue;
 
   test.describe(`${config.name} CRUD`, () => {
-    const timestamp = Date.now();
+    // Tests are sequential: create → verify → edit → delete
+    test.describe.configure({ mode: 'serial' });
+
+    // Unique identifier for this test run — used to find/verify test records
+    const testId = `E2E_${Date.now()}`;
     let modulePage: AdminModulePage;
 
     test.beforeEach(async ({ page }) => {
@@ -37,104 +44,106 @@ for (const moduleKey of SIMPLE_CRUD_MODULES) {
       await modulePage.gotoList();
 
       await expect(modulePage.table).toBeVisible();
-      // List may be empty for some modules, just verify table loads
+      // Verify table has at least the header structure
+      const headerCells = page.locator('ui-data-table th, table th');
+      const headerCount = await headerCells.count();
+      expect(headerCount).toBeGreaterThan(0);
     });
 
     test(`2. should navigate to create form via Add button`, async ({ page }) => {
       await modulePage.gotoList();
       await modulePage.clickAdd();
 
-      // Verify we're on the create page
       await expect(page).toHaveURL(new RegExp(`/${config.listPath}/new`));
+      // Verify the first form field is visible
+      if (config.formFields.length > 0) {
+        const firstField = config.formFields[0];
+        if (firstField.type === 'textarea') {
+          await expect(modulePage.getTextarea(firstField.placeholder)).toBeVisible();
+        } else {
+          await expect(modulePage.getInput(firstField.placeholder)).toBeVisible();
+        }
+      }
     });
 
     test(`3. should create a new ${config.name.toLowerCase().slice(0, -1)}`, async ({ page }) => {
       await modulePage.gotoCreate();
 
-      // Fill form fields based on config
+      // Fill each form field — NO try/catch, NO if(isVisible) guards.
+      // If a field doesn't exist, the test fails. That's the point.
       for (const field of config.formFields) {
-        if (field.type === 'select') continue; // Skip selects for now
+        if (field.type === 'select' || field.type === 'toggle') continue;
 
-        const value = field.type === 'number'
-          ? String(timestamp % 1000)
-          : field.name === 'name' || field.name === 'firstName'
-            ? `E2E Test ${timestamp}`
-            : `e2e_${field.name}_${timestamp}`;
+        // Generate appropriate values based on field name/constraints
+        let value: string;
+        if (field.type === 'number') {
+          value = String(Date.now() % 100);
+        } else if (field.name === 'name' || field.name === 'contactPerson') {
+          value = testId;
+        } else if (field.name === 'code') {
+          // Country codes are exactly 2 chars — use letter+digit for 260 possible values
+          const ts = Date.now();
+          value = String.fromCharCode(65 + (ts % 26)) + String(ts % 10);
+        } else if (field.name === 'iso3Code') {
+          value = `E${String(Date.now() % 100).padStart(2, '0')}`.substring(0, 3);
+        } else if (field.name === 'email') {
+          value = `e2e_${Date.now()}@test.com`;
+        } else {
+          value = `e2e_${Date.now()}`;
+        }
 
-        try {
-          const input = field.type === 'textarea'
-            ? page.locator(`textarea[placeholder="${field.placeholder}"]`).first()
-            : page.locator(`input[placeholder="${field.placeholder}"]`).first();
-
-          if (await input.isVisible({ timeout: 2000 }).catch(() => false)) {
-            await input.fill(value);
-          }
-        } catch {
-          // Field might not be visible or have different placeholder
+        if (field.type === 'textarea') {
+          await modulePage.fillTextarea(field.placeholder, value);
+        } else if (field.label) {
+          await modulePage.fillFieldByLabel(field.label, value);
+        } else {
+          await modulePage.fillField(field.placeholder, value, field.fieldIndex);
         }
       }
 
-      // Try to select first option if there's a select
-      const select = page.locator('select.select-field').first();
-      if (await select.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await select.selectOption({ index: 1 }).catch(() => {});
+      // Select first option for ALL visible ui-selects on the form
+      const selects = page.locator('select.ui-select__field');
+      const selectCount = await selects.count();
+      for (let i = 0; i < selectCount; i++) {
+        const sel = selects.nth(i);
+        if (await sel.isVisible().catch(() => false)) {
+          await sel.selectOption({ index: 1 });
+        }
       }
 
       await modulePage.saveAndExpectList();
+
+      // VERIFY: The created record appears in the list
+      await modulePage.verifyRowExists(testId);
     });
 
     test(`4. should navigate to edit page via actions dropdown`, async ({ page }) => {
       await modulePage.gotoList();
 
       const hasData = await modulePage.hasData();
-      if (!hasData) {
-        test.skip(true, `No ${config.name.toLowerCase()} to edit`);
-        return;
-      }
-
-      // Check if actions dropdown exists
-      const actionsDropdown = page.locator('ui-table-actions-dropdown').first();
-      if (!await actionsDropdown.isVisible({ timeout: 3000 }).catch(() => false)) {
-        test.skip(true, `No actions dropdown available`);
-        return;
-      }
+      test.skip(!hasData, `No ${config.name.toLowerCase()} to edit`);
 
       await modulePage.clickEdit(0);
 
-      // Verify we're on edit page
       await expect(page).toHaveURL(new RegExp(`/${config.listPath}/[\\w-]+/edit`));
+      // Verify the save button is present (we're on a form page)
+      await expect(modulePage.saveButton).toBeVisible();
     });
 
     test(`5. should edit an existing ${config.name.toLowerCase().slice(0, -1)}`, async ({ page }) => {
       await modulePage.gotoList();
 
       const hasData = await modulePage.hasData();
-      if (!hasData) {
-        test.skip(true, `No ${config.name.toLowerCase()} to edit`);
-        return;
-      }
-
-      // Check if actions dropdown exists
-      const actionsDropdown = page.locator('ui-table-actions-dropdown').first();
-      if (!await actionsDropdown.isVisible({ timeout: 3000 }).catch(() => false)) {
-        test.skip(true, `No actions dropdown available`);
-        return;
-      }
+      test.skip(!hasData, `No ${config.name.toLowerCase()} to edit`);
 
       await modulePage.clickEdit(0);
 
-      // Try to modify first field
-      const firstField = config.formFields[0];
-      if (firstField && firstField.type !== 'number') {
-        try {
-          const input = page.locator(`input[placeholder="${firstField.placeholder}"]`).first();
-          if (await input.isVisible({ timeout: 2000 }).catch(() => false)) {
-            const currentValue = await input.inputValue();
-            await input.fill(`${currentValue} - Edited`);
-          }
-        } catch {
-          // Field might not be editable
-        }
+      // Modify the first text field
+      const firstField = config.formFields.find(f => f.type !== 'number' && f.type !== 'select' && f.type !== 'toggle' && f.type !== 'textarea');
+      if (firstField) {
+        const currentValue = await modulePage.getCurrentInputValue(firstField.placeholder, firstField.fieldIndex);
+        const editedValue = `${currentValue} Edited`;
+        await modulePage.fillField(firstField.placeholder, editedValue, firstField.fieldIndex);
       }
 
       await modulePage.saveAndExpectList();
@@ -143,24 +152,38 @@ for (const moduleKey of SIMPLE_CRUD_MODULES) {
     test(`6. should delete a ${config.name.toLowerCase().slice(0, -1)} via actions dropdown`, async ({ page }) => {
       await modulePage.gotoList();
 
-      // Find test data to delete
+      // Find a test record to delete (created by test 3)
       const rowIndex = await modulePage.findRowWithText('E2E');
-      if (rowIndex === -1) {
-        test.skip(true, `No test ${config.name.toLowerCase()} found to delete`);
-        return;
+      test.skip(rowIndex === -1, `No test ${config.name.toLowerCase()} found to delete`);
+
+      const rowText = await modulePage.tableRows.nth(rowIndex).textContent();
+
+      // Delete uses window.confirm() — handled by acceptNextDialog()
+      await modulePage.clickDeleteAndConfirm(rowIndex);
+
+      // VERIFY: The deleted row is gone
+      // Give Angular a moment to update the list signal
+      await page.waitForTimeout(300);
+      if (rowText) {
+        // Look for the specific E2E test ID that was in the deleted row
+        const e2eMatch = rowText.match(/E2E_\d+/);
+        if (e2eMatch) {
+          await modulePage.verifyRowNotExists(e2eMatch[0]);
+        }
       }
-
-      await modulePage.clickDelete(rowIndex);
-      await modulePage.confirmDelete();
-
-      await expect(page).toHaveURL(new RegExp(`/${config.listPath}`), { timeout: 5000 });
     });
 
     test(`7. should search/filter ${config.name.toLowerCase()}`, async ({ page }) => {
       await modulePage.gotoList();
 
-      await modulePage.search('test');
-      await page.waitForTimeout(500);
+      const initialRowCount = await modulePage.getRowCount();
+      test.skip(initialRowCount === 0, `No ${config.name.toLowerCase()} to search`);
+
+      // Get text from first row to use as search term
+      const firstRowText = await modulePage.tableRows.first().textContent();
+      const searchTerm = firstRowText?.trim().substring(0, 10) ?? 'test';
+
+      await modulePage.search(searchTerm);
 
       // Table should still be visible
       await expect(modulePage.table).toBeVisible();

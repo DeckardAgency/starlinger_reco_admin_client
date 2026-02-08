@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { AdminModulePage, MODULE_CONFIGS } from './pages';
 
 /**
  * Accounts Module - CRUD E2E Tests
@@ -6,306 +7,151 @@ import { test, expect } from '@playwright/test';
  * (contacts, addresses, shop-orders, manual-entries, machines)
  */
 test.describe('Accounts CRUD', () => {
+  test.describe.configure({ mode: 'serial' });
+
   const timestamp = Date.now();
+  const testId = `E2E_${timestamp}`;
   const testData = {
-    name: `E2E Test Company ${timestamp}`,
+    name: testId,
     code: `E2E${timestamp % 10000}`,
-    oib: `${timestamp % 100000000000}`,
     email: `e2e_company_${timestamp}@test.com`,
     phone: '+385 1 234 5678',
-    web: 'https://e2e-test.com',
   };
 
+  let modulePage: AdminModulePage;
+
   test.beforeEach(async ({ page }) => {
-    // Navigate to accounts list
-    await page.goto('/admin/accounts/list');
-    await page.waitForLoadState('networkidle');
+    modulePage = new AdminModulePage(page, MODULE_CONFIGS['accounts']);
   });
 
   test('1. should display accounts list with data', async ({ page }) => {
-    // Verify the data table is visible
-    const table = page.locator('ui-data-table, table').first();
-    await expect(table).toBeVisible({ timeout: 15000 });
+    await modulePage.gotoList();
 
-    // Wait for API response (accounts uses /clients endpoint)
-    await page.waitForResponse(
-      resp => resp.url().includes('/clients') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
-
-    // Check that table has rows
-    const rows = page.locator('ui-data-table tbody tr, table tbody tr');
-    const rowCount = await rows.count();
+    await expect(modulePage.table).toBeVisible();
+    const rowCount = await modulePage.getRowCount();
     expect(rowCount).toBeGreaterThan(0);
   });
 
   test('2. should navigate to create form via Add button', async ({ page }) => {
-    // Find and click the Add button
-    const addButton = page.locator('ui-list-header button:has-text("Add"), button:has-text("Add")').first();
-    await addButton.click();
+    await modulePage.gotoList();
+    await modulePage.clickAdd();
 
-    // Verify navigation to create page
     await expect(page).toHaveURL(/\/accounts\/new/);
-
-    // Verify form structure is visible - accounts has toggles and form cards
-    await expect(page.locator('.card, .form-card').first()).toBeVisible({ timeout: 10000 });
+    // Verify form structure — accounts has toggles and form fields
+    await expect(page.locator('input[placeholder="Company title"]')).toBeVisible({ timeout: 10000 });
   });
 
   test('3. should create a new account', async ({ page }) => {
-    // Go directly to create page
-    await page.goto('/admin/accounts/new');
-    await page.waitForLoadState('networkidle');
+    await modulePage.gotoCreate();
 
-    // Fill basic information
-    const nameInput = page.locator('input[placeholder="Company title"], input[placeholder*="title"]').first();
-    if (await nameInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await nameInput.fill(testData.name);
+    // Fill basic information — no guards
+    await page.locator('input[placeholder="Company title"]').fill(testData.name);
+    await page.locator('input[placeholder="Code"]').fill(testData.code);
+    await page.locator('input[placeholder="Email"]').first().fill(testData.email);
+    await page.locator('input[placeholder="Phone"]').first().fill(testData.phone);
+
+    // Select first option for all visible selects (accountType is REQUIRED)
+    const selects = page.locator('select.ui-select__field');
+    const selectCount = await selects.count();
+    for (let i = 0; i < selectCount; i++) {
+      const sel = selects.nth(i);
+      if (await sel.isVisible().catch(() => false)) {
+        await sel.selectOption({ index: 1 });
+      }
     }
 
-    const codeInput = page.locator('input[placeholder="Code"]').first();
-    if (await codeInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await codeInput.fill(testData.code);
-    }
+    await modulePage.saveAndExpectList();
 
-    const oibInput = page.locator('input[placeholder="OIB"]').first();
-    if (await oibInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await oibInput.fill(testData.oib);
-    }
-
-    // Fill contact information
-    const emailInput = page.locator('input[placeholder="Email"]').first();
-    if (await emailInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await emailInput.fill(testData.email);
-    }
-
-    const phoneInput = page.locator('input[placeholder="Phone"]').first();
-    if (await phoneInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await phoneInput.fill(testData.phone);
-    }
-
-    // Note: "Is active" toggle is enabled by default in new accounts
-
-    // Click save and wait for response
-    const saveButton = page.getByRole('button', { name: 'Save', exact: true });
-    await Promise.all([
-      page.waitForResponse(
-        resp => resp.url().includes('/clients') && resp.request().method() === 'POST',
-        { timeout: 15000 }
-      ).catch(() => {}),
-      saveButton.click(),
-    ]);
-
-    // Wait for redirect to list
-    await expect(page).toHaveURL(/\/accounts/, { timeout: 15000 });
+    // VERIFY: The created account appears in the list
+    await modulePage.verifyRowExists(testId);
   });
 
   test('4. should navigate to edit page via actions dropdown', async ({ page }) => {
-    // Wait for table to load
-    await page.waitForResponse(
-      resp => resp.url().includes('/clients') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
+    await modulePage.gotoList();
 
-    // Open actions dropdown for first row
-    const actionsDropdown = page.locator('ui-table-actions-dropdown').first();
-    await actionsDropdown.locator('button').first().click();
+    await modulePage.clickEdit(0);
 
-    // Click Edit
-    await page.locator('text="Edit"').first().click();
-
-    // Verify navigation to edit page
-    await expect(page).toHaveURL(/\/accounts\/[\w-]+\/edit/, { timeout: 10000 });
-    await page.waitForLoadState('networkidle');
-
-    // Verify form is populated - cards should be visible
-    await expect(page.locator('.card, .form-card').first()).toBeVisible({ timeout: 10000 });
+    await expect(page).toHaveURL(/\/accounts\/[\w-]+\/edit/);
+    await expect(page.locator('input[placeholder="Company title"]')).toBeVisible({ timeout: 10000 });
   });
 
   test('5. should edit an existing account', async ({ page }) => {
-    // Wait for table data
-    await page.waitForResponse(
-      resp => resp.url().includes('/clients') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
+    await modulePage.gotoList();
+    await modulePage.clickEdit(0);
 
-    // Open actions and click edit
-    const actionsDropdown = page.locator('ui-table-actions-dropdown').first();
-    await actionsDropdown.locator('button').first().click();
-    await page.locator('text="Edit"').first().click();
+    // Modify the title field
+    const nameInput = page.locator('input[placeholder="Company title"]');
+    await expect(nameInput).toBeVisible();
+    const currentName = await nameInput.inputValue();
+    await nameInput.fill(`${currentName} Edited`);
 
-    // Wait for form to load
-    await expect(page).toHaveURL(/\/accounts\/[\w-]+\/edit/, { timeout: 10000 });
-    await page.waitForLoadState('networkidle');
-
-    // Wait for form data to load
-    await page.waitForTimeout(1000);
-
-    // Find and modify the name/title field
-    const nameInput = page.locator('input[placeholder="Company title"], input[placeholder*="title"]').first();
-    if (await nameInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      const currentName = await nameInput.inputValue();
-      const editedName = currentName ? `${currentName} - Edited` : `Edited Account ${Date.now()}`;
-      await nameInput.fill(editedName);
-    }
-
-    // Save
-    const saveButton = page.getByRole('button', { name: 'Save', exact: true });
-    await Promise.all([
-      page.waitForResponse(
-        resp => resp.url().includes('/clients') &&
-                (resp.request().method() === 'PATCH' || resp.request().method() === 'PUT'),
-        { timeout: 15000 }
-      ).catch(() => {}),
-      saveButton.click(),
-    ]);
-
-    // Wait for redirect
-    await expect(page).toHaveURL(/\/accounts/, { timeout: 15000 });
+    await modulePage.saveAndExpectList();
   });
 
   test('6. should delete an account via actions dropdown', async ({ page }) => {
-    // Wait for table data
-    await page.waitForResponse(
-      resp => resp.url().includes('/clients') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
+    await modulePage.gotoList();
 
-    // Find test account to delete
-    const rows = page.locator('ui-data-table tbody tr, table tbody tr');
-    const rowCount = await rows.count();
+    const rowIndex = await modulePage.findRowWithText('E2E');
+    test.skip(rowIndex === -1, 'No test account found to delete');
 
-    let rowIndex = -1;
-    for (let i = 0; i < rowCount; i++) {
-      const rowText = await rows.nth(i).textContent();
-      if (rowText?.includes('E2E') || rowText?.includes('e2e')) {
-        rowIndex = i;
-        break;
-      }
-    }
+    await modulePage.clickDeleteAndConfirm(rowIndex);
 
-    if (rowIndex === -1) {
-      test.skip(true, 'No test account found to delete');
-      return;
-    }
-
-    // Open actions dropdown for the found row
-    const actionsDropdown = page.locator('ui-table-actions-dropdown').nth(rowIndex);
-    await actionsDropdown.locator('button').first().click();
-
-    // Click Delete
-    await page.locator('text="Delete"').first().click();
-
-    // Confirm deletion if dialog appears
-    const confirmBtn = page.locator('button:has-text("Confirm"), button:has-text("Yes"), button:has-text("Delete")').last();
-    if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmBtn.click();
-    }
-
-    // Wait for delete request
-    await page.waitForResponse(
-      resp => resp.url().includes('/clients') && resp.request().method() === 'DELETE',
-      { timeout: 10000 }
-    ).catch(() => {});
-
-    // Verify still on accounts page
-    await expect(page).toHaveURL(/\/accounts/, { timeout: 5000 });
+    await page.waitForTimeout(300);
+    await expect(page).toHaveURL(/\/accounts\/list/);
   });
 
   test('7. should search/filter accounts', async ({ page }) => {
-    // Wait for table data
-    await page.waitForResponse(
-      resp => resp.url().includes('/clients') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
+    await modulePage.gotoList();
 
-    // Find search input
-    const searchInput = page.locator('ui-list-header input[type="text"], input[placeholder*="Search"]').first();
+    // Search is client-side
+    await modulePage.search('test');
 
-    // Search for an account
-    await searchInput.fill('test');
-    await page.waitForTimeout(500);
-
-    // Table should still be visible
-    const table = page.locator('ui-data-table, table').first();
-    await expect(table).toBeVisible();
+    await expect(modulePage.table).toBeVisible();
   });
 
   test('8. should navigate through account tabs', async ({ page }) => {
-    // Go to edit page of first account
-    await page.waitForResponse(
-      resp => resp.url().includes('/clients') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
+    await modulePage.gotoList();
+    await modulePage.clickEdit(0);
 
-    // Open actions and click edit
-    const actionsDropdown = page.locator('ui-table-actions-dropdown').first();
-    await actionsDropdown.locator('button').first().click();
-    await page.locator('text="Edit"').first().click();
+    // Check for tabs
+    const tabsSection = page.locator('ui-tabs').first();
+    await expect(tabsSection).toBeVisible({ timeout: 5000 });
 
-    // Wait for edit page
-    await expect(page).toHaveURL(/\/accounts\/[\w-]+\/edit/, { timeout: 10000 });
-    await page.waitForLoadState('networkidle');
-
-    // Check for tabs component - only test tabs that don't navigate away
-    const tabsSection = page.locator('.tabs-section, ui-tabs').first();
-    if (await tabsSection.isVisible({ timeout: 5000 }).catch(() => false)) {
-      // Click through internal tab items only (within ui-tabs component)
-      // These tabs switch content without changing URL
-      const internalTabNames = ['Contacts', 'Addresses', 'Machines'];
-      for (const tabName of internalTabNames) {
-        const tab = tabsSection.locator(`button:has-text("${tabName}"), [role="tab"]:has-text("${tabName}")`).first();
-        if (await tab.isVisible({ timeout: 2000 }).catch(() => false)) {
-          await tab.click();
-          await page.waitForTimeout(300);
-        }
+    // Click through internal tabs
+    const internalTabNames = ['Contacts', 'Addresses', 'Machines'];
+    for (const tabName of internalTabNames) {
+      const tab = tabsSection.locator(`button:has-text("${tabName}"), [role="tab"]:has-text("${tabName}")`).first();
+      if (await tab.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await tab.click();
+        await page.waitForTimeout(300);
       }
     }
 
-    // Verify we're still on the edit page
     await expect(page).toHaveURL(/\/accounts\/[\w-]+\/edit/);
   });
 
   test('9. should toggle account status', async ({ page }) => {
-    // Go to edit page of first account
-    await page.waitForResponse(
-      resp => resp.url().includes('/clients') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
-
-    // Open actions and click edit
-    const actionsDropdown = page.locator('ui-table-actions-dropdown').first();
-    await actionsDropdown.locator('button').first().click();
-    await page.locator('text="Edit"').first().click();
-
-    // Wait for edit page
-    await expect(page).toHaveURL(/\/accounts\/[\w-]+\/edit/, { timeout: 10000 });
-    await page.waitForLoadState('networkidle');
+    await modulePage.gotoList();
+    await modulePage.clickEdit(0);
 
     // Find the "Is active" toggle
     const activeToggle = page.locator('ui-toggle').filter({ hasText: /active/i }).first();
-    if (await activeToggle.isVisible({ timeout: 3000 }).catch(() => false)) {
-      // Click to toggle the state
-      await activeToggle.click();
-      await page.waitForTimeout(300);
+    await expect(activeToggle).toBeVisible({ timeout: 3000 });
 
-      // Toggle back to original state
-      await activeToggle.click();
-    }
+    // Click to toggle the state
+    await activeToggle.click();
+    await page.waitForTimeout(300);
 
-    // Verify we're still on the edit page
+    // Toggle back to original state
+    await activeToggle.click();
+
     await expect(page).toHaveURL(/\/accounts\/[\w-]+\/edit/);
   });
 
   test('10. should cancel and go back to list', async ({ page }) => {
-    // Go to create form
-    await page.goto('/admin/accounts/new');
-    await page.waitForLoadState('networkidle');
+    await modulePage.gotoCreate();
+    await modulePage.goBack();
 
-    // Click back button
-    const backButton = page.locator('ui-detail-header button').first();
-    await backButton.click();
-
-    // Verify redirect to list
-    await expect(page).toHaveURL(/\/accounts/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/accounts\/list/);
   });
 });

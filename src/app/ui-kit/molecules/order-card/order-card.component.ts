@@ -4,14 +4,14 @@ import { RouterModule } from '@angular/router';
 import { BadgeComponent, ButtonComponent, BadgeVariant } from '@app/ui-kit/atoms';
 import { CardComponent } from '../card/card.component';
 
-export type OrderCardType = 'order' | 'inquiry';
-export type OrderCardStatus = 
-  | 'submitted' 
-  | 'in-review' 
-  | 'in-progress' 
-  | 'more-info' 
+export type OrderCardType = 'order';
+export type OrderCardStatus =
+  | 'submitted'
+  | 'in-review'
+  | 'in-progress'
+  | 'more-info'
   | 'confirmed'
-  | 'in-transit' 
+  | 'in-transit'
   | 'dispatched'
   | 'completed'
   | 'cancelled'
@@ -71,9 +71,6 @@ export class OrderCardComponent {
   }
 
   getDetailLink(): string {
-    if (this.routePrefix === '/customer') {
-      return `/customer/inquiry/${this.data.id.replace('#', '')}`;
-    }
     return `${this.routePrefix}/shop-orders/${this.data.id}/edit`;
   }
 }

@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { HttpParams } from '@angular/common/http';
 import { Product, ProductsCollection } from '@core/models';
 import { BaseHttpService } from './base-http.service';
 
@@ -44,22 +43,6 @@ export class ProductService extends BaseHttpService {
    */
   searchProducts(query: string): Observable<ProductsCollection> {
     const params = this.buildParams({ name: query });
-    return this.getWithJsonLd<ProductsCollection>(this.endpoint, params);
-  }
-
-  /**
-   * Get products filtered by machine
-   */
-  getProductsByMachine(machineId: string): Observable<ProductsCollection> {
-    const params = new HttpParams().set('machines.id', machineId);
-    return this.getWithJsonLd<ProductsCollection>(this.endpoint, params);
-  }
-
-  /**
-   * Get products for a specific machine (by article description search)
-   */
-  getProductsByMachineDescription(description: string): Observable<ProductsCollection> {
-    const params = new HttpParams().set('machines.articleDescription', description);
     return this.getWithJsonLd<ProductsCollection>(this.endpoint, params);
   }
 

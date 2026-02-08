@@ -5,7 +5,6 @@ export interface SupportTicket {
   subject: string;
   message: string;
   orderId?: string;
-  machine?: string;
   urgency: 'low' | 'medium' | 'high';
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
   attachment?: {

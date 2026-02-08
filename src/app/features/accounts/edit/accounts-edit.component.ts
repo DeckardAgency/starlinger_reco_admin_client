@@ -51,12 +51,6 @@ interface ShopOrder {
   status: 'completed' | 'delayed' | 'failed' | 'in-review' | 'archived';
 }
 
-interface Machine {
-  machineId: string;
-  location: string;
-  name: string;
-}
-
 // Default empty account for new mode
 const EMPTY_ACCOUNT: Account = {
   id: 0,
@@ -127,14 +121,11 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('orderCustomerTemplate') orderCustomerTemplate!: TemplateRef<any>;
   @ViewChild('orderStatusTemplate') orderStatusTemplate!: TemplateRef<any>;
   @ViewChild('orderActionsTemplate') orderActionsTemplate!: TemplateRef<any>;
-  @ViewChild('machineActionsTemplate') machineActionsTemplate!: TemplateRef<any>;
-
   // Table column configs
   contactsColumns: TableColumn[] = [];
   addressesColumns: TableColumn[] = [];
   shopOrdersColumns: TableColumn[] = [];
   manualEntriesColumns: TableColumn[] = [];
-  machinesColumns: TableColumn[] = [];
 
   // Mode tracking
   isEditMode = signal(false);
@@ -154,9 +145,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Manual entries data - starts empty, loaded in edit mode
   manualEntries = signal<ShopOrder[]>([]);
-
-  // Machines data - starts empty, loaded in edit mode
-  machines = signal<Machine[]>([]);
 
   // Tabs configuration
   tabs: TabItem[] = [
@@ -314,13 +302,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       { key: 'actions', label: '', width: '64px', template: this.orderActionsTemplate }
     ];
 
-    // Machines columns
-    this.machinesColumns = [
-      { key: 'machineId', label: 'Machine ID', width: '150px' },
-      { key: 'location', label: 'Location', width: '200px' },
-      { key: 'name', label: 'Name' },
-      { key: 'actions', label: '', width: '64px', template: this.machineActionsTemplate }
-    ];
   }
 
   ngOnDestroy(): void {
@@ -334,7 +315,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.addresses.set([]);
     this.shopOrders.set([]);
     this.manualEntries.set([]);
-    this.machines.set([]);
     this.isActive.set(true);
     this.isLegalEntity.set(false);
     this.activeTab.set('contacts');
@@ -362,7 +342,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       next: (client) => {
         this.account.set(this.mapClientToAccount(client));
         this.manualEntries.set([]);
-        this.machines.set([]);
         this.isActive.set(client.isActive ?? true);
         this.isLegalEntity.set(client.isLegalEntity ?? false);
         this.isLoading.set(false);
@@ -505,8 +484,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   totalAddresses = computed(() => this.addresses().length);
   totalShopOrders = computed(() => this.shopOrders().length);
   totalManualEntries = computed(() => this.manualEntries().length);
-  totalMachines = computed(() => this.machines().length);
-
   // Get current tab count
   currentTabCount = computed(() => {
     switch (this.activeTab()) {
@@ -514,7 +491,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'addresses': return this.totalAddresses();
       case 'shop-orders': return this.totalShopOrders();
       case 'manual-entries': return this.totalManualEntries();
-      case 'machines': return this.totalMachines();
       default: return 0;
     }
   });
@@ -526,7 +502,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'addresses': return 'Add address';
       case 'shop-orders': return 'Add order';
       case 'manual-entries': return 'Add entry';
-      case 'machines': return 'Add machine';
       default: return 'Add';
     }
   });

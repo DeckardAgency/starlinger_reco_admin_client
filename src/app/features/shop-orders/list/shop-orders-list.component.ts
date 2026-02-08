@@ -2,7 +2,6 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
@@ -14,12 +13,11 @@ import { ListHeaderComponent } from '@app/ui-kit/molecules/list-header/list-head
 import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-footer.component';
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { OrderService } from '@core/services/http/order.service';
-import { InquiryService, Inquiry } from '@core/services/http/inquiry.service';
 import { Order } from '@core/models/order.model';
 
 interface ShopOrder {
   id: string;
-  type: 'order' | 'manual';
+  type: 'order';
   dateCreated: string;
   internalRef: string;
   customer: {
@@ -56,7 +54,6 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private orderService = inject(OrderService);
-  private inquiryService = inject(InquiryService);
 
   @ViewChild('typeTemplate') typeTemplate!: TemplateRef<any>;
   @ViewChild('customerTemplate') customerTemplate!: TemplateRef<any>;
@@ -158,17 +155,13 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   private loadData(): void {
     this.isLoading.set(true);
 
-    forkJoin({
-      orders: this.orderService.getOrders(),
-      inquiries: this.inquiryService.getInquiries()
-    }).subscribe({
-      next: ({ orders, inquiries }) => {
-        const orderItems = orders.orders.map(o => this.mapOrderToShopOrder(o));
-        const inquiryItems = inquiries.inquiries.map(i => this.mapInquiryToShopOrder(i));
-        const combined = [...orderItems, ...inquiryItems].sort((a, b) =>
+    this.orderService.getOrders().subscribe({
+      next: (response) => {
+        const orderItems = response.orders.map(o => this.mapOrderToShopOrder(o));
+        const sorted = orderItems.sort((a, b) =>
           this.parseDate(b.dateCreated) - this.parseDate(a.dateCreated)
         );
-        this.allOrders.set(combined);
+        this.allOrders.set(sorted);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
@@ -191,19 +184,6 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
       customer: { name: userName, initials: this.getInitials(userName) },
       partsOrdered: order.items?.length || 0,
       status: this.mapStatus(order.status)
-    };
-  }
-
-  private mapInquiryToShopOrder(inquiry: Inquiry): ShopOrder {
-    const userName = inquiry.user ? `${inquiry.user.firstName || ''} ${inquiry.user.lastName || ''}`.trim() || 'Unknown' : 'Unknown';
-    return {
-      id: inquiry.id,
-      type: 'manual',
-      dateCreated: this.formatDate(inquiry.createdAt),
-      internalRef: inquiry.inquiryNumber?.toString() || inquiry.id,
-      customer: { name: userName, initials: this.getInitials(userName) },
-      partsOrdered: inquiry.machines?.length || 0,
-      status: this.mapStatus(inquiry.status)
     };
   }
 
@@ -310,7 +290,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   }
 
   getTypeLabel(type: string): string {
-    return type === 'order' ? 'Order' : 'Manual';
+    return 'Order';
   }
 
   getStatusLabel(status: string): string {

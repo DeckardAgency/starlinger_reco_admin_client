@@ -22,7 +22,7 @@ export class QuickActionsComponent {
     {
       type: 'contact-sales',
       title: 'Contact Sales Manager',
-      description: 'Access direct communication channel for expert support, technical consultations and inquiry status.',
+      description: 'Access direct communication channel for expert support, technical consultations and order status.',
       buttonLabel: 'Contact',
       routerLink: '/contact'
     }

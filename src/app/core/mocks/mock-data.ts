@@ -304,149 +304,6 @@ export const mockOrders = [
 ];
 
 // =============================================================================
-// MOCK INQUIRIES
-// =============================================================================
-
-export const mockInquiries = [
-  {
-    '@id': '/api/v1/inquiries/inq-001',
-    '@type': 'Inquiry',
-    id: 'inq-001',
-    inquiryNumber: 'INQ-2024-001',
-    status: 'in_progress',
-    createdAt: '2024-12-01T10:00:00Z',
-    updatedAt: '2024-12-05T15:30:00Z',
-    user: {
-      firstName: 'Thomas',
-      lastName: 'Schmidt',
-      email: 'thomas@plastics-gmbh.de',
-      client: { companyName: 'Plastics GmbH' }
-    },
-    machines: [
-      { name: 'recoSTAR dynamic 65', products: [{ name: 'Bearing' }, { name: 'Filter' }] }
-    ]
-  },
-  {
-    '@id': '/api/v1/inquiries/inq-002',
-    '@type': 'Inquiry',
-    id: 'inq-002',
-    inquiryNumber: 'INQ-2024-002',
-    status: 'submitted',
-    createdAt: '2024-12-10T09:30:00Z',
-    updatedAt: '2024-12-10T09:30:00Z',
-    user: {
-      firstName: 'Michael',
-      lastName: 'Weber',
-      email: 'michael@recycling-solutions.ch',
-      client: { companyName: 'Recycling Solutions AG' }
-    },
-    machines: [
-      { name: 'recoSTAR PET 165', products: [{ name: 'Motor' }] }
-    ]
-  },
-  {
-    '@id': '/api/v1/inquiries/inq-003',
-    '@type': 'Inquiry',
-    id: 'inq-003',
-    inquiryNumber: 'INQ-2024-003',
-    status: 'completed',
-    createdAt: '2024-11-20T14:00:00Z',
-    updatedAt: '2024-11-28T11:00:00Z',
-    user: {
-      firstName: 'Lisa',
-      lastName: 'Bauer',
-      email: 'lisa@ecoplast.at',
-      client: { companyName: 'EcoPlast Industries' }
-    },
-    machines: [
-      { name: 'recoSTAR universal', products: [{ name: 'Heater' }, { name: 'Blade' }, { name: 'Filter' }] }
-    ]
-  },
-  {
-    '@id': '/api/v1/inquiries/inq-004',
-    '@type': 'Inquiry',
-    id: 'inq-004',
-    inquiryNumber: 'INQ-2024-004',
-    status: 'more_info',
-    createdAt: '2024-12-08T16:45:00Z',
-    updatedAt: '2024-12-09T10:15:00Z',
-    user: {
-      firstName: 'Anna',
-      lastName: 'Müller',
-      email: 'anna@plastics-gmbh.de',
-      client: { companyName: 'Plastics GmbH' }
-    },
-    machines: [
-      { name: 'recoSTAR dynamic 85', products: [{ name: 'Screw' }] }
-    ]
-  },
-  {
-    '@id': '/api/v1/inquiries/inq-005',
-    '@type': 'Inquiry',
-    id: 'inq-005',
-    inquiryNumber: 'INQ-2024-005',
-    status: 'in_review',
-    createdAt: '2024-12-11T08:20:00Z',
-    updatedAt: '2024-12-12T14:00:00Z',
-    user: {
-      firstName: 'Peter',
-      lastName: 'Hoffmann',
-      email: 'peter@recycling-solutions.ch',
-      client: { companyName: 'Recycling Solutions AG' }
-    },
-    machines: [
-      { name: 'recoSTAR PET iV+', products: [{ name: 'Bearing' }, { name: 'Motor' }] }
-    ]
-  }
-];
-
-// =============================================================================
-// MOCK MACHINES
-// =============================================================================
-
-export const mockMachines = [
-  {
-    '@id': '/api/v1/machines/mch-001',
-    '@type': 'Machine',
-    id: 'mch-001',
-    serialNumber: 'RS-DYN-65-2021-001',
-    name: 'recoSTAR dynamic 65',
-    model: 'dynamic 65',
-    category: 'Recycling Line',
-    installationDate: '2021-06-15',
-    warrantyEndDate: '2024-06-15',
-    status: 'operational',
-    client: mockClients[0]
-  },
-  {
-    '@id': '/api/v1/machines/mch-002',
-    '@type': 'Machine',
-    id: 'mch-002',
-    serialNumber: 'RS-PET-165-2022-001',
-    name: 'recoSTAR PET 165',
-    model: 'PET 165',
-    category: 'PET Recycling',
-    installationDate: '2022-03-20',
-    warrantyEndDate: '2025-03-20',
-    status: 'operational',
-    client: mockClients[1]
-  },
-  {
-    '@id': '/api/v1/machines/mch-003',
-    '@type': 'Machine',
-    id: 'mch-003',
-    serialNumber: 'RS-UNI-2020-001',
-    name: 'recoSTAR universal',
-    model: 'universal',
-    category: 'Recycling Line',
-    installationDate: '2020-09-10',
-    warrantyEndDate: '2023-09-10',
-    status: 'maintenance',
-    client: mockClients[2]
-  }
-];
-
-// =============================================================================
 // MOCK DASHBOARD DATA
 // =============================================================================
 
@@ -464,24 +321,6 @@ export const mockDashboardPerformance = {
     percentageChange: 123.0,
     trend: 'up' as const,
     history: [12, 15, 14, 18, 16, 19, 20]
-  },
-  manualInquiries: {
-    value: 33,
-    percentageChange: 97.0,
-    trend: 'up' as const,
-    history: [18, 22, 25, 28, 30, 31, 33]
-  },
-  activeInquiries: {
-    value: 7,
-    percentageChange: 30.0,
-    trend: 'up' as const,
-    history: [4, 5, 5, 6, 6, 7, 7]
-  },
-  cancelledInquiries: {
-    value: 3,
-    percentageChange: 15.0,
-    trend: 'up' as const,
-    history: [1, 2, 2, 2, 3, 3, 3]
   },
   activeCarts: {
     value: 5,
@@ -515,11 +354,9 @@ export const mockDashboardPerformance = {
 export const mockPerformanceData = {
   totalRevenue: 125430.50,
   totalOrders: 156,
-  totalInquiries: 89,
   averageOrderValue: 804.04,
   revenueChange: 12.5,
   ordersChange: 8.3,
-  inquiriesChange: -2.1,
   avgOrderValueChange: 4.2
 };
 
@@ -536,18 +373,7 @@ export const mockOrderStatusDistribution = {
   ]
 };
 
-export const mockInquiryStatusDistribution = {
-  total: 89,
-  distribution: [
-    { status: 'submitted', label: 'Submitted', count: 15 },
-    { status: 'in_review', label: 'In Review', count: 12 },
-    { status: 'more_info', label: 'More Info Needed', count: 8 },
-    { status: 'information_provided', label: 'Info Provided', count: 6 },
-    { status: 'in_progress', label: 'In Progress', count: 18 },
-    { status: 'completed', label: 'Completed', count: 28 },
-    { status: 'canceled', label: 'Canceled', count: 2 }
-  ]
-};
+
 
 // =============================================================================
 // MOCK CONTACTS
@@ -980,7 +806,7 @@ export const mockAdminUsers = [
 
 export interface OrderHistoryItem {
   id: string;
-  type: 'order' | 'inquiry';
+  type: 'order';
   dateCreated: string;
   internalRef: string;
   customer: {
@@ -1003,7 +829,7 @@ export interface OrderDetailProduct {
   price: number;
 }
 
-export interface OrderDetailMachineGroup {
+export interface OrderDetailProductGroup {
   id: string;
   name: string;
   products: OrderDetailProduct[];
@@ -1018,39 +844,16 @@ export interface OrderDetailLogMessage {
   message: string;
 }
 
-// Inquiry detail for "Inquiry" type (with parts details)
-export interface InquiryDetailFile {
-  id: string;
-  name: string;
-  type: 'pdf' | 'image' | 'spreadsheet';
-  size: string;
-}
-
-export interface InquiryDetailPart {
-  id: string;
-  partNumber: string;
-  machineName: string;
-  productName: string;
-  description: string;
-  files: InquiryDetailFile[];
-  notes: string;
-  isExpanded: boolean;
-}
-
 export interface OrderDetail {
   id: string;
-  type: 'order' | 'inquiry';
+  type: 'order';
   internalRef: string;
   dateCreated: string;
-  partsOrdered?: number; // Only for orders
+  partsOrdered?: number;
   status: string;
-  // Order-specific
-  machineGroups?: OrderDetailMachineGroup[];
+  productGroups?: OrderDetailProductGroup[];
   totalPrice?: number;
   amountPaid?: number;
-  // Inquiry-specific
-  parts?: InquiryDetailPart[];
-  // Common
   logMessages: OrderDetailLogMessage[];
 }
 
@@ -1062,9 +865,9 @@ export const mockOrderDetails: Record<string, OrderDetail> = {
     dateCreated: '14-03-2024',
     partsOrdered: 12,
     status: 'completed',
-    machineGroups: [
+    productGroups: [
       {
-        id: 'machine-1',
+        id: 'group-1',
         name: '200XE Winding Machine',
         isExpanded: true,
         products: [
@@ -1074,7 +877,7 @@ export const mockOrderDetails: Record<string, OrderDetail> = {
         ]
       },
       {
-        id: 'machine-2',
+        id: 'group-2',
         name: 'Alpha 6.0 Machine',
         isExpanded: true,
         products: [
@@ -1086,57 +889,12 @@ export const mockOrderDetails: Record<string, OrderDetail> = {
     totalPrice: 9764.19,
     amountPaid: 7811.35,
     logMessages: [
-      { status: 'Completed', statusVariant: 'success', dateTime: '19-03-2024 | 16:30', user: '#username', message: 'Inquiry completed' },
-      { status: 'In progress', statusVariant: 'warning', dateTime: '19-03-2024 | 16:30', user: 'Starlinger', message: 'Inquiry in progress' },
+      { status: 'Completed', statusVariant: 'success', dateTime: '19-03-2024 | 16:30', user: '#username', message: 'Order completed' },
+      { status: 'In progress', statusVariant: 'warning', dateTime: '19-03-2024 | 16:30', user: 'Starlinger', message: 'Order in progress' },
       { status: 'Information provided', statusVariant: 'warning', dateTime: '18-03-2024 | 09:15', user: '#username', message: 'Missing information provided by the customer.' },
       { status: 'More info', statusVariant: 'warning', dateTime: '17-03-2024 | 14:45', user: 'Starlinger', message: 'Missing information requested by the admin.' },
-      { status: 'In review', statusVariant: 'warning', dateTime: '16-03-2024 | 10:00', user: 'Starlinger', message: 'Inquiry in review by the admin.' },
-      { status: 'Submitted', statusVariant: 'info', dateTime: '15-03-2024 | 19:30', user: '#username', message: 'Inquiry submitted by the customer.' }
-    ]
-  },
-  '0003': {
-    id: '0003',
-    type: 'inquiry',
-    internalRef: '004231-UGR',
-    dateCreated: '14-03-2024',
-    status: 'completed',
-    parts: [
-      {
-        id: 'part-1',
-        partNumber: 'Part 1',
-        machineName: 'ad*StarKON Machine',
-        productName: 'Power panel T30 4,3" WQVGA color touch',
-        description: 'Hello! I need a replacement part for my 200XE Winding Machine. Not sure about the exact part needed, please check the attached files for more info.',
-        files: [
-          { id: 'f1', name: 'electric_response.pdf', type: 'pdf', size: '3.4 MB' },
-          { id: 'f2', name: 'machine_side_view_99.jpg', type: 'image', size: '1.2 MB' },
-          { id: 'f3', name: 'system_error_report.xls', type: 'spreadsheet', size: '0.3MB' }
-        ],
-        notes: 'Please get back to us ASAP, we need this part urgent, production stopped!',
-        isExpanded: true
-      },
-      {
-        id: 'part-2',
-        partNumber: 'Part 2',
-        machineName: 'EX200 Weaving Machine',
-        productName: 'Power panel T30 4,3" WQVGA color touch',
-        description: 'Hello! I need a replacement part for my 200XE Winding Machine. Not sure about the exact part needed, please check the attached files for more info.',
-        files: [
-          { id: 'f4', name: 'electric_response.pdf', type: 'pdf', size: '3.4 MB' },
-          { id: 'f5', name: 'machine_side_view_99.jpg', type: 'image', size: '1.2 MB' },
-          { id: 'f6', name: 'system_error_report.xls', type: 'spreadsheet', size: '0.3MB' }
-        ],
-        notes: 'Please get back to us ASAP, we need this part urgent, production stopped!',
-        isExpanded: true
-      }
-    ],
-    logMessages: [
-      { status: 'Completed', statusVariant: 'success', dateTime: '19-03-2024 | 16:30', user: '#username', message: 'Inquiry completed' },
-      { status: 'In progress', statusVariant: 'warning', dateTime: '19-03-2024 | 16:30', user: 'Starlinger', message: 'Inquiry in progress' },
-      { status: 'Information provided', statusVariant: 'warning', dateTime: '18-03-2024 | 09:15', user: '#username', message: 'Missing information provided by the customer.' },
-      { status: 'More info', statusVariant: 'warning', dateTime: '17-03-2024 | 14:45', user: 'Starlinger', message: 'Missing information requested by the admin.' },
-      { status: 'In review', statusVariant: 'warning', dateTime: '16-03-2024 | 10:00', user: 'Starlinger', message: 'Inquiry in review by the admin.' },
-      { status: 'Submitted', statusVariant: 'info', dateTime: '15-03-2024 | 19:30', user: '#username', message: 'Inquiry submitted by the customer.' }
+      { status: 'In review', statusVariant: 'warning', dateTime: '16-03-2024 | 10:00', user: 'Starlinger', message: 'Order in review by the admin.' },
+      { status: 'Submitted', statusVariant: 'info', dateTime: '15-03-2024 | 19:30', user: '#username', message: 'Order submitted by the customer.' }
     ]
   }
 };
@@ -1144,20 +902,20 @@ export const mockOrderDetails: Record<string, OrderDetail> = {
 export const mockOrderHistory: OrderHistoryItem[] = [
   { id: '0001', type: 'order', dateCreated: '14-03-2024', internalRef: '000123-ABC', customer: { name: 'Anes Kapetanovic', initials: 'AK' }, partsOrdered: 12, status: 'completed' },
   { id: '0002', type: 'order', dateCreated: '14-03-2024', internalRef: '000987-EAD', customer: { name: 'Anes Kapetanovic', initials: 'AK' }, partsOrdered: 192, status: 'pending' },
-  { id: '0003', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '004231-UGR', customer: { name: 'Martin Ertl', initials: 'ME' }, partsOrdered: 48, status: 'completed' },
+  { id: '0003', type: 'order', dateCreated: '14-03-2024', internalRef: '004231-UGR', customer: { name: 'Martin Ertl', initials: 'ME' }, partsOrdered: 48, status: 'completed' },
   { id: '0004', type: 'order', dateCreated: '14-03-2024', internalRef: '001456-ZXY', customer: { name: 'Martin Ertl', initials: 'ME' }, partsOrdered: 36, status: 'cancelled' },
   { id: '0005', type: 'order', dateCreated: '14-03-2024', internalRef: '002789-WPQ', customer: { name: 'Anes Kapetanovic', initials: 'AK', avatar: 'assets/avatars/anes.jpg' }, partsOrdered: 24, status: 'cancelled' },
-  { id: '0006', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '005678-MNB', customer: { name: 'Anes Kapetanovic', initials: 'AK' }, partsOrdered: 60, status: 'completed' },
-  { id: '0007', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '003234-LJK', customer: { name: 'Ivan Jozic', initials: 'IJ' }, partsOrdered: 72, status: 'completed' },
-  { id: '0008', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '007890-QWE', customer: { name: 'Mira Kulic', initials: 'MK' }, partsOrdered: 15, status: 'completed' },
-  { id: '0009', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '009876-RYT', customer: { name: 'Sofia Lichtenstein', initials: 'SL' }, partsOrdered: 84, status: 'completed' },
+  { id: '0006', type: 'order', dateCreated: '14-03-2024', internalRef: '005678-MNB', customer: { name: 'Anes Kapetanovic', initials: 'AK' }, partsOrdered: 60, status: 'completed' },
+  { id: '0007', type: 'order', dateCreated: '14-03-2024', internalRef: '003234-LJK', customer: { name: 'Ivan Jozic', initials: 'IJ' }, partsOrdered: 72, status: 'completed' },
+  { id: '0008', type: 'order', dateCreated: '14-03-2024', internalRef: '007890-QWE', customer: { name: 'Mira Kulic', initials: 'MK' }, partsOrdered: 15, status: 'completed' },
+  { id: '0009', type: 'order', dateCreated: '14-03-2024', internalRef: '009876-RYT', customer: { name: 'Sofia Lichtenstein', initials: 'SL' }, partsOrdered: 84, status: 'completed' },
   { id: '0010', type: 'order', dateCreated: '14-03-2024', internalRef: '006543-PLM', customer: { name: 'Tommy Barlow', initials: 'TB' }, partsOrdered: 30, status: 'cancelled' },
   { id: '0011', type: 'order', dateCreated: '14-03-2024', internalRef: '008765-VBN', customer: { name: 'Yara Nasr', initials: 'YN' }, partsOrdered: 99, status: 'cancelled' },
   { id: '0012', type: 'order', dateCreated: '15-03-2024', internalRef: '010101-XYZ', customer: { name: 'Diana Patel', initials: 'DP' }, partsOrdered: 57, status: 'completed' },
   { id: '0013', type: 'order', dateCreated: '15-03-2024', internalRef: '011213-ABC', customer: { name: 'Roger Lee', initials: 'RL' }, partsOrdered: 81, status: 'completed' },
   { id: '0014', type: 'order', dateCreated: '16-03-2024', internalRef: '012345-DEF', customer: { name: 'Sara Wong', initials: 'SW' }, partsOrdered: 40, status: 'cancelled' },
-  { id: '0015', type: 'inquiry', dateCreated: '16-03-2024', internalRef: '013456-GHI', customer: { name: 'Jack Monroe', initials: 'JM' }, partsOrdered: 22, status: 'cancelled' },
-  { id: '0016', type: 'inquiry', dateCreated: '17-03-2024', internalRef: '014567-JKL', customer: { name: 'Clara Thompson', initials: 'CT' }, partsOrdered: 66, status: 'cancelled' },
+  { id: '0015', type: 'order', dateCreated: '16-03-2024', internalRef: '013456-GHI', customer: { name: 'Jack Monroe', initials: 'JM' }, partsOrdered: 22, status: 'cancelled' },
+  { id: '0016', type: 'order', dateCreated: '17-03-2024', internalRef: '014567-JKL', customer: { name: 'Clara Thompson', initials: 'CT' }, partsOrdered: 66, status: 'cancelled' },
   { id: '0017', type: 'order', dateCreated: '17-03-2024', internalRef: '015678-MNO', customer: { name: 'Zara Nguyen', initials: 'ZN' }, partsOrdered: 3, status: 'completed' }
 ];
 
@@ -1334,37 +1092,37 @@ export const mockAdminProducts = [
 // =============================================================================
 
 export const mockManualEntries = [
-  { id: '0001', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '000123-ABC', customer: { name: 'Anes Kapetanovic', initials: 'AK' }, partsOrdered: 12, status: 'completed' },
-  { id: '0002', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '000987-EAD', customer: { name: 'Anes Kapetanovic', initials: 'AK' }, partsOrdered: 192, status: 'completed' },
-  { id: '0003', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '004231-UGR', customer: { name: 'Martin Ertl', initials: 'ME' }, partsOrdered: 48, status: 'archived' },
-  { id: '0004', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '001456-ZXY', customer: { name: 'Martin Ertl', initials: 'ME' }, partsOrdered: 36, status: 'rejected' },
-  { id: '0005', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '002789-WPQ', customer: { name: 'Anes Kapetanovic', initials: 'AK', avatar: 'assets/avatars/anes.jpg' }, partsOrdered: 24, status: 'cancelled' },
-  { id: '0006', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '005678-MNB', customer: { name: 'Anes Kapetanovic', initials: 'AK' }, partsOrdered: 60, status: 'completed' },
-  { id: '0007', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '003234-LJK', customer: { name: 'Ivan Jozic', initials: 'IJ' }, partsOrdered: 72, status: 'completed' },
-  { id: '0008', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '007890-QWE', customer: { name: 'Mira Kulic', initials: 'MK' }, partsOrdered: 15, status: 'completed' },
-  { id: '0009', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '009876-RYT', customer: { name: 'Sofia Lichtenstein', initials: 'SL' }, partsOrdered: 84, status: 'completed' },
-  { id: '0010', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '006543-PLM', customer: { name: 'Tommy Barlow', initials: 'TB' }, partsOrdered: 30, status: 'archived' },
-  { id: '0011', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '008765-VBN', customer: { name: 'Yara Nasr', initials: 'YN' }, partsOrdered: 99, status: 'rejected' },
-  { id: '0012', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '010101-XYZ', customer: { name: 'Diana Patel', initials: 'DP' }, partsOrdered: 57, status: 'completed' },
-  { id: '0013', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '011213-ABC', customer: { name: 'Roger Lee', initials: 'RL' }, partsOrdered: 81, status: 'completed' },
-  { id: '0014', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '012345-DEF', customer: { name: 'Sara Wong', initials: 'SW' }, partsOrdered: 40, status: 'archived' },
-  { id: '0015', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '013456-GHI', customer: { name: 'Jack Monroe', initials: 'JM' }, partsOrdered: 22, status: 'rejected' },
-  { id: '0016', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '014567-JKL', customer: { name: 'Clara Thompson', initials: 'CT' }, partsOrdered: 66, status: 'cancelled' },
-  { id: '0017', type: 'inquiry', dateCreated: '14-03-2024', internalRef: '015678-MNO', customer: { name: 'Zara Nguyen', initials: 'ZN' }, partsOrdered: 3, status: 'completed' }
+  { id: '0001', type: 'order', dateCreated: '14-03-2024', internalRef: '000123-ABC', customer: { name: 'Anes Kapetanovic', initials: 'AK' }, partsOrdered: 12, status: 'completed' },
+  { id: '0002', type: 'order', dateCreated: '14-03-2024', internalRef: '000987-EAD', customer: { name: 'Anes Kapetanovic', initials: 'AK' }, partsOrdered: 192, status: 'completed' },
+  { id: '0003', type: 'order', dateCreated: '14-03-2024', internalRef: '004231-UGR', customer: { name: 'Martin Ertl', initials: 'ME' }, partsOrdered: 48, status: 'archived' },
+  { id: '0004', type: 'order', dateCreated: '14-03-2024', internalRef: '001456-ZXY', customer: { name: 'Martin Ertl', initials: 'ME' }, partsOrdered: 36, status: 'rejected' },
+  { id: '0005', type: 'order', dateCreated: '14-03-2024', internalRef: '002789-WPQ', customer: { name: 'Anes Kapetanovic', initials: 'AK', avatar: 'assets/avatars/anes.jpg' }, partsOrdered: 24, status: 'cancelled' },
+  { id: '0006', type: 'order', dateCreated: '14-03-2024', internalRef: '005678-MNB', customer: { name: 'Anes Kapetanovic', initials: 'AK' }, partsOrdered: 60, status: 'completed' },
+  { id: '0007', type: 'order', dateCreated: '14-03-2024', internalRef: '003234-LJK', customer: { name: 'Ivan Jozic', initials: 'IJ' }, partsOrdered: 72, status: 'completed' },
+  { id: '0008', type: 'order', dateCreated: '14-03-2024', internalRef: '007890-QWE', customer: { name: 'Mira Kulic', initials: 'MK' }, partsOrdered: 15, status: 'completed' },
+  { id: '0009', type: 'order', dateCreated: '14-03-2024', internalRef: '009876-RYT', customer: { name: 'Sofia Lichtenstein', initials: 'SL' }, partsOrdered: 84, status: 'completed' },
+  { id: '0010', type: 'order', dateCreated: '14-03-2024', internalRef: '006543-PLM', customer: { name: 'Tommy Barlow', initials: 'TB' }, partsOrdered: 30, status: 'archived' },
+  { id: '0011', type: 'order', dateCreated: '14-03-2024', internalRef: '008765-VBN', customer: { name: 'Yara Nasr', initials: 'YN' }, partsOrdered: 99, status: 'rejected' },
+  { id: '0012', type: 'order', dateCreated: '14-03-2024', internalRef: '010101-XYZ', customer: { name: 'Diana Patel', initials: 'DP' }, partsOrdered: 57, status: 'completed' },
+  { id: '0013', type: 'order', dateCreated: '14-03-2024', internalRef: '011213-ABC', customer: { name: 'Roger Lee', initials: 'RL' }, partsOrdered: 81, status: 'completed' },
+  { id: '0014', type: 'order', dateCreated: '14-03-2024', internalRef: '012345-DEF', customer: { name: 'Sara Wong', initials: 'SW' }, partsOrdered: 40, status: 'archived' },
+  { id: '0015', type: 'order', dateCreated: '14-03-2024', internalRef: '013456-GHI', customer: { name: 'Jack Monroe', initials: 'JM' }, partsOrdered: 22, status: 'rejected' },
+  { id: '0016', type: 'order', dateCreated: '14-03-2024', internalRef: '014567-JKL', customer: { name: 'Clara Thompson', initials: 'CT' }, partsOrdered: 66, status: 'cancelled' },
+  { id: '0017', type: 'order', dateCreated: '14-03-2024', internalRef: '015678-MNO', customer: { name: 'Zara Nguyen', initials: 'ZN' }, partsOrdered: 3, status: 'completed' }
 ];
 
 // =============================================================================
-// MOCK ACTIVE INQUIRIES / ORDERS
+// MOCK ACTIVE ORDERS
 // =============================================================================
 
-export const mockActiveInquiries = [
+export const mockActiveOrders = [
   { id: '#0001', type: 'order', internalReference: '000123-ABC', dateCreated: '14-03-2024', partsOrdered: 12, status: 'submitted' },
   { id: '#0002', type: 'order', internalReference: '000987-EAD', dateCreated: '14-03-2024', partsOrdered: 12, status: 'submitted' },
-  { id: '#0003', type: 'inquiry', internalReference: '004231-UGR', dateCreated: '14-03-2024', partsOrdered: 12, status: 'in-review' },
-  { id: '#0004', type: 'inquiry', internalReference: '000987-EAD', dateCreated: '14-03-2024', partsOrdered: 12, status: 'more-info' },
+  { id: '#0003', type: 'order', internalReference: '004231-UGR', dateCreated: '14-03-2024', partsOrdered: 12, status: 'in-review' },
+  { id: '#0004', type: 'order', internalReference: '000987-EAD', dateCreated: '14-03-2024', partsOrdered: 12, status: 'more-info' },
   { id: '#0005', type: 'order', internalReference: '000123-ABC', dateCreated: '14-03-2024', partsOrdered: 12, status: 'submitted' },
   { id: '#0006', type: 'order', internalReference: '004231-UGR', dateCreated: '14-03-2024', partsOrdered: 12, status: 'dispatched' },
-  { id: '#0007', type: 'inquiry', internalReference: '000987-EAD', dateCreated: '14-03-2024', partsOrdered: 12, status: 'in-progress' }
+  { id: '#0007', type: 'order', internalReference: '000987-EAD', dateCreated: '14-03-2024', partsOrdered: 12, status: 'in-progress' }
 ];
 
 // =============================================================================
@@ -1412,9 +1170,9 @@ export const mockShopOrderDetail = {
   priceWithoutTax: 4764.74,
   totalPrice: 5724.20,
   priceTax: 956.40,
-  machineGroups: [
+  productGroups: [
     {
-      id: 'machine-1',
+      id: 'group-1',
       name: '200XE Winding Machine',
       isExpanded: true,
       products: [
@@ -1424,7 +1182,7 @@ export const mockShopOrderDetail = {
       ]
     },
     {
-      id: 'machine-2',
+      id: 'group-2',
       name: 'Alpha 6.0 Machine',
       isExpanded: true,
       products: [
@@ -1436,12 +1194,12 @@ export const mockShopOrderDetail = {
   orderTotal: 9764.19,
   amountPaid: 7811.352,
   logMessages: [
-    { status: 'Completed', statusVariant: 'success' as const, dateTime: '19-03-2024 | 16:30', user: '#username', message: 'Inquiry completed' },
-    { status: 'In progress', statusVariant: 'warning' as const, dateTime: '19-03-2024 | 16:30', user: 'Starlinger', message: 'Inquiry in progress' },
+    { status: 'Completed', statusVariant: 'success' as const, dateTime: '19-03-2024 | 16:30', user: '#username', message: 'Order completed' },
+    { status: 'In progress', statusVariant: 'warning' as const, dateTime: '19-03-2024 | 16:30', user: 'Starlinger', message: 'Order in progress' },
     { status: 'Information provided', statusVariant: 'warning' as const, dateTime: '18-03-2024 | 09:15', user: '#username', message: 'Missing information provided by the customer.' },
     { status: 'More info', statusVariant: 'warning' as const, dateTime: '17-03-2024 | 14:45', user: 'Starlinger', message: 'Missing information requested by the admin.' },
-    { status: 'In review', statusVariant: 'warning' as const, dateTime: '16-03-2024 | 10:00', user: 'Starlinger', message: 'Inquiry in review by the admin.' },
-    { status: 'Submitted', statusVariant: 'info' as const, dateTime: '15-03-2024 | 19:30', user: '#username', message: 'Inquiry submitted by the customer.' }
+    { status: 'In review', statusVariant: 'warning' as const, dateTime: '16-03-2024 | 10:00', user: 'Starlinger', message: 'Order in review by the admin.' },
+    { status: 'Submitted', statusVariant: 'info' as const, dateTime: '15-03-2024 | 19:30', user: '#username', message: 'Order submitted by the customer.' }
   ]
 };
 
@@ -1461,11 +1219,11 @@ export const mockManualEntryDetail = {
   priceWithoutTax: 4764.74,
   totalPrice: 5724.20,
   priceTax: 956.40,
-  inquiryParts: [
+  orderParts: [
     {
       id: 'part-1',
       partNumber: 'Part 1',
-      machineName: 'ad*StarKON Machine',
+      equipmentName: 'ad*StarKON Machine',
       productName: 'Power panel T30 4,3" WQVGA color touch',
       detailedDescription: 'Hello! I need a replacement part for my 200XE Winding Machine. Not sure about the exact part needed, please check the attached files for more info.',
       attachedFiles: [
@@ -1479,7 +1237,7 @@ export const mockManualEntryDetail = {
     {
       id: 'part-2',
       partNumber: 'Part 2',
-      machineName: 'EX200 Weaving Machine',
+      equipmentName: 'EX200 Weaving Machine',
       productName: 'Power panel T30 4,3" WQVGA color touch',
       detailedDescription: 'Hello! I need a replacement part for my 200XE Winding Machine. Not sure about the exact part needed, please check the attached files for more info.',
       attachedFiles: [
@@ -1492,12 +1250,12 @@ export const mockManualEntryDetail = {
     }
   ],
   logMessages: [
-    { status: 'Completed', statusVariant: 'success' as const, dateTime: '19-03-2024 | 16:30', user: '#username', message: 'Inquiry completed' },
-    { status: 'In progress', statusVariant: 'warning' as const, dateTime: '19-03-2024 | 16:30', user: 'Starlinger', message: 'Inquiry in progress' },
+    { status: 'Completed', statusVariant: 'success' as const, dateTime: '19-03-2024 | 16:30', user: '#username', message: 'Order completed' },
+    { status: 'In progress', statusVariant: 'warning' as const, dateTime: '19-03-2024 | 16:30', user: 'Starlinger', message: 'Order in progress' },
     { status: 'Information provided', statusVariant: 'warning' as const, dateTime: '18-03-2024 | 09:15', user: '#username', message: 'Missing information provided by the customer.' },
     { status: 'More info', statusVariant: 'warning' as const, dateTime: '17-03-2024 | 14:45', user: 'Starlinger', message: 'Missing information requested by the admin.' },
-    { status: 'In review', statusVariant: 'warning' as const, dateTime: '16-03-2024 | 10:00', user: 'Starlinger', message: 'Inquiry in review by the admin.' },
-    { status: 'Submitted', statusVariant: 'info' as const, dateTime: '15-03-2024 | 19:30', user: '#username', message: 'Inquiry submitted by the customer.' }
+    { status: 'In review', statusVariant: 'warning' as const, dateTime: '16-03-2024 | 10:00', user: 'Starlinger', message: 'Order in review by the admin.' },
+    { status: 'Submitted', statusVariant: 'info' as const, dateTime: '15-03-2024 | 19:30', user: '#username', message: 'Order submitted by the customer.' }
   ]
 };
 
@@ -1613,7 +1371,7 @@ export const mockCustomerQuickActions: QuickActionCardData[] = [
   {
     type: 'contact-sales',
     title: 'Contact Sales Manager',
-    description: 'Access direct communication channel for expert support, technical consultations and inquiry status.',
+    description: 'Access direct communication channel for expert support, technical consultations and order status.',
     buttonLabel: 'Contact'
   }
 ];
@@ -1621,14 +1379,14 @@ export const mockCustomerQuickActions: QuickActionCardData[] = [
 export const mockCustomerActiveOrders: OrderCardData[] = [
   { id: '#0001', type: 'order', internalReference: '000123-ABC', dateCreated: '14-03-2024', partsOrdered: 12, status: 'submitted' },
   { id: '#0002', type: 'order', internalReference: '000987-EAD', dateCreated: '14-03-2024', partsOrdered: 12, status: 'confirmed' },
-  { id: '#0003', type: 'inquiry', internalReference: '004231-UGR', dateCreated: '14-03-2024', partsOrdered: 12, status: 'in-review' }
+  { id: '#0003', type: 'order', internalReference: '004231-UGR', dateCreated: '14-03-2024', partsOrdered: 12, status: 'in-review' }
 ];
 
 export type HistoryStatus = 'completed' | 'cancelled' | 'in-review';
 export type HistoryType = 'order' | 'manual';
 
 export interface HistoryItem {
-  inquiryId: string;
+  id: string;
   type: HistoryType;
   dateCreated: string;
   internalReference: string;
@@ -1637,37 +1395,37 @@ export interface HistoryItem {
 }
 
 export const mockCustomerHistoryData: HistoryItem[] = [
-  { inquiryId: '0001', type: 'order', dateCreated: '14-03-2024', internalReference: '000123-ABC', partsOrdered: 12, status: 'completed' },
-  { inquiryId: '0002', type: 'order', dateCreated: '14-03-2024', internalReference: '000987-EAD', partsOrdered: 192, status: 'cancelled' },
-  { inquiryId: '0003', type: 'manual', dateCreated: '14-03-2024', internalReference: '004231-UGR', partsOrdered: 48, status: 'completed' },
-  { inquiryId: '0004', type: 'manual', dateCreated: '14-03-2024', internalReference: '001456-ZXY', partsOrdered: 36, status: 'completed' },
-  { inquiryId: '0005', type: 'order', dateCreated: '14-03-2024', internalReference: '002789-WPQ', partsOrdered: 24, status: 'cancelled' },
-  { inquiryId: '0006', type: 'manual', dateCreated: '14-03-2024', internalReference: '005678-MNB', partsOrdered: 60, status: 'completed' },
-  { inquiryId: '0007', type: 'order', dateCreated: '14-03-2024', internalReference: '003234-LJK', partsOrdered: 72, status: 'completed' }
+  { id: '0001', type: 'order', dateCreated: '14-03-2024', internalReference: '000123-ABC', partsOrdered: 12, status: 'completed' },
+  { id: '0002', type: 'order', dateCreated: '14-03-2024', internalReference: '000987-EAD', partsOrdered: 192, status: 'cancelled' },
+  { id: '0003', type: 'manual', dateCreated: '14-03-2024', internalReference: '004231-UGR', partsOrdered: 48, status: 'completed' },
+  { id: '0004', type: 'manual', dateCreated: '14-03-2024', internalReference: '001456-ZXY', partsOrdered: 36, status: 'completed' },
+  { id: '0005', type: 'order', dateCreated: '14-03-2024', internalReference: '002789-WPQ', partsOrdered: 24, status: 'cancelled' },
+  { id: '0006', type: 'manual', dateCreated: '14-03-2024', internalReference: '005678-MNB', partsOrdered: 60, status: 'completed' },
+  { id: '0007', type: 'order', dateCreated: '14-03-2024', internalReference: '003234-LJK', partsOrdered: 72, status: 'completed' }
 ];
 
 // =============================================================================
-// CUSTOMER INQUIRY PAGE MOCK DATA
+// CUSTOMER ORDER PAGE MOCK DATA
 // =============================================================================
 
-export const mockCustomerInquiryActiveOrders: OrderCardData[] = [
+export const mockCustomerActiveOrdersExtended: OrderCardData[] = [
   { id: '#0001', type: 'order', internalReference: '000123-ABC', dateCreated: '14-03-2024', partsOrdered: 12, status: 'submitted' },
   { id: '#0002', type: 'order', internalReference: '000987-EAD', dateCreated: '14-03-2024', partsOrdered: 12, status: 'confirmed' },
-  { id: '#0003', type: 'inquiry', internalReference: '004231-UGR', dateCreated: '14-03-2024', partsOrdered: 12, status: 'in-review' },
-  { id: '#0004', type: 'inquiry', internalReference: '000987-EAD', dateCreated: '14-03-2024', partsOrdered: 12, status: 'more-info' },
+  { id: '#0003', type: 'order', internalReference: '004231-UGR', dateCreated: '14-03-2024', partsOrdered: 12, status: 'in-review' },
+  { id: '#0004', type: 'order', internalReference: '000987-EAD', dateCreated: '14-03-2024', partsOrdered: 12, status: 'more-info' },
   { id: '#0005', type: 'order', internalReference: '000123-ABC', dateCreated: '14-03-2024', partsOrdered: 12, status: 'submitted' },
   { id: '#0006', type: 'order', internalReference: '004231-UGR', dateCreated: '14-03-2024', partsOrdered: 12, status: 'dispatched' },
-  { id: '#0007', type: 'inquiry', internalReference: '000987-EAD', dateCreated: '14-03-2024', partsOrdered: 12, status: 'in-progress' }
+  { id: '#0007', type: 'order', internalReference: '000987-EAD', dateCreated: '14-03-2024', partsOrdered: 12, status: 'in-progress' }
 ];
 
-export const mockCustomerInquiryHistoryOrders: OrderCardData[] = [
+export const mockCustomerHistoryOrdersExtended: OrderCardData[] = [
   { id: '#0008', type: 'order', internalReference: '000555-XYZ', dateCreated: '10-02-2024', partsOrdered: 8, status: 'completed' },
-  { id: '#0009', type: 'inquiry', internalReference: '000666-ABC', dateCreated: '05-02-2024', partsOrdered: 15, status: 'completed' },
+  { id: '#0009', type: 'order', internalReference: '000666-ABC', dateCreated: '05-02-2024', partsOrdered: 15, status: 'completed' },
   { id: '#0010', type: 'order', internalReference: '000777-DEF', dateCreated: '01-02-2024', partsOrdered: 6, status: 'cancelled' }
 ];
 
-export const mockCustomerInquiryDraftOrders: OrderCardData[] = [
-  { id: '#0011', type: 'inquiry', internalReference: '000888-GHI', dateCreated: '20-03-2024', partsOrdered: 3, status: 'draft' },
+export const mockCustomerDraftOrdersExtended: OrderCardData[] = [
+  { id: '#0011', type: 'order', internalReference: '000888-GHI', dateCreated: '20-03-2024', partsOrdered: 3, status: 'draft' },
   { id: '#0012', type: 'order', internalReference: '000999-JKL', dateCreated: '18-03-2024', partsOrdered: 20, status: 'draft' }
 ];
 
@@ -1851,8 +1609,7 @@ export function generateMockProducts(count: number = 30): any[] {
       createdAt: createdDate.toISOString(),
       updatedAt: updatedDate.toISOString(),
       imageGallery: [],
-      documents: [],
-      machines: []
+      documents: []
     });
   }
 

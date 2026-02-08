@@ -102,8 +102,8 @@ export interface UserMember {
 /**
  * User roles for the RECO application
  * - ROLE_USER: Base role (all authenticated users)
- * - ROLE_CLIENT: Customer role (shop, inquiry, search)
- * - ROLE_CLIENT_ADMIN: Customer Admin role (manages client users & machines)
+ * - ROLE_CLIENT: Customer role (shop, orders, search)
+ * - ROLE_CLIENT_ADMIN: Customer Admin role (manages client users)
  * - ROLE_SUPER_ADMIN: Starlinger Admin role (full system access)
  */
 export const USER_ROLES = {

@@ -12,12 +12,9 @@ import {
   mockClients,
   mockProducts,
   mockOrders,
-  mockInquiries,
-  mockMachines,
   mockPerformanceData,
   mockDashboardPerformance,
   mockOrderStatusDistribution,
-  mockInquiryStatusDistribution,
   mockContacts,
   mockDiscounts,
   mockUserList,
@@ -117,10 +114,6 @@ export class MockInterceptor implements HttpInterceptor {
       return mockOrderStatusDistribution;
     }
 
-    if (path.includes('/dashboard/inquiry-status-distribution') && method === 'GET') {
-      return mockInquiryStatusDistribution;
-    }
-
     // ==========================================================================
     // ORDERS
     // ==========================================================================
@@ -131,18 +124,6 @@ export class MockInterceptor implements HttpInterceptor {
     if (path.match(/\/orders\/[^\/]+$/) && method === 'GET') {
       const id = path.split('/').pop();
       return mockOrders.find(o => o.id === id) || mockOrders[0];
-    }
-
-    // ==========================================================================
-    // INQUIRIES
-    // ==========================================================================
-    if (path.match(/\/inquiries$/) && method === 'GET') {
-      return this.paginatedResponse(mockInquiries, '/api/v1/inquiries');
-    }
-
-    if (path.match(/\/inquiries\/[^\/]+$/) && method === 'GET') {
-      const id = path.split('/').pop();
-      return mockInquiries.find(i => i.id === id) || mockInquiries[0];
     }
 
     // ==========================================================================
@@ -167,18 +148,6 @@ export class MockInterceptor implements HttpInterceptor {
     if (path.match(/\/clients\/[^\/]+$/) && method === 'GET') {
       const id = path.split('/').pop();
       return mockClients.find(c => c.id === id) || mockClients[0];
-    }
-
-    // ==========================================================================
-    // MACHINES
-    // ==========================================================================
-    if (path.match(/\/machines$/) && method === 'GET') {
-      return this.paginatedResponse(mockMachines, '/api/v1/machines');
-    }
-
-    if (path.match(/\/machines\/[^\/]+$/) && method === 'GET') {
-      const id = path.split('/').pop();
-      return mockMachines.find(m => m.id === id) || mockMachines[0];
     }
 
     // ==========================================================================

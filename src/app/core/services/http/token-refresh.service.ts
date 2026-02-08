@@ -4,6 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { AuthService } from '@core/auth/auth.service';
 import { LoggerService, ScopedLogger } from '@services/logger.service';
+import { environment } from '@env/environment';
 
 interface RefreshTokenResponse {
   token: string;
@@ -14,7 +15,7 @@ interface RefreshTokenResponse {
   providedIn: 'root'
 })
 export class TokenRefreshService {
-  private refreshUrl = '/api/token/refresh';
+  private refreshUrl = `${environment.apiBaseUrl}/api/token/refresh`;
   private logger!: ScopedLogger;
 
   constructor(

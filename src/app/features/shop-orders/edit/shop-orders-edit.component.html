@@ -27,7 +27,7 @@
         </button>
         <div class="section-header__title-group">
           <ui-icon name="file-text" size="md" color="#71717A" class="section-header__icon"></ui-icon>
-          <h1 class="section-header__title">{{ isInquiry() ? 'Inquiry' : 'Order' }} ID: #{{ order().internalRef || order().id }}</h1>
+          <h1 class="section-header__title">Order ID: #{{ order().internalRef || order().id }}</h1>
           <ui-badge [variant]="getStatusBadgeVariant(order().status)">
             {{ order().status === 'new' ? 'New' : order().status }}
           </ui-badge>
@@ -193,21 +193,21 @@
         <h2 class="products-section__title">Products ordered</h2>
       </div>
 
-      <!-- Machine Groups -->
-      <div class="machine-groups">
-        <div class="machine-group" *ngFor="let group of order().machineGroups">
-          <div class="machine-group__header">
-            <div class="machine-group__title">
+      <!-- Product Groups -->
+      <div class="product-groups">
+        <div class="product-group" *ngFor="let group of order().productGroups">
+          <div class="product-group__header">
+            <div class="product-group__title">
               <ui-icon name="clipboard-list" size="md"></ui-icon>
               <span>{{ group.name }}</span>
             </div>
-            <button class="machine-group__toggle" (click)="toggleMachineGroup(group.id)">
+            <button class="product-group__toggle" (click)="toggleProductGroup(group.id)">
               <span>{{ group.isExpanded ? 'Close' : 'Open' }}</span>
               <ui-icon [name]="group.isExpanded ? 'chevron-up' : 'chevron-down'" size="sm"></ui-icon>
             </button>
           </div>
 
-          <div class="machine-group__content" *ngIf="group.isExpanded">
+          <div class="product-group__content" *ngIf="group.isExpanded">
             <ui-data-table
               [columns]="productsColumns"
               [data]="group.products"

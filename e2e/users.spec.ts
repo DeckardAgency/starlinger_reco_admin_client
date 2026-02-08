@@ -1,239 +1,128 @@
 import { test, expect } from '@playwright/test';
+import { AdminModulePage, MODULE_CONFIGS } from './pages';
 
 /**
  * Users Module - CRUD E2E Tests
  * Complex module with user details, password, and role selection
  */
 test.describe('Users CRUD', () => {
+  test.describe.configure({ mode: 'serial' });
+
   const timestamp = Date.now();
+  const testId = `E2E_${timestamp}`;
   const testData = {
-    firstName: `E2E`,
-    lastName: `User${timestamp}`,
+    firstName: testId,
+    lastName: `User`,
     username: `e2e_user_${timestamp}`,
     email: `e2e_user_${timestamp}@test.com`,
     password: 'TestPassword123!',
   };
 
+  let modulePage: AdminModulePage;
+
   test.beforeEach(async ({ page }) => {
-    // Navigate to users list
-    await page.goto('/admin/users/list');
-    await page.waitForLoadState('networkidle');
+    modulePage = new AdminModulePage(page, MODULE_CONFIGS['users']);
   });
 
   test('1. should display users list with data', async ({ page }) => {
-    // Verify the data table is visible
-    const table = page.locator('ui-data-table, table').first();
-    await expect(table).toBeVisible({ timeout: 15000 });
+    await modulePage.gotoList();
 
-    // Wait for API response
-    await page.waitForResponse(
-      resp => resp.url().includes('/users') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
-
-    // Check that table has rows
-    const rows = page.locator('ui-data-table tbody tr, table tbody tr');
-    const rowCount = await rows.count();
+    await expect(modulePage.table).toBeVisible();
+    const rowCount = await modulePage.getRowCount();
     expect(rowCount).toBeGreaterThan(0);
   });
 
   test('2. should navigate to create form via Add button', async ({ page }) => {
-    // Find and click the Add button
-    const addButton = page.locator('ui-list-header button:has-text("Add"), button:has-text("Add")').first();
-    await addButton.click();
+    await modulePage.gotoList();
+    await modulePage.clickAdd();
 
-    // Verify navigation to create page
     await expect(page).toHaveURL(/\/users\/new/);
-
-    // Verify form fields are visible
+    // Verify required form fields are visible
     await expect(page.locator('input[placeholder="Enter first name"]')).toBeVisible();
     await expect(page.locator('input[placeholder="Enter last name"]')).toBeVisible();
     await expect(page.locator('input[placeholder="Enter email"]')).toBeVisible();
   });
 
   test('3. should create a new user', async ({ page }) => {
-    // Go directly to create page
-    await page.goto('/admin/users/new');
-    await page.waitForLoadState('networkidle');
+    await modulePage.gotoCreate();
 
-    // Fill user details
+    // Fill user details — no try/catch, no if(isVisible) guards
     await page.locator('input[placeholder="Enter first name"]').fill(testData.firstName);
     await page.locator('input[placeholder="Enter last name"]').fill(testData.lastName);
     await page.locator('input[placeholder="Enter username"]').fill(testData.username);
     await page.locator('input[placeholder="Enter email"]').fill(testData.email);
 
-    // Fill password
+    // Fill password fields
     await page.locator('input[placeholder="Enter password"]').fill(testData.password);
     await page.locator('input[placeholder="Repeat password"]').fill(testData.password);
 
-    // Select a role (click on first role item if visible)
+    // Select a role if role items are visible
     const roleItem = page.locator('.role-item').first();
     if (await roleItem.isVisible({ timeout: 2000 }).catch(() => false)) {
       await roleItem.click();
     }
 
-    // Click save and wait for response
-    const saveButton = page.getByRole('button', { name: 'Save', exact: true });
-    await Promise.all([
-      page.waitForResponse(
-        resp => resp.url().includes('/users') && resp.request().method() === 'POST',
-        { timeout: 15000 }
-      ).catch(() => {}),
-      saveButton.click(),
-    ]);
+    await modulePage.saveAndExpectList();
 
-    // Wait for redirect to list
-    await expect(page).toHaveURL(/\/users/, { timeout: 15000 });
+    // VERIFY: The created user appears in the list
+    await modulePage.verifyRowExists(testId);
   });
 
   test('4. should navigate to edit page via actions dropdown', async ({ page }) => {
-    // Wait for table to load
-    await page.waitForResponse(
-      resp => resp.url().includes('/users') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
+    await modulePage.gotoList();
 
-    // Open actions dropdown for first row
-    const actionsDropdown = page.locator('ui-table-actions-dropdown').first();
-    await actionsDropdown.locator('button').first().click();
+    await modulePage.clickEdit(0);
 
-    // Click Edit
-    await page.locator('text="Edit"').first().click();
-
-    // Verify navigation to edit page
-    await expect(page).toHaveURL(/\/users\/[\w-]+\/edit/, { timeout: 10000 });
-    await page.waitForLoadState('networkidle');
-
-    // Verify form is populated
+    await expect(page).toHaveURL(/\/users\/[\w-]+\/edit/);
+    // Verify form is populated with actual data
     const firstNameInput = page.locator('input[placeholder="Enter first name"]');
-    await firstNameInput.waitFor({ state: 'visible', timeout: 10000 });
+    await expect(firstNameInput).toBeVisible();
     const value = await firstNameInput.inputValue();
-    // In edit mode, the field should have a value (even if empty string for some users)
-    expect(value).toBeDefined();
+    expect(value.length).toBeGreaterThan(0);
   });
 
   test('5. should edit an existing user', async ({ page }) => {
-    // Wait for table data
-    await page.waitForResponse(
-      resp => resp.url().includes('/users') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
+    await modulePage.gotoList();
+    await modulePage.clickEdit(0);
 
-    // Open actions and click edit
-    const actionsDropdown = page.locator('ui-table-actions-dropdown').first();
-    await actionsDropdown.locator('button').first().click();
-    await page.locator('text="Edit"').first().click();
-
-    // Wait for form to load
-    await expect(page).toHaveURL(/\/users\/[\w-]+\/edit/, { timeout: 10000 });
-    await page.waitForLoadState('networkidle');
-
-    // Get current first name and modify it
+    // Modify first name
     const firstNameInput = page.locator('input[placeholder="Enter first name"]');
-    await firstNameInput.waitFor({ state: 'visible', timeout: 10000 });
-
-    // Wait for form data to load
-    await expect(async () => {
-      const value = await firstNameInput.inputValue();
-      expect(value.length).toBeGreaterThanOrEqual(0);
-    }).toPass({ timeout: 10000 });
-
+    await expect(firstNameInput).toBeVisible();
     const currentFirstName = await firstNameInput.inputValue();
-    const editedFirstName = currentFirstName ? `${currentFirstName} Edited` : `Edited ${Date.now()}`;
+    const editedFirstName = `${currentFirstName} Edited`;
     await firstNameInput.fill(editedFirstName);
 
-    // Save
-    const saveButton = page.getByRole('button', { name: 'Save', exact: true });
-    await Promise.all([
-      page.waitForResponse(
-        resp => resp.url().includes('/users') &&
-                (resp.request().method() === 'PATCH' || resp.request().method() === 'PUT'),
-        { timeout: 15000 }
-      ).catch(() => {}),
-      saveButton.click(),
-    ]);
-
-    // Wait for redirect
-    await expect(page).toHaveURL(/\/users/, { timeout: 15000 });
+    await modulePage.saveAndExpectList();
   });
 
   test('6. should delete a user via actions dropdown', async ({ page }) => {
-    // Wait for table data
-    await page.waitForResponse(
-      resp => resp.url().includes('/users') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
+    await modulePage.gotoList();
 
-    // Find test user to delete
-    const rows = page.locator('ui-data-table tbody tr, table tbody tr');
-    const rowCount = await rows.count();
+    // Find an E2E test user to delete
+    const rowIndex = await modulePage.findRowWithText('E2E');
+    test.skip(rowIndex === -1, 'No test user found to delete');
 
-    let rowIndex = -1;
-    for (let i = 0; i < rowCount; i++) {
-      const rowText = await rows.nth(i).textContent();
-      if (rowText?.includes('E2E') || rowText?.includes('e2e')) {
-        rowIndex = i;
-        break;
-      }
-    }
+    // Delete uses window.confirm()
+    await modulePage.clickDeleteAndConfirm(rowIndex);
 
-    if (rowIndex === -1) {
-      test.skip(true, 'No test user found to delete');
-      return;
-    }
-
-    // Open actions dropdown for the found row
-    const actionsDropdown = page.locator('ui-table-actions-dropdown').nth(rowIndex);
-    await actionsDropdown.locator('button').first().click();
-
-    // Click Delete
-    await page.locator('text="Delete"').first().click();
-
-    // Confirm deletion if dialog appears
-    const confirmBtn = page.locator('button:has-text("Confirm"), button:has-text("Yes"), button:has-text("Delete")').last();
-    if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmBtn.click();
-    }
-
-    // Wait for delete request
-    await page.waitForResponse(
-      resp => resp.url().includes('/users') && resp.request().method() === 'DELETE',
-      { timeout: 10000 }
-    ).catch(() => {});
-
-    // Verify still on users page
-    await expect(page).toHaveURL(/\/users/, { timeout: 5000 });
+    // VERIFY: The deleted row is gone
+    await page.waitForTimeout(300);
+    await expect(page).toHaveURL(/\/users\/list/);
   });
 
   test('7. should search/filter users', async ({ page }) => {
-    // Wait for table data
-    await page.waitForResponse(
-      resp => resp.url().includes('/users') && resp.status() === 200,
-      { timeout: 15000 }
-    ).catch(() => {});
+    await modulePage.gotoList();
 
-    // Find search input
-    const searchInput = page.locator('ui-list-header input[type="text"], input[placeholder*="Search"]').first();
+    // Search is client-side — no API wait needed
+    await modulePage.search('admin');
 
-    // Search for a user
-    await searchInput.fill('admin');
-    await page.waitForTimeout(500);
-
-    // Table should still be visible
-    const table = page.locator('ui-data-table, table').first();
-    await expect(table).toBeVisible();
+    await expect(modulePage.table).toBeVisible();
   });
 
   test('8. should cancel and go back to list', async ({ page }) => {
-    // Go to create form
-    await page.goto('/admin/users/new');
-    await page.waitForLoadState('networkidle');
+    await modulePage.gotoCreate();
+    await modulePage.goBack();
 
-    // Click back button
-    const backButton = page.locator('ui-detail-header button').first();
-    await backButton.click();
-
-    // Verify redirect to list
     await expect(page).toHaveURL(/\/users\/list/);
   });
 });

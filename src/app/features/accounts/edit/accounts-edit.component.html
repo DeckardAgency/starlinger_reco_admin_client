@@ -200,14 +200,6 @@
           ></ui-data-table>
         </div>
 
-        <!-- Machines Table -->
-        <div class="table-wrapper" *ngIf="activeTab() === 'machines'">
-          <ui-data-table
-            [columns]="machinesColumns"
-            [data]="machines()"
-            emptyMessage="No results"
-          ></ui-data-table>
-        </div>
       </div>
     </div>
 
@@ -298,13 +290,6 @@
     (actionClick)="onOrderActionClick($event)"
     (close)="closeDropdown()"
   ></ui-table-actions-dropdown>
-</ng-template>
-
-<!-- Templates for Machines Table -->
-<ng-template #machineActionsTemplate let-row>
-  <button class="actions-trigger">
-    <ui-icon name="more-vertical" size="sm"></ui-icon>
-  </button>
 </ng-template>
 
 <!-- Address Modal -->

@@ -1,9 +1,8 @@
 import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { forkJoin } from 'rxjs';
 import { OrderCardComponent, OrderCardData, OrderCardStatus, SectionHeaderComponent } from '@app/ui-kit';
-import { DashboardService, DashboardOrder, DashboardInquiry } from '@core/services/http/dashboard.service';
+import { DashboardService, DashboardOrder } from '@core/services/http/dashboard.service';
 
 @Component({
   selector: 'app-active-orders',
@@ -26,18 +25,15 @@ export class ActiveOrdersComponent implements OnInit {
   private loadData(): void {
     this.isLoading.set(true);
 
-    forkJoin({
-      orders: this.dashboardService.getRecentOrders(8),
-      inquiries: this.dashboardService.getRecentInquiries(8)
-    }).subscribe({
-      next: ({ orders, inquiries }) => {
-        const cards = this.mapToCards(orders, inquiries);
+    this.dashboardService.getRecentOrders(8).subscribe({
+      next: (orders) => {
+        const cards = this.mapToCards(orders);
         this.orders.set(cards);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Failed to load active orders/inquiries:', error);
+        console.error('Failed to load active orders:', error);
         this.orders.set([]);
         this.isLoading.set(false);
         this.cdr.markForCheck();
@@ -45,7 +41,7 @@ export class ActiveOrdersComponent implements OnInit {
     });
   }
 
-  private mapToCards(orders: DashboardOrder[], inquiries: DashboardInquiry[]): OrderCardData[] {
+  private mapToCards(orders: DashboardOrder[]): OrderCardData[] {
     const orderCards: OrderCardData[] = orders
       .filter(o => !['completed', 'canceled', 'cancelled'].includes((o.status || '').toLowerCase()))
       .map(order => ({
@@ -57,25 +53,12 @@ export class ActiveOrdersComponent implements OnInit {
         status: this.normalizeStatus(order.status)
       }));
 
-    const inquiryCards: OrderCardData[] = inquiries
-      .filter(i => !['completed', 'canceled', 'cancelled'].includes((i.status || '').toLowerCase()))
-      .map(inquiry => ({
-        id: inquiry.id,
-        type: 'inquiry' as const,
-        internalReference: inquiry.inquiryNumber || inquiry.id.slice(0, 8),
-        dateCreated: this.formatDate(inquiry.createdAt),
-        partsOrdered: 0,
-        status: this.normalizeStatus(inquiry.status)
-      }));
-
-    const combined = [...orderCards, ...inquiryCards]
+    return orderCards
       .sort((a, b) => {
         const parse = (d: string) => { const [day, month, year] = d.split('-'); return new Date(Number(year), Number(month) - 1, Number(day)).getTime(); };
         return parse(b.dateCreated) - parse(a.dateCreated);
       })
       .slice(0, 8);
-
-    return combined;
   }
 
   private formatDate(dateStr: string): string {
@@ -91,7 +74,6 @@ export class ActiveOrdersComponent implements OnInit {
     const s = (status || '').toLowerCase().replace(/_/g, '-');
     const valid: OrderCardStatus[] = ['submitted', 'in-review', 'in-progress', 'more-info', 'confirmed', 'in-transit', 'dispatched', 'completed', 'cancelled', 'draft'];
     if (valid.includes(s as OrderCardStatus)) return s as OrderCardStatus;
-    if (['in_review', 'more_info', 'information_provided', 'in_progress'].includes((status || '').toLowerCase())) return 'in-review';
     if (['submitted', 'confirmed'].includes(s)) return 'submitted';
     return 'draft';
   }
