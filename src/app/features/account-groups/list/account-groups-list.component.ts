@@ -14,6 +14,7 @@ import {
 } from '@app/ui-kit/molecules';
 import { AccountGroup } from '@core/models/account-group.model';
 import { AccountGroupService } from '@core/services/http/account-group.service';
+import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 
 @Component({
@@ -39,6 +40,7 @@ export class AccountGroupsListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private accountGroupService = inject(AccountGroupService);
+  private alertService = inject(AlertService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -180,8 +182,9 @@ export class AccountGroupsListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onDelete(group: AccountGroup): void {
-    if (!confirm(`Are you sure you want to delete "${group.name}"?`)) {
+  async onDelete(group: AccountGroup): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${group.name}"?`, 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }
@@ -195,10 +198,11 @@ export class AccountGroupsListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const selected = this.accountGroups().filter(t => t.selected);
     if (selected.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selected.length} account group(s)?`)) return;
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} account group(s)?`, 'Delete');
+    if (!confirmed) return;
 
     const deleteOps = selected.map(t =>
       this.accountGroupService.deleteAccountGroup(String(t.id)).toPromise()

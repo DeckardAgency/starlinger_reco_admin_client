@@ -14,6 +14,7 @@ import {
 } from '@app/ui-kit/molecules';
 import { AdminUser, AdminUserRoleType } from '@core/models/admin-user.model';
 import { UserService } from '@core/services/http/user.service';
+import { AlertService } from '@services/alert.service';
 import { User, USER_ROLES } from '@core/models';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 
@@ -48,6 +49,7 @@ export class UsersListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private userService = inject(UserService);
+  private alertService = inject(AlertService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -293,8 +295,9 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onDelete(user: AdminUser): void {
-    if (!confirm(`Are you sure you want to delete "${user.firstName} ${user.lastName}"?`)) {
+  async onDelete(user: AdminUser): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${user.firstName} ${user.lastName}"?`, 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }

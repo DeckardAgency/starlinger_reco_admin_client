@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -10,6 +10,7 @@ import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { AccountGroupService } from '@core/services/http/account-group.service';
 
 interface AccountGroupDetail {
@@ -42,6 +43,7 @@ const EMPTY_ACCOUNT_GROUP: AccountGroupDetail = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AccountGroupsEditComponent implements OnInit, OnDestroy {
+  private toastService = inject(ToastService);
   private destroy$ = new Subject<void>();
 
   isEditMode = signal(false);
@@ -156,13 +158,17 @@ export class AccountGroupsEditComponent implements OnInit, OnDestroy {
 
     operation.subscribe({
       next: (result) => {
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/account-groups/list']);
         } else if (isCreating && result?.id) {
           this.router.navigate(['/admin/account-groups', result.id, 'edit']);
         }
       },
-      error: (error) => console.error('Error saving account group:', error)
+      error: (error) => {
+        console.error('Error saving account group:', error);
+        this.toastService.error('Failed to save account group');
+      }
     });
   }
 }

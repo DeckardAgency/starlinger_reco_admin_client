@@ -7,6 +7,7 @@ import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organism
 import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
 import { Discount } from '@core/models/discount.model';
 import { DiscountService } from '@core/services/http/discount.service';
+import { AlertService } from '@services/alert.service';
 
 // Consolidated components
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -45,6 +46,7 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private discountService = inject(DiscountService);
+  private alertService = inject(AlertService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -226,8 +228,9 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  private deleteDiscount(discount: DiscountRow): void {
-    if (!confirm(`Are you sure you want to delete "${discount.name}"?`)) {
+  private async deleteDiscount(discount: DiscountRow): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${discount.name}"?`, 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }
@@ -241,10 +244,11 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const selected = this.discounts().filter(d => d.selected);
     if (selected.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selected.length} discount(s)?`)) return;
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} discount(s)?`, 'Delete');
+    if (!confirmed) return;
 
     const deleteOps = selected.map(d =>
       this.discountService.deleteDiscount(String(d.id)).toPromise()

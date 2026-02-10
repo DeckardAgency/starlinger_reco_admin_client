@@ -3,9 +3,9 @@
  * Represents the decoded JWT token structure from the API
  */
 export interface TokenPayload {
-  // User identification
-  username: string;
-  email?: string;
+  // User identification (JWT claim is 'email', legacy tokens may have 'username')
+  email: string;
+  username?: string;
   roles: string[];
 
   // JWT standard claims (RFC 7519)

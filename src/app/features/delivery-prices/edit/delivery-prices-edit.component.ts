@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -11,6 +11,7 @@ import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detai
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { DeliveryPrice, DeliveryPriceDeliveryType } from '@core/models/delivery-price.model';
 import { DeliveryPriceService } from '@core/services/http/delivery-price.service';
 import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
@@ -67,6 +68,7 @@ interface SelectOption {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
+  private toastService = inject(ToastService);
   private destroy$ = new Subject<void>();
 
   // Mode
@@ -235,13 +237,17 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
 
     operation.subscribe({
       next: (result) => {
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/delivery-prices/list']);
         } else if (isCreating && result?.id) {
           this.router.navigate(['/admin/delivery-prices', result.id, 'edit']);
         }
       },
-      error: (error) => console.error('Error saving delivery price:', error)
+      error: (error) => {
+        console.error('Error saving delivery price:', error);
+        this.toastService.error('Failed to save delivery price');
+      }
     });
   }
 

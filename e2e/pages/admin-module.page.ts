@@ -48,6 +48,8 @@ export class AdminModulePage extends BasePage {
     await this.page.goto(`/admin/${this.config.listPath}/list`);
     const response = await responsePromise;
     expect(response.status(), `List API ${this.config.apiEndpoint} returned ${response.status()}`).toBeLessThan(400);
+    // Wait for Angular to render the table after API data is received
+    await this.page.waitForLoadState('networkidle');
   }
 
   async gotoCreate() {
@@ -85,8 +87,9 @@ export class AdminModulePage extends BasePage {
   async openRowActions(index: number = 0) {
     const dropdown = this.actionsDropdown(index);
     await dropdown.locator('button').first().click();
-    // Wait for dropdown menu to appear
+    // Wait for dropdown menu to appear and animation to settle
     await expect(this.page.locator('.dropdown-menu').first()).toBeVisible({ timeout: 3000 });
+    await this.page.waitForTimeout(200);
   }
 
   async clickEdit(index: number = 0) {
@@ -104,13 +107,24 @@ export class AdminModulePage extends BasePage {
    */
   async clickDeleteAndConfirm(index: number = 0) {
     await this.openRowActions(index);
-    // Set up dialog handler and response listener BEFORE triggering delete
+    // Handle BOTH native confirm() and custom modal dialogs
     this.acceptNextDialog();
     const responsePromise = this.page.waitForResponse(
       (resp) => resp.url().includes(this.config.apiEndpoint) && resp.request().method() === 'DELETE',
       { timeout: 15000 }
     );
     await this.page.locator('.dropdown-menu__item:has-text("Delete")').first().click();
+    // Some modules show a custom alertdialog modal instead of native confirm()
+    const confirmBtn = this.page.locator('[role="alertdialog"]').filter({ hasText: 'Delete' })
+      .locator('button', { hasText: 'Confirm' });
+    try {
+      await expect(confirmBtn).toBeVisible({ timeout: 5000 });
+      await confirmBtn.click();
+    } catch {
+      // No custom dialog — native confirm() was handled by acceptNextDialog()
+    }
+    // For native dialog: response arrives immediately after auto-accept
+    // For custom dialog: response arrives after Confirm click
     const response = await responsePromise;
     expect(response.status(), `DELETE ${this.config.apiEndpoint} returned ${response.status()}`).toBeLessThan(400);
   }
@@ -255,6 +269,9 @@ export class AdminModulePage extends BasePage {
                 ['POST', 'PATCH', 'PUT'].includes(resp.request().method()),
       { timeout: 15000 }
     );
+
+    // Small delay to let Angular process any pending form value changes
+    await this.page.waitForTimeout(100);
 
     if (this.config.hasSaveAndContinue !== false) {
       // "Save and continue" navigates to list automatically

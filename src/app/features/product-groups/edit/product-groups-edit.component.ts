@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -10,6 +10,7 @@ import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcru
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { ProductGroupService } from '@core/services/http/product-group.service';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface ProductGroupDetail {
   id: string;
@@ -56,6 +57,7 @@ const EMPTY_PRODUCT_GROUP: ProductGroupDetail = {
 export class ProductGroupsEditComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private productGroupId: string | null = null;
+  private toastService = inject(ToastService);
 
   // Form state
   productGroup = signal<ProductGroupDetail>({ ...EMPTY_PRODUCT_GROUP });
@@ -192,6 +194,7 @@ export class ProductGroupsEditComponent implements OnInit, OnDestroy {
     operation.subscribe({
       next: (result) => {
         this.isSaving.set(false);
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/product-groups/list']);
         } else if (isCreating && result?.id) {
@@ -204,7 +207,7 @@ export class ProductGroupsEditComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error saving product group:', error);
         this.isSaving.set(false);
-        alert('Failed to save product group');
+        this.toastService.error('Failed to save product group');
         this.cdr.markForCheck();
       }
     });

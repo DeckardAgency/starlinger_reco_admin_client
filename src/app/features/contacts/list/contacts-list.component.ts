@@ -7,6 +7,7 @@ import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organism
 import { ContactService } from '@core/services/http/contact.service';
 import { ClientService } from '@core/services/http/client.service';
 import { Contact } from '@core/models/contact.model';
+import { AlertService } from '@services/alert.service';
 import { forkJoin } from 'rxjs';
 
 // Consolidated components
@@ -39,6 +40,7 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private contactService = inject(ContactService);
   private clientService = inject(ClientService);
+  private alertService = inject(AlertService);
 
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
   @ViewChild('phoneTemplate') phoneTemplate!: TemplateRef<any>;
@@ -199,8 +201,9 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  private deleteContact(contact: Contact): void {
-    if (!confirm(`Are you sure you want to delete "${contact.firstName} ${contact.lastName}"?`)) {
+  private async deleteContact(contact: Contact): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${contact.firstName} ${contact.lastName}"?`, 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }

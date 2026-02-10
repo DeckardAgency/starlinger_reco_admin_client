@@ -12,6 +12,7 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
 import { AdminUser, AdminUserRoleType, ADMIN_USER_ROLE_OPTIONS, AdminUserRoleOption } from '@core/models/admin-user.model';
 import { UserService } from '@core/services/http/user.service';
 import { User } from '@core/models';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 const EMPTY_USER: AdminUser = {
   id: '',
@@ -44,6 +45,7 @@ export class UsersEditComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
   private userService = inject(UserService);
+  private toastService = inject(ToastService);
 
   isEditMode = signal(false);
   userId = signal<string | null>(null);
@@ -223,8 +225,14 @@ export class UsersEditComponent implements OnInit {
       : this.userService.createUser(data);
 
     operation.subscribe({
-      next: () => this.router.navigate(['/admin/users/list']),
-      error: (error) => console.error('Error saving user:', error)
+      next: () => {
+        this.toastService.success('Saved successfully');
+        this.router.navigate(['/admin/users/list']);
+      },
+      error: (error) => {
+        console.error('Error saving user:', error);
+        this.toastService.error('Failed to save user');
+      }
     });
   }
 
@@ -252,12 +260,16 @@ export class UsersEditComponent implements OnInit {
 
     operation.subscribe({
       next: (response) => {
+        this.toastService.success('Saved successfully');
         if (!this.isEditMode() && response?.id) {
           this.router.navigate(['/admin/users', response.id, 'edit']);
         }
         this.cdr.markForCheck();
       },
-      error: (error) => console.error('Error saving user:', error)
+      error: (error) => {
+        console.error('Error saving user:', error);
+        this.toastService.error('Failed to save user');
+      }
     });
   }
 

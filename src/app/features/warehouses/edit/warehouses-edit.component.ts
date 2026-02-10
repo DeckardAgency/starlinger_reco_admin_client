@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef, ViewChild, TemplateRef, AfterViewInit, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef, ViewChild, TemplateRef, AfterViewInit, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpEventType } from '@angular/common/http';
@@ -22,6 +22,7 @@ import { WarehouseDocument } from '@core/models/warehouse.model';
 import { WarehouseService } from '@core/services/http/warehouse.service';
 import { MediaService } from '@core/services/http/media.service';
 import { environment } from '@env/environment';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface WarehouseDetail {
   id: string;
@@ -81,6 +82,7 @@ const EMPTY_WAREHOUSE: WarehouseDetail = {
 })
 export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
+  private toastService = inject(ToastService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -290,6 +292,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
 
     operation.subscribe({
       next: (result) => {
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/warehouses/list']);
         } else if (isCreating && result?.id) {
@@ -300,7 +303,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
       },
       error: (error) => {
         console.error('Error saving warehouse:', error);
-        alert('Failed to save warehouse');
+        this.toastService.error('Failed to save warehouse');
       }
     });
   }

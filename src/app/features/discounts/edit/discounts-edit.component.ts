@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ViewChild, TemplateRef, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ViewChild, TemplateRef, AfterViewInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -16,6 +16,7 @@ import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-f
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { CalendarComponent } from '@app/ui-kit/molecules/calendar/calendar.component';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { DiscountService } from '@core/services/http/discount.service';
 import { AccountGroupService } from '@core/services/http/account-group.service';
 import { ClientService } from '@core/services/http/client.service';
@@ -74,6 +75,7 @@ const EMPTY_DISCOUNT: DiscountDetail = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
+  private toastService = inject(ToastService);
   private destroy$ = new Subject<void>();
   private discountId: string | null = null;
 
@@ -411,13 +413,17 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
 
     operation.subscribe({
       next: (result) => {
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/discounts/list']);
         } else if (isCreating && result?.id) {
           this.router.navigate(['/admin/discounts', result.id, 'edit']);
         }
       },
-      error: (error) => console.error('Error saving discount:', error)
+      error: (error) => {
+        console.error('Error saving discount:', error);
+        this.toastService.error('Failed to save discount');
+      }
     });
   }
 

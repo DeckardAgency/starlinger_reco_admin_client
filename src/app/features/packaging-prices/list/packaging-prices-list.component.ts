@@ -14,6 +14,7 @@ import {
 } from '@app/ui-kit/molecules';
 import { PackagingPrice } from '@core/models/packaging-price.model';
 import { PackagingPriceService } from '@core/services/http/packaging-price.service';
+import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 
 @Component({
@@ -39,6 +40,7 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private packagingPriceService = inject(PackagingPriceService);
+  private alertService = inject(AlertService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -200,8 +202,9 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
     this.closeDropdown();
   }
 
-  onDelete(packagingPrice: PackagingPrice): void {
-    if (!confirm(`Are you sure you want to delete "${packagingPrice.name || 'this item'}"?`)) {
+  async onDelete(packagingPrice: PackagingPrice): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${packagingPrice.name || 'this item'}"?`, 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }
@@ -217,10 +220,11 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
     this.closeDropdown();
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const selected = this.packagingPrices().filter(pp => pp.selected);
     if (selected.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selected.length} packaging price(s)?`)) return;
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} packaging price(s)?`, 'Delete');
+    if (!confirmed) return;
 
     const deletePromises = selected.map(pp =>
       this.packagingPriceService.deletePackagingPrice(pp.id).toPromise()

@@ -15,6 +15,8 @@ import {
 } from '@app/ui-kit/molecules';
 import { ProductGroup } from '@core/models/product-group.model';
 import { ProductGroupService } from '@core/services/http/product-group.service';
+import { AlertService } from '@services/alert.service';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 
 interface ProductGroupRow extends ProductGroup {
@@ -45,6 +47,8 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private productGroupService = inject(ProductGroupService);
+  private alertService = inject(AlertService);
+  private toastService = inject(ToastService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -219,24 +223,26 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onDelete(productGroup: ProductGroupRow): void {
-    if (confirm(`Are you sure you want to delete "${productGroup.name}"?`)) {
+  async onDelete(productGroup: ProductGroupRow): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${productGroup.name}"?`, 'Delete');
+    if (confirmed) {
       this.productGroupService.deleteProductGroup(productGroup.id).subscribe({
         next: () => {
           this.loadProductGroups();
         },
         error: (error) => {
           console.error('Failed to delete product group:', error);
-          alert('Failed to delete product group');
+          this.toastService.error('Failed to delete product group');
         }
       });
     }
     this.closeDropdown();
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const selected = this.productGroups().filter(p => p.selected);
-    if (confirm(`Are you sure you want to delete ${selected.length} product group(s)?`)) {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} product group(s)?`, 'Delete');
+    if (confirmed) {
       // Delete each selected item
       selected.forEach(p => {
         this.productGroupService.deleteProductGroup(p.id).subscribe({

@@ -1,6 +1,9 @@
 // CSS Custom Properties with defaults
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 
   // Default values for CSS custom properties
   --data-table-border: none;
@@ -15,11 +18,20 @@
 
 .data-table {
   width: 100%;
-  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+  max-height: var(--data-table-max-height, calc(100vh - 300px));
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
   background: var(--data-table-background);
   border: var(--data-table-border);
   border-radius: var(--data-table-border-radius);
+  cursor: grab;
+
+  &--dragging {
+    cursor: grabbing;
+    user-select: none;
+  }
 
   &__table {
     width: 100%;
@@ -44,6 +56,9 @@
     background: var(--data-table-header-background);
     text-align: left;
     vertical-align: middle;
+    position: sticky;
+    top: 0;
+    z-index: 1;
 
     &--sortable {
       cursor: pointer;

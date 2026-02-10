@@ -72,11 +72,10 @@ test.describe('Contacts CRUD', () => {
 
     await modulePage.clickEdit(0);
 
-    // Modify first name
+    // Modify first name — use a fresh value to avoid accumulation from previous runs
     const firstNameInput = page.locator('input[placeholder="First name"]');
     await expect(firstNameInput).toBeVisible();
-    const currentName = await firstNameInput.inputValue();
-    await firstNameInput.fill(`${currentName} Edited`);
+    await firstNameInput.fill(`Edited_${Date.now()}`);
 
     await modulePage.saveAndExpectList();
   });
@@ -113,7 +112,9 @@ test.describe('Contacts CRUD', () => {
   });
 
   test('8. should go back to list', async ({ page }) => {
-    await modulePage.gotoCreate();
+    // Navigate via list first so browser history has the list page
+    await modulePage.gotoList();
+    await modulePage.clickAdd();
     await modulePage.goBack();
 
     await expect(page).toHaveURL(/\/contacts\/list/);

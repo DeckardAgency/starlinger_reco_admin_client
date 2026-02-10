@@ -6,6 +6,7 @@ import { RouterModule, Router } from '@angular/router';
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { DeliveryPrice } from '@core/models/delivery-price.model';
 import { DeliveryPriceService } from '@core/services/http/delivery-price.service';
+import { AlertService } from '@services/alert.service';
 
 // Consolidated components
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -40,6 +41,7 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private deliveryPriceService = inject(DeliveryPriceService);
+  private alertService = inject(AlertService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -205,8 +207,9 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  private deleteDeliveryPrice(deliveryPrice: DeliveryPrice): void {
-    if (!confirm(`Are you sure you want to delete this delivery price?`)) {
+  private async deleteDeliveryPrice(deliveryPrice: DeliveryPrice): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete this delivery price?`, 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }
@@ -220,10 +223,11 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const selected = this.deliveryPrices().filter(dp => dp.selected);
     if (selected.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selected.length} delivery price(s)?`)) return;
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} delivery price(s)?`, 'Delete');
+    if (!confirmed) return;
 
     const deleteOps = selected.map(dp =>
       this.deliveryPriceService.deleteDeliveryPrice(String(dp.id)).toPromise()

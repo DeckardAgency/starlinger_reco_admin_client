@@ -10,6 +10,7 @@ import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detai
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { PackagingPriceService } from '@core/services/http/packaging-price.service';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 const EMPTY_PACKAGING_PRICE: PackagingPrice = {
   id: '',
@@ -40,6 +41,7 @@ export class PackagingPricesEditComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
   private packagingPriceService = inject(PackagingPriceService);
+  private toastService = inject(ToastService);
 
   isEditMode = signal(false);
   packagingPriceId = signal<string | null>(null);
@@ -164,8 +166,14 @@ export class PackagingPricesEditComponent implements OnInit {
       : this.packagingPriceService.createPackagingPrice(payload as any);
 
     operation.subscribe({
-      next: () => this.router.navigate(['/admin/packaging-prices/list']),
-      error: (error) => console.error('Error saving packaging price:', error)
+      next: () => {
+        this.toastService.success('Saved successfully');
+        this.router.navigate(['/admin/packaging-prices/list']);
+      },
+      error: (error) => {
+        console.error('Error saving packaging price:', error);
+        this.toastService.error('Failed to save packaging price');
+      }
     });
   }
 

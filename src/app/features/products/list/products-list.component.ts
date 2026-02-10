@@ -11,6 +11,7 @@ import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-f
 import { TableCheckboxSelectionComponent } from '@app/ui-kit/molecules/table-checkbox-selection/table-checkbox-selection.component';
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { ProductService } from '@core/services/http/product.service';
+import { AlertService } from '@services/alert.service';
 import { Product as ApiProduct } from '@core/models';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 
@@ -48,6 +49,7 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private productService = inject(ProductService);
+  private alertService = inject(AlertService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -274,8 +276,9 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
     });
   }
 
-  onDelete(product: Product): void {
-    if (!confirm(`Are you sure you want to delete "${product.name}"?`)) {
+  async onDelete(product: Product): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${product.name}"?`, 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }

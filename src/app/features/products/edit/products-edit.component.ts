@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ViewChild, TemplateRef, ElementRef, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ViewChild, TemplateRef, ElementRef, AfterViewInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -29,6 +29,7 @@ import { Product, MediaItem } from '@core/models';
 import { MediaService } from '@core/services/http/media.service';
 import { environment } from '@env/environment';
 import JSZip from 'jszip';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface ProductDetail {
   id: string;
@@ -138,6 +139,7 @@ const EMPTY_PRODUCT: ProductDetail = {
 })
 export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
+  private toastService = inject(ToastService);
 
   // State
   product = signal<ProductDetail>(EMPTY_PRODUCT);
@@ -995,6 +997,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
     operation.subscribe({
       next: (result) => {
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/products/list']);
         } else if (isCreating && result?.id) {
@@ -1004,7 +1007,10 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           this.loadProduct(product.id);
         }
       },
-      error: (error) => console.error('Error saving product:', error)
+      error: (error) => {
+        console.error('Error saving product:', error);
+        this.toastService.error('Failed to save product');
+      }
     });
   }
 

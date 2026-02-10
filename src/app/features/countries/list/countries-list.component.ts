@@ -14,6 +14,7 @@ import {
 } from '@app/ui-kit/molecules';
 import { Country } from '@core/models/country.model';
 import { CountryService } from '@core/services/http/country.service';
+import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 
 @Component({
@@ -39,6 +40,7 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private countryService = inject(CountryService);
+  private alertService = inject(AlertService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -206,8 +208,9 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onDelete(country: Country): void {
-    if (!confirm(`Are you sure you want to delete "${country.name}"?`)) {
+  async onDelete(country: Country): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${country.name}"?`, 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }
@@ -221,10 +224,11 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const selected = this.countries().filter(c => c.selected);
     if (selected.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selected.length} country/countries?`)) return;
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} country/countries?`, 'Delete');
+    if (!confirmed) return;
 
     const deleteOps = selected.map(c =>
       this.countryService.deleteCountry(String(c.id)).toPromise()

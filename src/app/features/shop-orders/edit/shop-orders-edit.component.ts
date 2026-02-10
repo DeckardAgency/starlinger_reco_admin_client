@@ -19,6 +19,8 @@ import { ClientService } from '@core/services/http/client.service';
 import { AddressService } from '@core/services/http/address.service';
 import { Order } from '@core/models/order.model';
 import { ClientAddress } from '@core/models/client.model';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
+import { AlertService } from '@services/alert.service';
 
 // Interfaces
 interface OrderProduct {
@@ -127,6 +129,8 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private userService = inject(UserService);
   private clientService = inject(ClientService);
   private addressService = inject(AddressService);
+  private toastService = inject(ToastService);
+  private alertService = inject(AlertService);
   private destroy$ = new Subject<void>();
 
   isLoading = signal(true);
@@ -712,7 +716,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     // Check if form is valid
     if (!this.isValid()) {
       const errorMessages = Object.values(this.errors()).join('\n');
-      alert('Please fix the following errors:\n' + errorMessages);
+      this.alertService.error(errorMessages, 'Validation Error');
       return;
     }
 
@@ -732,11 +736,11 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.orderService.updateOrder(orderData.id, updatePayload as Partial<Order>).subscribe({
       next: (updatedOrder) => {
         console.log('[ShopOrdersEdit] Order saved successfully:', updatedOrder);
-        alert('Order saved successfully!');
+        this.toastService.success('Order saved successfully');
       },
       error: (error) => {
         console.error('[ShopOrdersEdit] Error saving order:', error);
-        alert('Error saving order: ' + (error?.error?.detail || error?.error?.message || error?.message || 'Unknown error'));
+        this.toastService.error('Error saving order: ' + (error?.error?.detail || error?.error?.message || error?.message || 'Unknown error'));
       }
     });
   }

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -11,6 +11,7 @@ import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detai
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { DHL_ZONES } from '@core/models/country.model';
 import { CountryService } from '@core/services/http/country.service';
 
@@ -56,6 +57,7 @@ interface SelectOption {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CountriesEditComponent implements OnInit, OnDestroy {
+  private toastService = inject(ToastService);
   private destroy$ = new Subject<void>();
   private countryId: string | null = null;
 
@@ -216,13 +218,17 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
 
     operation.subscribe({
       next: (result) => {
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/countries/list']);
         } else if (isCreating && result?.id) {
           this.router.navigate(['/admin/countries', result.id, 'edit']);
         }
       },
-      error: (error) => console.error('Error saving country:', error)
+      error: (error) => {
+        console.error('Error saving country:', error);
+        this.toastService.error('Failed to save country');
+      }
     });
   }
 }

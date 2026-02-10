@@ -15,6 +15,7 @@ import {
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { Warehouse } from '@core/models/warehouse.model';
 import { WarehouseService } from '@core/services/http/warehouse.service';
+import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 
 @Component({
@@ -41,6 +42,7 @@ export class WarehousesListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private warehouseService = inject(WarehouseService);
+  private alertService = inject(AlertService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -204,8 +206,9 @@ export class WarehousesListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onDelete(warehouse: Warehouse): void {
-    if (!confirm(`Are you sure you want to delete "${warehouse.name}"?`)) {
+  async onDelete(warehouse: Warehouse): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${warehouse.name}"?`, 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }
@@ -219,10 +222,11 @@ export class WarehousesListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const selected = this.warehouses().filter(w => w.selected);
     if (selected.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selected.length} warehouse(s)?`)) return;
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} warehouse(s)?`, 'Delete');
+    if (!confirmed) return;
 
     const deleteOps = selected.map(w =>
       this.warehouseService.deleteWarehouse(String(w.id)).toPromise()

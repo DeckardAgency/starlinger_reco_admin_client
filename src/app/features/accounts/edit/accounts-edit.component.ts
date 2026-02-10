@@ -17,6 +17,7 @@ import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-f
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { DataTableComponent, TableColumn } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { AddressModalComponent, AddressFormData } from '../../../shared/components/modals/address-modal/address-modal.component';
 import { Account, AccountContact } from '@core/models/account.model';
 import { ClientService } from '@core/services/http/client.service';
@@ -106,6 +107,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   private orderService = inject(OrderService);
   private addressService = inject(AddressService);
   private accountGroupService = inject(AccountGroupService);
+  private toastService = inject(ToastService);
   private destroy$ = new Subject<void>();
 
   isLoading = signal(false);
@@ -657,6 +659,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
     operation.subscribe({
       next: (result) => {
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/accounts/list']);
         } else if (isCreating && result?.id) {
@@ -665,7 +668,10 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         }
         // If editing and not navigating, just stay on page (data already saved)
       },
-      error: (error) => console.error('Error saving account:', error)
+      error: (error) => {
+        console.error('Error saving account:', error);
+        this.toastService.error('Failed to save account');
+      }
     });
   }
 

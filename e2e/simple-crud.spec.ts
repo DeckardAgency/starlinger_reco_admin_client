@@ -77,7 +77,8 @@ for (const moduleKey of SIMPLE_CRUD_MODULES) {
         // Generate appropriate values based on field name/constraints
         let value: string;
         if (field.type === 'number') {
-          value = String(Date.now() % 100);
+          // Use small, valid numbers — large random values may fail API validation
+          value = '1';
         } else if (field.name === 'name' || field.name === 'contactPerson') {
           value = testId;
         } else if (field.name === 'code') {
@@ -138,11 +139,10 @@ for (const moduleKey of SIMPLE_CRUD_MODULES) {
 
       await modulePage.clickEdit(0);
 
-      // Modify the first text field
+      // Modify the first text field — use a fresh value to avoid accumulation from previous runs
       const firstField = config.formFields.find(f => f.type !== 'number' && f.type !== 'select' && f.type !== 'toggle' && f.type !== 'textarea');
       if (firstField) {
-        const currentValue = await modulePage.getCurrentInputValue(firstField.placeholder, firstField.fieldIndex);
-        const editedValue = `${currentValue} Edited`;
+        const editedValue = `Edited_${Date.now()}`;
         await modulePage.fillField(firstField.placeholder, editedValue, firstField.fieldIndex);
       }
 

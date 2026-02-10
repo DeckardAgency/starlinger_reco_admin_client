@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef, ViewChild, TemplateRef, AfterViewInit, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef, ViewChild, TemplateRef, AfterViewInit, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpEventType } from '@angular/common/http';
@@ -18,6 +18,7 @@ import { TabsComponent, TabItem } from '@app/ui-kit/molecules/tabs/tabs.componen
 import { TableCheckboxSelectionComponent } from '@app/ui-kit/molecules/table-checkbox-selection/table-checkbox-selection.component';
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { TextEditorComponent } from '@shared/components/text-editor/text-editor.component';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { DeliveryType, DeliveryTypeDocument } from '@core/models/delivery-type.model';
 import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
 import { MediaService } from '@core/services/http/media.service';
@@ -75,6 +76,7 @@ const EMPTY_DELIVERY_TYPE: DeliveryTypeDetail = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewInit {
+  private toastService = inject(ToastService);
   private destroy$ = new Subject<void>();
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
@@ -278,13 +280,17 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
 
     operation.subscribe({
       next: (result) => {
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/delivery-types/list']);
         } else if (isCreating && result?.id) {
           this.router.navigate(['/admin/delivery-types', result.id, 'edit']);
         }
       },
-      error: (error) => console.error('Error saving delivery type:', error)
+      error: (error) => {
+        console.error('Error saving delivery type:', error);
+        this.toastService.error('Failed to save delivery type');
+      }
     });
   }
 

@@ -11,6 +11,7 @@ import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { ContactService } from '@core/services/http/contact.service';
 import { ClientService } from '@core/services/http/client.service';
 import { LookupService } from '@core/services/http/lookup.service';
@@ -88,6 +89,7 @@ export class ContactsEditComponent implements OnInit, OnDestroy {
   private contactService = inject(ContactService);
   private clientService = inject(ClientService);
   private lookupService = inject(LookupService);
+  private toastService = inject(ToastService);
   private destroy$ = new Subject<void>();
 
   // Mode tracking
@@ -346,13 +348,17 @@ export class ContactsEditComponent implements OnInit, OnDestroy {
 
     operation.subscribe({
       next: (result) => {
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/contacts/list']);
         } else if (isCreating && result?.id) {
           this.router.navigate(['/admin/contacts', result.id, 'edit']);
         }
       },
-      error: (error) => console.error('Error saving contact:', error)
+      error: (error) => {
+        console.error('Error saving contact:', error);
+        this.toastService.error('Failed to save contact');
+      }
     });
   }
 

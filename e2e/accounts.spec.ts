@@ -79,11 +79,10 @@ test.describe('Accounts CRUD', () => {
     await modulePage.gotoList();
     await modulePage.clickEdit(0);
 
-    // Modify the title field
+    // Modify the title field — use a fresh value to avoid accumulation from previous runs
     const nameInput = page.locator('input[placeholder="Company title"]');
     await expect(nameInput).toBeVisible();
-    const currentName = await nameInput.inputValue();
-    await nameInput.fill(`${currentName} Edited`);
+    await nameInput.fill(`Edited_${Date.now()}`);
 
     await modulePage.saveAndExpectList();
   });
@@ -149,7 +148,10 @@ test.describe('Accounts CRUD', () => {
   });
 
   test('10. should cancel and go back to list', async ({ page }) => {
-    await modulePage.gotoCreate();
+    // Navigate via list first so browser history has the list page
+    // (direct gotoCreate uses page.goto which leaves about:blank in history)
+    await modulePage.gotoList();
+    await modulePage.clickAdd();
     await modulePage.goBack();
 
     await expect(page).toHaveURL(/\/accounts\/list/);

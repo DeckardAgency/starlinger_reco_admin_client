@@ -13,6 +13,7 @@ import { ListHeaderComponent } from '@app/ui-kit/molecules/list-header/list-head
 import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-footer.component';
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { OrderService } from '@core/services/http/order.service';
+import { AlertService } from '@services/alert.service';
 import { Order } from '@core/models/order.model';
 
 interface ShopOrder {
@@ -54,6 +55,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private orderService = inject(OrderService);
+  private alertService = inject(AlertService);
 
   @ViewChild('typeTemplate') typeTemplate!: TemplateRef<any>;
   @ViewChild('customerTemplate') customerTemplate!: TemplateRef<any>;
@@ -274,8 +276,9 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onDelete(order: ShopOrder): void {
-    if (!confirm(`Are you sure you want to delete order "${order.internalRef}"?`)) {
+  async onDelete(order: ShopOrder): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete order "${order.internalRef}"?`, 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }

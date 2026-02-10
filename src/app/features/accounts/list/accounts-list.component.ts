@@ -8,6 +8,7 @@ import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
 import { Account } from '@core/models/account.model';
 import { ClientService } from '@core/services/http/client.service';
 import { Client } from '@core/models/client.model';
+import { AlertService } from '@services/alert.service';
 
 // Consolidated components
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -39,6 +40,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
   private clientService = inject(ClientService);
+  private alertService = inject(AlertService);
 
   @ViewChild('statusTemplate') statusTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
@@ -202,8 +204,9 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  private deleteAccount(account: Account): void {
-    if (!confirm(`Are you sure you want to delete "${account.name}"?`)) {
+  private async deleteAccount(account: Account): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${account.name}"?`, 'Delete');
+    if (!confirmed) {
       return;
     }
     this.clientService.deleteClient(String(account.id)).subscribe({

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef, ViewChild, TemplateRef, AfterViewInit, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef, ViewChild, TemplateRef, AfterViewInit, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpEventType } from '@angular/common/http';
@@ -23,6 +23,7 @@ import { PaymentTypeService } from '@core/services/http/payment-type.service';
 import { MediaService } from '@core/services/http/media.service';
 import { MediaItem } from '@core/models/media.model';
 import { environment } from '@env/environment';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface PaymentTypeDetail {
   id: string;
@@ -84,6 +85,7 @@ const EMPTY_PAYMENT_TYPE: PaymentTypeDetail = {
 })
 export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
+  private toastService = inject(ToastService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -315,13 +317,17 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
 
     operation.subscribe({
       next: (result) => {
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/payment-types/list']);
         } else if (isCreating && result?.id) {
           this.router.navigate(['/admin/payment-types', result.id, 'edit']);
         }
       },
-      error: (error) => console.error('Error saving payment type:', error)
+      error: (error) => {
+        console.error('Error saving payment type:', error);
+        this.toastService.error('Failed to save payment type');
+      }
     });
   }
 

@@ -14,6 +14,7 @@ import {
 } from '@app/ui-kit/molecules';
 import { TaxType } from '@core/models/tax-type.model';
 import { TaxTypeService } from '@core/services/http/tax-type.service';
+import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 
 @Component({
@@ -39,6 +40,7 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private taxTypeService = inject(TaxTypeService);
+  private alertService = inject(AlertService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -203,8 +205,9 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onDelete(taxType: TaxType): void {
-    if (!confirm(`Are you sure you want to delete "${taxType.name}"?`)) {
+  async onDelete(taxType: TaxType): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${taxType.name}"?`, 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }
@@ -218,10 +221,11 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const selected = this.taxTypes().filter(t => t.selected);
     if (selected.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selected.length} tax type(s)?`)) return;
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} tax type(s)?`, 'Delete');
+    if (!confirmed) return;
 
     const deleteOps = selected.map(t =>
       this.taxTypeService.deleteTaxType(String(t.id)).toPromise()

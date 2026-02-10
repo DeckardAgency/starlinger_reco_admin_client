@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -11,6 +11,7 @@ import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detai
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { TaxType } from '@core/models/tax-type.model';
 import { TaxTypeService } from '@core/services/http/tax-type.service';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface TaxTypeDetail {
   id: string;
@@ -48,6 +49,7 @@ const EMPTY_TAX_TYPE: TaxTypeDetail = {
 })
 export class TaxTypesEditComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private toastService = inject(ToastService);
 
   // Mode
   isEditMode = signal(false);
@@ -169,13 +171,17 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
 
     operation.subscribe({
       next: (result) => {
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/tax-types/list']);
         } else if (isCreating && result?.id) {
           this.router.navigate(['/admin/tax-types', result.id, 'edit']);
         }
       },
-      error: (error) => console.error('Error saving tax type:', error)
+      error: (error) => {
+        console.error('Error saving tax type:', error);
+        this.toastService.error('Failed to save tax type');
+      }
     });
   }
 

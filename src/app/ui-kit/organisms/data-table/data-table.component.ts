@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, TemplateRef, HostBinding } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, TemplateRef, HostBinding, ViewChild, ElementRef, OnDestroy, NgZone, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface TableColumn {
@@ -36,7 +36,11 @@ export interface SortEvent {
   styleUrls: ['./data-table.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DataTableComponent {
+export class DataTableComponent implements OnDestroy {
+  private ngZone = inject(NgZone);
+
+  @ViewChild('tableWrapper') tableWrapper!: ElementRef<HTMLDivElement>;
+
   @Input({ required: true }) columns!: TableColumn[];
   @Input({ required: true }) data!: any[];
   @Input() sortColumn: string | null = null;
@@ -71,6 +75,63 @@ export class DataTableComponent {
   get rowHoverBackgroundStyle() { return this.rowHoverBackground; }
 
   @Output() sort = new EventEmitter<SortEvent>();
+
+  // Drag-to-scroll state
+  isDragging = false;
+  private startX = 0;
+  private startScrollLeft = 0;
+  private hasDragStarted = false;
+  private readonly dragThreshold = 5;
+
+  private boundOnMouseMove = (e: MouseEvent) => this.onMouseMove(e);
+  private boundOnMouseUp = () => this.onMouseUp();
+
+  onMouseDown(e: MouseEvent): void {
+    if (e.button !== 0) return;
+    const el = this.tableWrapper?.nativeElement;
+    if (!el) return;
+
+    this.isDragging = true;
+    this.hasDragStarted = false;
+    this.startX = e.pageX;
+    this.startScrollLeft = el.scrollLeft;
+
+    this.ngZone.runOutsideAngular(() => {
+      document.addEventListener('mousemove', this.boundOnMouseMove);
+      document.addEventListener('mouseup', this.boundOnMouseUp);
+    });
+  }
+
+  private onMouseMove(e: MouseEvent): void {
+    if (!this.isDragging) return;
+    const dx = e.pageX - this.startX;
+
+    if (!this.hasDragStarted && Math.abs(dx) > this.dragThreshold) {
+      this.hasDragStarted = true;
+    }
+
+    if (this.hasDragStarted) {
+      e.preventDefault();
+      const el = this.tableWrapper.nativeElement;
+      el.scrollLeft = this.startScrollLeft - dx;
+      el.classList.add('data-table--dragging');
+    }
+  }
+
+  private onMouseUp(): void {
+    if (this.hasDragStarted) {
+      this.tableWrapper?.nativeElement.classList.remove('data-table--dragging');
+    }
+    this.isDragging = false;
+    this.hasDragStarted = false;
+    document.removeEventListener('mousemove', this.boundOnMouseMove);
+    document.removeEventListener('mouseup', this.boundOnMouseUp);
+  }
+
+  ngOnDestroy(): void {
+    document.removeEventListener('mousemove', this.boundOnMouseMove);
+    document.removeEventListener('mouseup', this.boundOnMouseUp);
+  }
 
   onSort(column: TableColumn): void {
     if (!column.sortable) return;

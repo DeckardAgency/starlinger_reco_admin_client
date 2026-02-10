@@ -59,7 +59,8 @@ test.describe('Products CRUD', () => {
     await modulePage.saveAndExpectList();
 
     // VERIFY: The created product appears in the list
-    await modulePage.verifyRowExists(testId);
+    // Products list displays slug (lowercased/hyphenated) as name, so verify by code
+    await modulePage.verifyRowExists(testData.code);
   });
 
   test('4. should navigate to edit page via actions dropdown', async ({ page }) => {
@@ -76,11 +77,10 @@ test.describe('Products CRUD', () => {
     await modulePage.gotoList();
     await modulePage.clickEdit(0);
 
-    // Modify the name field
+    // Modify the name field — use a fresh value to avoid accumulation from previous runs
     const nameInput = page.locator('input[placeholder="Enter product name"]');
     await expect(nameInput).toBeVisible();
-    const currentName = await nameInput.inputValue();
-    await nameInput.fill(`${currentName} Edited`);
+    await nameInput.fill(`Edited_${Date.now()}`);
 
     await modulePage.saveAndExpectList();
   });
@@ -100,8 +100,8 @@ test.describe('Products CRUD', () => {
   test('7. should search/filter products', async ({ page }) => {
     await modulePage.gotoList();
 
-    // Search is client-side
-    await modulePage.search('part');
+    // Search is client-side — use a term that matches existing product codes
+    await modulePage.search('BCSM');
 
     await expect(modulePage.table).toBeVisible();
   });
@@ -129,7 +129,9 @@ test.describe('Products CRUD', () => {
   });
 
   test('9. should cancel and go back to list', async ({ page }) => {
-    await modulePage.gotoCreate();
+    // Navigate via list first so browser history has the list page
+    await modulePage.gotoList();
+    await modulePage.clickAdd();
     await modulePage.goBack();
 
     await expect(page).toHaveURL(/\/products\/list/);

@@ -45,7 +45,6 @@
     @media screen and (max-width: 576px) {
       margin-top: 80px; // Account for mobile top-bar height
       padding-top: 16px; // Spacing between navbar and content
-      min-height: calc(100vh - 80px - 16px);
     }
 
     &--collapsed {

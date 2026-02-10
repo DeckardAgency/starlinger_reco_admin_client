@@ -9,6 +9,7 @@ import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcru
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
+import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { FuelSurchargeService } from '@core/services/http/fuel-surcharge.service';
 
 interface FuelSurchargeDetail {
@@ -67,6 +68,7 @@ export class FuelSurchargesEditComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
   private fuelSurchargeService = inject(FuelSurchargeService);
+  private toastService = inject(ToastService);
 
   private fuelSurchargeId: string | null = null;
 
@@ -203,13 +205,17 @@ export class FuelSurchargesEditComponent implements OnInit {
 
     operation.subscribe({
       next: (result) => {
+        this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/fuel-surcharges/list']);
         } else if (isCreating && result?.id) {
           this.router.navigate(['/admin/fuel-surcharges', result.id, 'edit']);
         }
       },
-      error: (error) => console.error('Error saving fuel surcharge:', error)
+      error: (error) => {
+        console.error('Error saving fuel surcharge:', error);
+        this.toastService.error('Failed to save fuel surcharge');
+      }
     });
   }
 }

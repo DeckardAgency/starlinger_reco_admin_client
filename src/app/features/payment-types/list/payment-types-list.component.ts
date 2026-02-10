@@ -15,6 +15,7 @@ import {
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { PaymentType } from '@core/models/payment-type.model';
 import { PaymentTypeService } from '@core/services/http/payment-type.service';
+import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 
 @Component({
@@ -41,6 +42,7 @@ export class PaymentTypesListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private paymentTypeService = inject(PaymentTypeService);
+  private alertService = inject(AlertService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -203,8 +205,9 @@ export class PaymentTypesListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onDelete(paymentType: PaymentType): void {
-    if (!confirm(`Are you sure you want to delete "${paymentType.name}"?`)) {
+  async onDelete(paymentType: PaymentType): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${paymentType.name}"?`, 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }
@@ -218,10 +221,11 @@ export class PaymentTypesListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const selected = this.paymentTypes().filter(p => p.selected);
     if (selected.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selected.length} payment type(s)?`)) return;
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} payment type(s)?`, 'Delete');
+    if (!confirmed) return;
 
     const deleteOps = selected.map(p =>
       this.paymentTypeService.deletePaymentType(String(p.id)).toPromise()

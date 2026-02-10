@@ -1,4 +1,4 @@
-<div class="data-table">
+<div class="data-table" #tableWrapper (mousedown)="onMouseDown($event)">
   <table class="data-table__table">
     <thead class="data-table__header" *ngIf="showHeaders">
       <tr class="data-table__header-row">

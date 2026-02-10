@@ -8,6 +8,8 @@ import { filter } from 'rxjs/operators';
 import { SidebarService } from '@services/sidebar.service';
 import { AuthService } from '@core/auth/auth.service';
 import { MobileMenuComponent } from './layout/mobile-menu/mobile-menu.component';
+import { ToastContainerComponent } from './ui-kit/organisms/toast-container/toast-container.component';
+import { AlertComponent } from './shared/components/alert/alert.component';
 
 @Component({
     selector: 'app-root',
@@ -17,7 +19,9 @@ import { MobileMenuComponent } from './layout/mobile-menu/mobile-menu.component'
       TopBarComponent,
       AsyncPipe,
       NgIf,
-      MobileMenuComponent
+      MobileMenuComponent,
+      ToastContainerComponent,
+      AlertComponent
     ],
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss']

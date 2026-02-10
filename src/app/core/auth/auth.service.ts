@@ -212,8 +212,8 @@ export class AuthService {
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const decoded = JSON.parse(window.atob(base64)) as TokenPayload;
 
-      // Validate required fields
-      if (!decoded.username || !decoded.exp || !decoded.iat) {
+      // Validate required fields (email is the primary JWT claim)
+      if (!decoded.email || !decoded.exp || !decoded.iat) {
         this.logger.error('Invalid token payload: missing required fields');
         return null;
       }
@@ -239,8 +239,8 @@ export class AuthService {
 
       // Create a user object
       const user: User = {
-        username: tokenData?.username || email,
-        email: tokenData?.username || email,
+        username: tokenData?.email || email,
+        email: tokenData?.email || email,
         id: '',
         roles: [],
         firstName: '',

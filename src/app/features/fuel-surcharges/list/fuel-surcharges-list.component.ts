@@ -14,6 +14,7 @@ import {
 } from '@app/ui-kit/molecules';
 import { FuelSurcharge } from '@core/models/fuel-surcharge.model';
 import { FuelSurchargeService } from '@core/services/http/fuel-surcharge.service';
+import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 
 @Component({
@@ -39,6 +40,7 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private fuelSurchargeService = inject(FuelSurchargeService);
+  private alertService = inject(AlertService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -196,8 +198,9 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onDelete(fuelSurcharge: FuelSurcharge): void {
-    if (!confirm('Are you sure you want to delete this fuel surcharge?')) {
+  async onDelete(fuelSurcharge: FuelSurcharge): Promise<void> {
+    const confirmed = await this.alertService.confirm('Are you sure you want to delete this fuel surcharge?', 'Delete');
+    if (!confirmed) {
       this.closeDropdown();
       return;
     }
@@ -211,10 +214,11 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
     this.closeDropdown();
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const selected = this.fuelSurcharges().filter(fs => fs.selected);
     if (selected.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selected.length} fuel surcharge(s)?`)) return;
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} fuel surcharge(s)?`, 'Delete');
+    if (!confirmed) return;
 
     const deleteOps = selected.map(fs =>
       this.fuelSurchargeService.deleteFuelSurcharge(String(fs.id)).toPromise()
