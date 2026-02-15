@@ -21,10 +21,6 @@ export class RoleGuard {
         route: ActivatedRouteSnapshot,
         state: RouterStateSnapshot
     ): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
-        // TODO: Remove this bypass before production
-        return true; // DEV BYPASS - skip role check
-
-        /* DEV BYPASS - Original code commented out
         // Not authenticated? Go to login
         if (!this.authService.isAuthenticated()) {
             return this.router.createUrlTree(['/login']);
@@ -45,7 +41,6 @@ export class RoleGuard {
 
         // Wrong area - redirect to correct area based on role
         return this.getHomeUrlForUser(user.roles);
-        */
     }
 
     /**

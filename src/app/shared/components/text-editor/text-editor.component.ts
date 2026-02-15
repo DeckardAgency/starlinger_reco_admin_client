@@ -157,15 +157,24 @@ export class TextEditorComponent implements OnInit, OnChanges {
 
     insertLink(): void {
         const url = prompt('Enter URL:');
-        if (url) {
+        if (url && this.isValidUrl(url)) {
             this.execCommand('createLink', url);
         }
     }
 
     insertImage(): void {
         const url = prompt('Enter image URL:');
-        if (url) {
+        if (url && this.isValidUrl(url)) {
             this.execCommand('insertImage', url);
+        }
+    }
+
+    private isValidUrl(url: string): boolean {
+        try {
+            const parsed = new URL(url);
+            return ['http:', 'https:'].includes(parsed.protocol);
+        } catch {
+            return false;
         }
     }
 

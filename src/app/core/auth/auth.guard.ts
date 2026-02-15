@@ -24,10 +24,6 @@ export class AuthGuard {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
-    // TODO: Remove this bypass before production
-    return true; // DEV BYPASS - skip auth check
-
-    /* DEV BYPASS - Original code commented out
     // First check if user is already authenticated
     if (this.authService.isAuthenticated()) {
       // Check if user's client is archived
@@ -39,7 +35,6 @@ export class AuthGuard {
         // Show login modal with message
         setTimeout(() => {
           this.loginModalService.open();
-          // You could add a notification here if you have a notification service
         }, 100);
 
         return false;
@@ -62,6 +57,5 @@ export class AuthGuard {
 
     // Return false to prevent navigation when not authenticated
     return false;
-    */
   }
 }
