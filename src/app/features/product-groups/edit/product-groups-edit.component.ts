@@ -13,7 +13,7 @@ import { ProductGroupService } from '@core/services/http/product-group.service';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface ProductGroupDetail {
-  id: string;
+  id: number;
   name: string;
   productGroupCode: string;
   description: string;
@@ -26,7 +26,7 @@ interface ProductGroupDetail {
 }
 
 const EMPTY_PRODUCT_GROUP: ProductGroupDetail = {
-  id: '',
+  id: 0,
   name: '',
   productGroupCode: '',
   description: '',
@@ -96,7 +96,7 @@ export class ProductGroupsEditComponent implements OnInit, OnDestroy {
     this.productGroupService.getProductGroupById(id).subscribe({
       next: (pg) => {
         this.productGroup.set({
-          id: pg.id || id,
+          id: pg.id || Number(id),
           name: pg.name || '',
           productGroupCode: pg.productGroupCode || '',
           description: pg.description || '',

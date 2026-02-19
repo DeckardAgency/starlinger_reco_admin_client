@@ -25,7 +25,7 @@ import { environment } from '@env/environment';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface WarehouseDetail {
-  id: string;
+  id: number;
   name: string;
   contactPerson: string;
   address: string;
@@ -41,7 +41,7 @@ interface WarehouseDetail {
 }
 
 const EMPTY_WAREHOUSE: WarehouseDetail = {
-  id: '',
+  id: 0,
   name: '',
   contactPerson: '',
   address: '',
@@ -119,13 +119,13 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
   isHeaderDropdownOpen = signal(false);
 
   // Document action dropdown state
-  activeDocActionId = signal<string | null>(null);
+  activeDocActionId = signal<number | null>(null);
 
   // Rename modal state
   isRenameModalOpen = signal(false);
   renameValue = signal('');
   renameExtension = signal('');
-  renameDocumentId = signal<string | null>(null);
+  renameDocumentId = signal<number | null>(null);
 
   // Selection state
   selectAll = signal(false);
@@ -187,7 +187,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.warehouseService.getWarehouseById(id).subscribe({
       next: (warehouse: any) => {
         this.warehouse.set({
-          id: warehouse.id || id,
+          id: warehouse.id || Number(id),
           name: warehouse.name || '',
           contactPerson: warehouse.contactPerson || '',
           address: warehouse.address || '',
@@ -434,7 +434,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.warehouse.update(w => ({ ...w, documents: updated }));
   }
 
-  toggleDocumentActions(docId: string): void {
+  toggleDocumentActions(docId: number): void {
     if (this.activeDocActionId() === docId) {
       this.activeDocActionId.set(null);
     } else {
@@ -465,7 +465,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.isHeaderDropdownOpen.set(isOpen);
   }
 
-  renameDocument(docId: string): void {
+  renameDocument(docId: number): void {
     const doc = this.warehouse().documents.find(d => d.id === docId);
     if (doc) {
       const { name, ext } = this.splitFilename(doc.name);
@@ -477,8 +477,8 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.activeDocActionId.set(null);
   }
 
-  downloadDocument(docId: string): void {
-    this.mediaService.getMediaItem(docId)
+  downloadDocument(docId: number): void {
+    this.mediaService.getMediaItem(String(docId))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (media) => {
@@ -509,8 +509,8 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
       });
   }
 
-  deleteDocument(docId: string): void {
-    this.mediaService.deleteMediaItem(docId)
+  deleteDocument(docId: number): void {
+    this.mediaService.deleteMediaItem(String(docId))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -545,7 +545,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     );
     this.warehouse.update(w => ({ ...w, documents: updated }));
 
-    this.mediaService.updateMediaItem(docId, { filename: fullName } as any)
+    this.mediaService.updateMediaItem(String(docId), { filename: fullName } as any)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         error: (err) => console.error('Error renaming document:', err)
@@ -575,7 +575,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     if (selected.length === 0) return;
 
     selected.forEach(doc => {
-      this.mediaService.deleteMediaItem(doc.id)
+      this.mediaService.deleteMediaItem(String(doc.id))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           error: (err) => console.error('Error deleting document:', err)

@@ -23,7 +23,7 @@ import { finalize, forkJoin, Observable, of, Subject, debounceTime } from 'rxjs'
 import {environment} from "@env/environment";
 
 interface GalleryImage {
-    id: string;
+    id: number;
     name: string;
     url: string;
     originalItem: MediaItem;
@@ -56,12 +56,12 @@ export class ProductImageGalleryComponent implements OnInit, OnChanges {
     private readonly dragLeaveSubject = new Subject<DragEvent>();
 
     galleryImages: GalleryImage[] = [];
-    activeImageMenu: string | null = null;
+    activeImageMenu: number | null = null;
     isUploading = false;
     isDraggingOver = false;
     isDraggingImage = false;
-    draggedImageId: string | null = null;
-    dropTargetImageId: string | null = null;
+    draggedImageId: number | null = null;
+    dropTargetImageId: number | null = null;
     uploadProgress: UploadProgress = { total: 0, completed: 0, errors: [] };
 
     // Memoized track by function for better performance
@@ -100,7 +100,7 @@ export class ProductImageGalleryComponent implements OnInit, OnChanges {
         }
 
         this.galleryImages = this.mediaItems.map((item, index) => ({
-            id: item.id || item['@id'] || `temp-${index}`,
+            id: item.id,
             name: item.filename || `Image-${index + 1}`,
             url: item.filePath || '',
             originalItem: item,
@@ -119,7 +119,7 @@ export class ProductImageGalleryComponent implements OnInit, OnChanges {
         }
     }
 
-    toggleImageMenu(imageId: string): void {
+    toggleImageMenu(imageId: number): void {
         this.activeImageMenu = this.activeImageMenu === imageId ? null : imageId;
     }
 
@@ -286,7 +286,7 @@ export class ProductImageGalleryComponent implements OnInit, OnChanges {
         });
     }
 
-    downloadImage(imageId: string): void {
+    downloadImage(imageId: number): void {
         const image = this.galleryImages.find(img => img.id === imageId);
         if (!image) return;
 
@@ -314,7 +314,7 @@ export class ProductImageGalleryComponent implements OnInit, OnChanges {
         this.closeAllMenus();
     }
 
-    deleteImage(imageId: string): void {
+    deleteImage(imageId: number): void {
         const index = this.galleryImages.findIndex(img => img.id === imageId);
         if (index === -1) return;
 
@@ -330,7 +330,7 @@ export class ProductImageGalleryComponent implements OnInit, OnChanges {
         this.closeAllMenus();
     }
 
-    makePrimary(imageId: string): void {
+    makePrimary(imageId: number): void {
         const targetImage = this.galleryImages.find(img => img.id === imageId);
         if (!targetImage) return;
 
@@ -364,7 +364,7 @@ export class ProductImageGalleryComponent implements OnInit, OnChanges {
         this.resetDragState();
     }
 
-    dragEnter(event: DragEvent, imageId: string): void {
+    dragEnter(event: DragEvent, imageId: number): void {
         if (this.isDraggingImage && this.draggedImageId !== imageId) {
             this.dropTargetImageId = imageId;
         }
@@ -437,7 +437,7 @@ export class ProductImageGalleryComponent implements OnInit, OnChanges {
         this.updateMediaItems();
     }
 
-    startRenameImage(imageId: string): void {
+    startRenameImage(imageId: number): void {
         const image = this.galleryImages.find(img => img.id === imageId);
         if (image) {
             image.isRenaming = true;
@@ -452,7 +452,7 @@ export class ProductImageGalleryComponent implements OnInit, OnChanges {
         this.closeAllMenus();
     }
 
-    saveImageRename(imageId: string, event?: Event): void {
+    saveImageRename(imageId: number, event?: Event): void {
         event?.preventDefault();
 
         const image = this.galleryImages.find(img => img.id === imageId);
@@ -468,7 +468,7 @@ export class ProductImageGalleryComponent implements OnInit, OnChanges {
         this.updateMediaItems();
     }
 
-    cancelImageRename(imageId: string): void {
+    cancelImageRename(imageId: number): void {
         const image = this.galleryImages.find(img => img.id === imageId);
         if (image) {
             image.isRenaming = false;

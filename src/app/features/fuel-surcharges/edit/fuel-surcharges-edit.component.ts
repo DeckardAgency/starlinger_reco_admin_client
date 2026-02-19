@@ -13,7 +13,7 @@ import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-contai
 import { FuelSurchargeService } from '@core/services/http/fuel-surcharge.service';
 
 interface FuelSurchargeDetail {
-  id: string;
+  id: number;
   name: string;
   sizeFrom: string;
   sizeTo: string;
@@ -21,7 +21,7 @@ interface FuelSurchargeDetail {
 }
 
 const EMPTY_FUEL_SURCHARGE: FuelSurchargeDetail = {
-  id: '',
+  id: 0,
   name: '',
   sizeFrom: '',
   sizeTo: '',
@@ -111,7 +111,7 @@ export class FuelSurchargesEditComponent implements OnInit {
     this.fuelSurchargeService.getFuelSurchargeById(id).subscribe({
       next: (fuelSurcharge) => {
         this.fuelSurcharge.set({
-          id: fuelSurcharge.id || id,
+          id: fuelSurcharge.id || Number(id),
           name: fuelSurcharge.name || '',
           sizeFrom: fuelSurcharge.sizeFrom || '',
           sizeTo: fuelSurcharge.sizeTo || '',

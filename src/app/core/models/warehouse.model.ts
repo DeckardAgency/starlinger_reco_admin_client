@@ -1,5 +1,5 @@
 export interface WarehouseDocument {
-  id: string;
+  id: number;
   fileType: string;
   name: string;
   size: string;
@@ -7,7 +7,7 @@ export interface WarehouseDocument {
 }
 
 export interface Warehouse {
-  id: string;
+  id: number;
   name: string;
   code: string;
   officeName: string;

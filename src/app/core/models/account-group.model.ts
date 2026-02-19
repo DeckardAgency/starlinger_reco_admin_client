@@ -1,5 +1,5 @@
 export interface AccountGroup {
-  id: string;
+  id: number;
   name: string;
   isActive: boolean;
   createdAt: string;

@@ -45,9 +45,9 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
-  @ViewChild('sizeFromTemplate') sizeFromTemplate!: TemplateRef<any>;
-  @ViewChild('sizeToTemplate') sizeToTemplate!: TemplateRef<any>;
-  @ViewChild('priceBaseTemplate') priceBaseTemplate!: TemplateRef<any>;
+  @ViewChild('dateTemplate') dateTemplate!: TemplateRef<any>;
+  @ViewChild('fuelSurchargeTemplate') fuelSurchargeTemplate!: TemplateRef<any>;
+  @ViewChild('deliveryTypeTemplate') deliveryTypeTemplate!: TemplateRef<any>;
 
   // Search state
   searchQuery = signal('');
@@ -147,10 +147,9 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   private initColumns(): void {
     this.columns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
-      { key: 'name', label: 'Name', sortable: true },
-      { key: 'sizeFrom', label: 'Size from', sortable: true, template: this.sizeFromTemplate },
-      { key: 'sizeTo', label: 'Size to', sortable: true, template: this.sizeToTemplate },
-      { key: 'priceBase', label: 'Price base', sortable: true, template: this.priceBaseTemplate },
+      { key: 'date', label: 'Date', sortable: true, template: this.dateTemplate },
+      { key: 'fuelSurcharge', label: 'Surcharge', sortable: true, template: this.fuelSurchargeTemplate },
+      { key: 'deliveryType', label: 'Delivery type', sortable: false, template: this.deliveryTypeTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }

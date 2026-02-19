@@ -30,7 +30,7 @@ interface ContactDetail {
   fax: string;
   dateOfBirth: string;
   description: string;
-  accountId: string | null;
+  accountId: number | null;
   accountName: string;
   titleId: number | null;
   departmentId: number | null;
@@ -136,7 +136,7 @@ export class ContactsEditComponent implements OnInit, OnDestroy {
             if (accountId) {
               this.contact.update(c => ({
                 ...c,
-                accountId: accountId,
+                accountId: Number(accountId),
                 accountName: accountName || ''
               }));
               this.cdr.markForCheck();
@@ -269,7 +269,7 @@ export class ContactsEditComponent implements OnInit, OnDestroy {
     if (selectedAccount) {
       this.contact.update(c => ({
         ...c,
-        accountId: strValue,
+        accountId: Number(value),
         accountName: selectedAccount.label
       }));
     }

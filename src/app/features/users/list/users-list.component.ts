@@ -171,7 +171,7 @@ export class UsersListComponent implements OnInit, AfterViewInit {
       itemsPerPage: number;
       hasClient?: boolean;
       roles?: string;
-    } = { page: 1, itemsPerPage: 100 };
+    } = { page: 1, itemsPerPage: 500 };
 
     // Apply hasClient filter
     if (this.hasClientFilter === 'yes') {

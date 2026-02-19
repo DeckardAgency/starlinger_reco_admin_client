@@ -117,8 +117,8 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
       accounts: this.clientService.getClients(1, 'name', 'asc')
     }).subscribe({
       next: ({ contacts, accounts }) => {
-        // Create account lookup map (client IDs are UUID strings)
-        const accountMap = new Map<string, string>();
+        // Create account lookup map (client IDs are integers)
+        const accountMap = new Map<number, string>();
         accounts.clients.forEach(client => {
           accountMap.set(client.id, client.name);
         });

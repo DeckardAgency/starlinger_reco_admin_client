@@ -1,7 +1,7 @@
 export interface MediaItem {
   '@id': string;
   '@type': string;
-  id: string;
+  id: number;
   filename: string;
   mimeType: string;
   filePath: string;
@@ -12,7 +12,7 @@ export interface MediaItem {
 export interface Product {
   '@id': string;
   '@type': string;
-  id: string;
+  id: number;
   name: string;
   slug: string;
   partNo: string;
@@ -29,10 +29,10 @@ export interface Product {
   qtyStep: number | null;
   quoteItemLimit: number | null;
   fixedQty: number | null;
-  productGroupId: string | null;
+  productGroupId: number | null;
   catalogCode: string | null;
   retailPrice: number | null;
-  taxTypeId: string | null;
+  taxTypeId: number | null;
   currency: string | null;
   discountPercent: number | null;
   discountPrice: number | null;

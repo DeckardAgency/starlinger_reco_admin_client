@@ -18,7 +18,7 @@ import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
 import { DHL_ZONES } from '@core/models/country.model';
 
 interface DeliveryPriceDetail {
-  id: string;
+  id: number;
   name: string;
   deliveryType: string;
   dhlZone: string;
@@ -31,7 +31,7 @@ interface DeliveryPriceDetail {
 }
 
 const EMPTY_DELIVERY_PRICE: DeliveryPriceDetail = {
-  id: '',
+  id: 0,
   name: '',
   deliveryType: '',
   dhlZone: '',
@@ -128,7 +128,7 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
         next: (response) => {
           const options = response.member
             .filter(dt => dt.isActive)
-            .map(dt => ({ value: dt.id, label: dt.name }));
+            .map(dt => ({ value: String(dt.id), label: dt.name }));
           this.deliveryTypeOptions.set(options);
           this.cdr.markForCheck();
         },
@@ -150,7 +150,7 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
         let deliveryTypeId = '';
         if (deliveryPrice.deliveryType) {
           if (typeof deliveryPrice.deliveryType === 'object' && deliveryPrice.deliveryType !== null) {
-            deliveryTypeId = (deliveryPrice.deliveryType as DeliveryPriceDeliveryType).id || '';
+            deliveryTypeId = String((deliveryPrice.deliveryType as DeliveryPriceDeliveryType).id) || '';
           } else if (typeof deliveryPrice.deliveryType === 'string') {
             // Could be an IRI like "/api/v1/delivery_types/uuid" or just a UUID
             const iriMatch = (deliveryPrice.deliveryType as string).match(/\/([^/]+)$/);
@@ -159,7 +159,7 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
         }
 
         this.deliveryPrice.set({
-          id: deliveryPrice.id || id,
+          id: deliveryPrice.id || Number(id),
           name: deliveryPrice.name || '',
           deliveryType: deliveryTypeId,
           dhlZone: deliveryPrice.dhlZone != null ? String(deliveryPrice.dhlZone) : '',

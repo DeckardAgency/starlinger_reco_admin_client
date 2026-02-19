@@ -14,7 +14,7 @@ import { TaxTypeService } from '@core/services/http/tax-type.service';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface TaxTypeDetail {
-  id: string;
+  id: number;
   name: string;
   percent: string;
   remoteId: number | null;
@@ -23,7 +23,7 @@ interface TaxTypeDetail {
 }
 
 const EMPTY_TAX_TYPE: TaxTypeDetail = {
-  id: '',
+  id: 0,
   name: '',
   percent: '0',
   remoteId: null,
@@ -105,7 +105,7 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
     this.taxTypeService.getTaxTypeById(id).subscribe({
       next: (taxType) => {
         this.taxType.set({
-          id: taxType.id || id,
+          id: taxType.id || Number(id),
           name: taxType.name || '',
           percent: taxType.percent ?? '0',
           remoteId: taxType.remoteId ?? null,

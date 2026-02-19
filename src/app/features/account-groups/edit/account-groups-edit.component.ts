@@ -14,13 +14,13 @@ import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-contai
 import { AccountGroupService } from '@core/services/http/account-group.service';
 
 interface AccountGroupDetail {
-  id: string;
+  id: number;
   name: string;
   isActive: boolean;
 }
 
 const EMPTY_ACCOUNT_GROUP: AccountGroupDetail = {
-  id: '',
+  id: 0,
   name: '',
   isActive: true
 };
@@ -83,13 +83,13 @@ export class AccountGroupsEditComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private loadAccountGroup(id: string): void {
+  private loadAccountGroup(id: string | number): void {
     this.isLoading.set(true);
 
-    this.accountGroupService.getAccountGroupById(id).subscribe({
+    this.accountGroupService.getAccountGroupById(String(id)).subscribe({
       next: (group) => {
         this.accountGroup.set({
-          id: group.id || id,
+          id: group.id || Number(id),
           name: group.name || '',
           isActive: group.isActive ?? true
         });

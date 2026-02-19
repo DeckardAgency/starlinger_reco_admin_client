@@ -1,5 +1,5 @@
 export interface Account {
-  id: number | string;
+  id: number;
   code?: string;
   oib: string;
   name: string;
@@ -13,7 +13,7 @@ export interface Account {
   isActive?: boolean;
   isLegalEntity?: boolean;
   accountType?: string;
-  accountGroupId?: string;
+  accountGroupId?: number;
   phone?: string;
   otherPhone?: string;
   otherEmail?: string;
@@ -22,7 +22,7 @@ export interface Account {
 }
 
 export interface AccountContact {
-  id: number | string;
+  id: number;
   fullName: string;
   email: string;
   phone: string;
@@ -54,7 +54,7 @@ export interface AccountDetailResponse {
 
 // Contact model for the Contacts list page
 export interface Contact {
-  id: number | string;
+  id: number;
   firstName: string;
   lastName: string;
   account: string;

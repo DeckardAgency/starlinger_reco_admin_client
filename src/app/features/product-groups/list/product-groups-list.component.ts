@@ -226,7 +226,7 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
   async onDelete(productGroup: ProductGroupRow): Promise<void> {
     const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${productGroup.name}"?`, 'Delete');
     if (confirmed) {
-      this.productGroupService.deleteProductGroup(productGroup.id).subscribe({
+      this.productGroupService.deleteProductGroup(String(productGroup.id)).subscribe({
         next: () => {
           this.loadProductGroups();
         },
@@ -245,7 +245,7 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
     if (confirmed) {
       // Delete each selected item
       selected.forEach(p => {
-        this.productGroupService.deleteProductGroup(p.id).subscribe({
+        this.productGroupService.deleteProductGroup(String(p.id)).subscribe({
           next: () => {
             const remaining = this.productGroups().filter(pg => pg.id !== p.id);
             this.productGroups.set(remaining);

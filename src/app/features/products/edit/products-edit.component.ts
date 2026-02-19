@@ -32,7 +32,7 @@ import JSZip from 'jszip';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface ProductDetail {
-  id: string;
+  id: number;
   code: string;
   name: string;
   active: boolean;
@@ -55,7 +55,7 @@ interface ProductDetail {
 }
 
 interface RelatedProduct {
-  id: string;
+  id: number;
   productId: string;
   code: string;
   name: string;
@@ -65,14 +65,14 @@ interface RelatedProduct {
 }
 
 interface GalleryImage {
-  id: string;
+  id: number;
   name: string;
   url: string;
   isPrimary?: boolean;
 }
 
 interface ProductDocument {
-  id: string;
+  id: number;
   fileType: string;
   name: string;
   size: string;
@@ -89,7 +89,7 @@ interface AppliedDiscount {
 
 
 const EMPTY_PRODUCT: ProductDetail = {
-  id: '',
+  id: 0,
   code: '',
   name: '',
   active: false,
@@ -159,12 +159,12 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Gallery
   galleryImages = signal<GalleryImage[]>([]);
-  activeImageDropdown = signal<string | null>(null);
-  primaryImageId = signal<string | null>(null);
+  activeImageDropdown = signal<number | null>(null);
+  primaryImageId = signal<number | null>(null);
 
   // Product documents
   productDocuments = signal<ProductDocument[]>([]);
-  selectedDocumentIds = signal<Set<string>>(new Set());
+  selectedDocumentIds = signal<Set<number>>(new Set());
 
   // Applied discounts
   appliedDiscounts = signal<AppliedDiscount[]>([]);
@@ -172,15 +172,15 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Related products
   availableProducts = signal<RelatedProduct[]>([]);
   relatedProducts = signal<RelatedProduct[]>([]);
-  relatedChildProductIds = signal<Set<string>>(new Set());
-  private linkToProductMap = new Map<string, string>(); // link UUID -> child product UUID
+  relatedChildProductIds = signal<Set<number>>(new Set());
+  private linkToProductMap = new Map<number, number>(); // link ID -> child product ID
   filteredAvailableProducts = computed(() => {
     const related = this.relatedChildProductIds();
     const currentProductId = this.product().id;
     return this.availableProducts().filter(p => !related.has(p.id) && p.id !== currentProductId);
   });
-  selectedProductIds = signal<Set<string>>(new Set());
-  selectedRelatedProductIds = signal<Set<string>>(new Set());
+  selectedProductIds = signal<Set<number>>(new Set());
+  selectedRelatedProductIds = signal<Set<number>>(new Set());
 
   // Search and pagination
   searchQuery = signal('');
@@ -197,7 +197,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   isHeaderDropdownOpen = signal(false);
   isRelatedHeaderDropdownOpen = signal(false);
   isDocHeaderDropdownOpen = signal(false);
-  activeDocActionId = signal<string | null>(null);
+  activeDocActionId = signal<number | null>(null);
 
   documentActions: TableAction[] = [
     { id: 'rename', label: 'Rename', icon: 'edit' },
@@ -209,7 +209,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   isRenameModalOpen = signal(false);
   renameValue = signal('');
   renameExtension = signal('');
-  renameItemId = signal<string | null>(null);
+  renameItemId = signal<number | null>(null);
   renameItemType = signal<'image' | 'document' | null>(null);
 
   // Options
@@ -434,7 +434,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cdr.markForCheck();
       },
       error: () => {
-        this.product.set({ ...EMPTY_PRODUCT, id });
+        this.product.set({ ...EMPTY_PRODUCT, id: Number(id) });
         this.cdr.markForCheck();
       }
     });
@@ -453,11 +453,11 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       quoteItemLimit: p.quoteItemLimit ?? 0,
       fixedQuantity: p.fixedQty ?? 0,
       weight: p.weight ?? '',
-      productGroup: p.productGroupId ?? '',
+      productGroup: String(p.productGroupId ?? ''),
       catalogCode: p.catalogCode ?? '',
       basePrice: p.price ?? 0,
       retailPrice: p.retailPrice ?? 0,
-      taxPercent: p.taxTypeId ?? '',
+      taxPercent: String(p.taxTypeId ?? ''),
       currency: p.currency ?? 'EUR',
       discountPercent: p.discountPercent ?? 0,
       discountPrice: p.discountPrice ?? 0,
@@ -476,7 +476,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         next: (response) => {
           const products = (response.member || []).map(p => ({
             id: p.id,
-            productId: p.partNo || p.id.substring(0, 8),
+            productId: p.partNo || String(p.id),
             code: p.partNo || '',
             name: p.name || '',
             status: (p.isActive ? 'active' : 'inactive') as 'active' | 'inactive',
@@ -511,13 +511,13 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           const related: RelatedProduct[] = [];
           let loaded = 0;
           links.forEach(link => {
-            this.productService.getProductById(link.childProductId)
+            this.productService.getProductById(String(link.childProductId))
               .pipe(takeUntil(this.destroy$))
               .subscribe({
                 next: (p) => {
                   related.push({
                     id: link.id,
-                    productId: p.partNo || p.id.substring(0, 8),
+                    productId: p.partNo || String(p.id),
                     code: p.partNo || '',
                     name: p.name || '',
                     status: (p.isActive ? 'active' : 'inactive') as 'active' | 'inactive',
@@ -533,7 +533,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
                 error: () => {
                   related.push({
                     id: link.id,
-                    productId: link.childProductId.substring(0, 8),
+                    productId: String(link.childProductId),
                     code: '-',
                     name: 'Unknown product',
                     status: 'inactive',
@@ -559,7 +559,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       .subscribe({
         next: (response) => {
           const discounts = (response.member || []).map(d => ({
-            id: d.id.substring(0, 7),
+            id: String(d.id),
             dateValidFrom: d.dateValidFrom ? new Date(d.dateValidFrom).toLocaleString() : '-',
             dateValidTo: d.dateValidTo ? new Date(d.dateValidTo).toLocaleString() : '-',
             discountPriceBase: d.discountPriceBase ? `\u20AC ${d.discountPriceBase}` : '-',
@@ -649,7 +649,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // Product selection
-  toggleProductSelection(productId: string): void {
+  toggleProductSelection(productId: number): void {
     const current = this.selectedProductIds();
     const newSet = new Set(current);
     if (newSet.has(productId)) {
@@ -660,7 +660,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedProductIds.set(newSet);
   }
 
-  toggleRelatedProductSelection(productId: string): void {
+  toggleRelatedProductSelection(productId: number): void {
     const current = this.selectedRelatedProductIds();
     const newSet = new Set(current);
     if (newSet.has(productId)) {
@@ -671,7 +671,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedRelatedProductIds.set(newSet);
   }
 
-  isProductSelected(productId: string): boolean {
+  isProductSelected(productId: number): boolean {
     return this.selectedProductIds().has(productId);
   }
 
@@ -745,7 +745,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // Document row actions
-  toggleDocAction(event: Event, docId: string): void {
+  toggleDocAction(event: Event, docId: number): void {
     event.stopPropagation();
     if (this.activeDocActionId() === docId) {
       this.activeDocActionId.set(null);
@@ -754,7 +754,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  toggleDocActionById(docId: string): void {
+  toggleDocActionById(docId: number): void {
     this.activeDocActionId.set(this.activeDocActionId() === docId ? null : docId);
   }
 
@@ -771,7 +771,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  renameDocument(docId: string): void {
+  renameDocument(docId: number): void {
     const doc = this.productDocuments().find(d => d.id === docId);
     if (doc) {
       const { name, ext } = this.splitFilename(doc.name);
@@ -784,8 +784,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.activeDocActionId.set(null);
   }
 
-  downloadDocument(docId: string): void {
-    this.mediaService.getMediaItem(docId)
+  downloadDocument(docId: number): void {
+    this.mediaService.getMediaItem(String(docId))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (media) => {
@@ -799,8 +799,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.activeDocActionId.set(null);
   }
 
-  deleteDocument(docId: string): void {
-    this.mediaService.deleteMediaItem(docId)
+  deleteDocument(docId: number): void {
+    this.mediaService.deleteMediaItem(String(docId))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -818,7 +818,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     if (selectedIds.size === 0) return;
 
     selectedIds.forEach(docId => {
-      this.mediaService.deleteMediaItem(docId)
+      this.mediaService.deleteMediaItem(String(docId))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           error: (err) => console.error('Error deleting document:', err)
@@ -889,7 +889,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   removeProduct(product: RelatedProduct): void {
     const linkId = product.id;
-    this.productProductLinkService.deleteLink(linkId)
+    this.productProductLinkService.deleteLink(String(linkId))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -908,7 +908,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   removeSelectedRelatedProducts(): void {
     const selectedIds = this.selectedRelatedProductIds();
     selectedIds.forEach(linkId => {
-      this.productProductLinkService.deleteLink(linkId)
+      this.productProductLinkService.deleteLink(String(linkId))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
@@ -993,7 +993,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     const isCreating = !this.isEditMode() || !product.id;
     const operation = isCreating
       ? this.productService.createProduct(data)
-      : this.productService.updateProduct(product.id, data);
+      : this.productService.updateProduct(String(product.id), data);
 
     operation.subscribe({
       next: (result) => {
@@ -1004,7 +1004,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           this.router.navigate(['/admin/products', result.id, 'edit']);
         } else if (!isCreating && product.id) {
           // Reload product data to confirm persistence
-          this.loadProduct(product.id);
+          this.loadProduct(String(product.id));
         }
       },
       error: (error) => {
@@ -1051,7 +1051,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       data['featuredImage'] = null;
     }
 
-    this.productService.updateProduct(productId, data)
+    this.productService.updateProduct(String(productId), data)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         error: (err) => console.error('Error updating product media:', err)
@@ -1059,7 +1059,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // Gallery methods
-  toggleImageDropdown(imageId: string, event: Event): void {
+  toggleImageDropdown(imageId: number, event: Event): void {
     event.stopPropagation();
     if (this.activeImageDropdown() === imageId) {
       this.activeImageDropdown.set(null);
@@ -1078,7 +1078,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.product.update(p => ({ ...p, shortDescription: content }));
   }
 
-  makeImagePrimary(imageId: string): void {
+  makeImagePrimary(imageId: number): void {
     this.primaryImageId.set(imageId);
     this.galleryImages.update(images =>
       images.map(img => ({ ...img, isPrimary: img.id === imageId }))
@@ -1087,7 +1087,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.updateProductMedia();
   }
 
-  renameImage(imageId: string): void {
+  renameImage(imageId: number): void {
     const image = this.galleryImages().find(img => img.id === imageId);
     if (image) {
       const { name, ext } = this.splitFilename(image.name);
@@ -1100,7 +1100,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.activeImageDropdown.set(null);
   }
 
-  downloadImage(imageId: string): void {
+  downloadImage(imageId: number): void {
     const image = this.galleryImages().find(img => img.id === imageId);
     if (image?.url) {
       this.triggerDownload(image.url, image.name);
@@ -1126,12 +1126,12 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       });
   }
 
-  deleteImage(imageId: string): void {
+  deleteImage(imageId: number): void {
     // If deleting the primary image, clear it
     if (this.primaryImageId() === imageId) {
       this.primaryImageId.set(null);
     }
-    this.mediaService.deleteMediaItem(imageId)
+    this.mediaService.deleteMediaItem(String(imageId))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -1221,7 +1221,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     const images = this.galleryImages();
     this.primaryImageId.set(null);
     images.forEach(image => {
-      this.mediaService.deleteMediaItem(image.id)
+      this.mediaService.deleteMediaItem(String(image.id))
         .pipe(takeUntil(this.destroy$))
         .subscribe({ error: (err) => console.error('Error deleting image:', err) });
     });
@@ -1230,7 +1230,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // Document methods
-  toggleDocumentSelection(docId: string): void {
+  toggleDocumentSelection(docId: number): void {
     const current = this.selectedDocumentIds();
     const newSet = new Set(current);
     if (newSet.has(docId)) {
@@ -1241,7 +1241,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedDocumentIds.set(newSet);
   }
 
-  isDocumentSelected(docId: string): boolean {
+  isDocumentSelected(docId: number): boolean {
     return this.selectedDocumentIds().has(docId);
   }
 
@@ -1337,7 +1337,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     // Persist to API
-    this.mediaService.updateMediaItem(itemId, { filename: fullName } as any)
+    this.mediaService.updateMediaItem(String(itemId), { filename: fullName } as any)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         error: (err) => console.error('Error renaming media item:', err)

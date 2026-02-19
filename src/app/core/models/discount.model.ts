@@ -1,5 +1,5 @@
 export interface Discount {
-  id: string;
+  id: number;
   name: string;
   isActive: boolean;
   dateValidFrom: string | null;

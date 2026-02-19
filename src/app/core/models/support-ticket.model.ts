@@ -1,16 +1,16 @@
 export interface SupportTicket {
   '@id': string;
   '@type': string;
-  id: string;
+  id: number;
   subject: string;
   message: string;
-  orderId?: string;
+  orderId?: number;
   urgency: 'low' | 'medium' | 'high';
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
   attachment?: {
     '@id': string;
     '@type': string;
-    id: string;
+    id: number;
     filename: string;
     mimeType: string;
     filePath: string;
@@ -20,7 +20,7 @@ export interface SupportTicket {
   user?: {
     '@id': string;
     '@type': string;
-    id: string;
+    id: number;
     email: string;
     firstName: string;
     lastName: string;

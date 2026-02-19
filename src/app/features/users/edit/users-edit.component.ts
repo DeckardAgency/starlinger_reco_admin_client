@@ -15,7 +15,7 @@ import { User } from '@core/models';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 const EMPTY_USER: AdminUser = {
-  id: '',
+  id: 0,
   firstName: '',
   lastName: '',
   username: '',

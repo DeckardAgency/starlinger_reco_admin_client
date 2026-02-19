@@ -22,7 +22,7 @@ export interface TokenPayload {
 }
 
 export interface User {
-  id: string;
+  id: number;
   email: string;
   roles: string[];
   firstName: string;
@@ -37,7 +37,7 @@ export interface User {
   client?: {
     '@id': string;
     '@type': string;
-    id: string;
+    id: number;
     name: string;
     code: string;
     isActive: boolean;
@@ -72,7 +72,7 @@ export interface UserCollectionResponse {
 export interface UserMember {
   '@id': string;
   '@type': string;
-  id: string;
+  id: number;
   email: string;
   roles: string[];
   firstName: string;
@@ -86,7 +86,7 @@ export interface UserMember {
   client?: {
     '@id': string;
     '@type': string;
-    id: string;
+    id: number;
     name: string;
     code: string;
     isActive: boolean;

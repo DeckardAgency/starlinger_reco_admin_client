@@ -18,7 +18,7 @@ export interface Contact {
     dateOfBirth: string | null;
     isActive: number | null;
     description: string | null;
-    accountId: string | null;
+    accountId: number | null;
     titleId: number | null;
     departmentId: number | null;
     supportPersonId: number | null;
@@ -68,7 +68,7 @@ export interface CreateContactDto {
     dateOfBirth?: string | null;
     isActive?: number | null;
     description?: string | null;
-    accountId?: string | null;
+    accountId?: number | null;
     titleId?: number | null;
     departmentId?: number | null;
     supportPersonId?: number | null;

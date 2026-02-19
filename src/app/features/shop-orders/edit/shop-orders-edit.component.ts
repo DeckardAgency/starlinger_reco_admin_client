@@ -34,7 +34,7 @@ interface OrderProduct {
 }
 
 interface ProductGroup {
-  id: string;
+  id: number | string;
   name: string;
   products: OrderProduct[];
   isExpanded: boolean;
@@ -49,7 +49,7 @@ interface LogMessage {
 }
 
 interface ShopOrderDetail {
-  id: string;
+  id: number;
   internalRef: string;
   dateCreated: string;
   partsOrdered: number;
@@ -75,7 +75,7 @@ interface ShopOrderDetail {
 }
 
 const EMPTY_ORDER: ShopOrderDetail = {
-  id: '',
+  id: 0,
   internalRef: '',
   dateCreated: '',
   partsOrdered: 0,
@@ -165,9 +165,9 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private loadedAddresses: ClientAddress[] = [];
 
   // Store loaded clients to look up client code when account changes
-  private loadedClients: Array<{ id: string; code: string }> = [];
+  private loadedClients: Array<{ id: number; code: string }> = [];
   // Store loaded users to look up addresses when contact changes
-  private loadedUsers: Array<{ id: string; address?: string }> = [];
+  private loadedUsers: Array<{ id: number; address?: string }> = [];
 
   // Order status options
   orderStatusOptions: SelectOption[] = [
@@ -297,9 +297,9 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
           const currentOrder = this.order();
           if (currentOrder.accountId) {
             this.selectedAccount = currentOrder.accountId;
-            const client = this.loadedClients.find(c => c.id === currentOrder.accountId);
+            const client = this.loadedClients.find(c => String(c.id) === currentOrder.accountId);
             if (client?.code) {
-              this.loadContactsAndAddresses(client.code, client.id);
+              this.loadContactsAndAddresses(client.code, String(client.id));
             }
           }
 
@@ -327,7 +327,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
             const member = response.member.find(m => m.id === u.id);
             return {
               value: u.id,
-              label: member ? (`${member.firstName} ${member.lastName}`.trim() || member.email) : u.id
+              label: member ? (`${member.firstName} ${member.lastName}`.trim() || member.email) : String(u.id)
             };
           });
           this.contactOptions.set(contacts);
@@ -418,11 +418,11 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
         // Check if the order address contains the key parts of this address
         if (normalizedSearch.includes(addr.street.toLowerCase()) &&
             normalizedSearch.includes(addr.city.toLowerCase())) {
-          return addr.id;
+          return String(addr.id);
         }
         // Also check for exact match
         if (normalizedSearch === normalizedFormat) {
-          return addr.id;
+          return String(addr.id);
         }
       }
     }
@@ -467,9 +467,9 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
         this.applyOrderDetail(detail);
         // Load contacts and addresses based on client
         const clientCode = (order.user as { client?: { code?: string } })?.client?.code;
-        const clientId = (order.user as { client?: { id?: string } })?.client?.id;
+        const clientId = (order.user as { client?: { id?: number } })?.client?.id;
         if (clientCode) {
-          this.loadContactsAndAddresses(clientCode, clientId);
+          this.loadContactsAndAddresses(clientCode, clientId != null ? String(clientId) : undefined);
         }
         this.isLoading.set(false);
         this.cdr.markForCheck();
@@ -511,14 +511,14 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     }
     return {
       id: o.id,
-      internalRef: o.orderNumber || o.id,
+      internalRef: o.orderNumber || String(o.id),
       dateCreated: this.formatDate(o.createdAt),
       partsOrdered: partsCount,
       status: o.status || 'pending',
       enableSale: !o.isDraft,
-      accountId: (o.user as { client?: { id?: string } })?.client?.id ?? '',
+      accountId: String((o.user as { client?: { id?: number } })?.client?.id ?? ''),
       account: (o.user as { client?: { name?: string } })?.client?.name ?? '',
-      contactId: (o.user as { id?: string })?.id ?? '',
+      contactId: String((o.user as { id?: number })?.id ?? ''),
       contact: userName,
       contactDropdown: userName,
       billingAddress: o.billingAddress ?? '',
@@ -549,7 +549,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.order.set(orderData);
     this.breadcrumbItems = [
       { label: 'Shop orders', route: '/admin/shop-orders' },
-      { label: orderData.internalRef ? `#${orderData.internalRef}` : orderData.id }
+      { label: orderData.internalRef ? `#${orderData.internalRef}` : String(orderData.id) }
     ];
     this.selectedAccount = orderData.accountId;
     this.selectedContact = orderData.contactId;
@@ -579,9 +579,9 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       this.order.update(o => ({ ...o, contactId: '', contact: '', contactDropdown: '', billingAddress: '', shippingAddress: '' }));
 
       // Load contacts and addresses for the selected client
-      const client = this.loadedClients.find(c => c.id === String(value));
+      const client = this.loadedClients.find(c => String(c.id) === String(value));
       if (client?.code) {
-        this.loadContactsAndAddresses(client.code, client.id);
+        this.loadContactsAndAddresses(client.code, String(client.id));
       }
     }
   }
@@ -610,7 +610,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   onBillingAddressChange(value: string | number): void {
     this.selectedBillingAddress = String(value);
     // Find the address and store the full address string for the order
-    const address = this.loadedAddresses.find(a => a.id === String(value));
+    const address = this.loadedAddresses.find(a => String(a.id) === String(value));
     const addressStr = address
       ? `${address.street}, ${address.city}${address.country?.name ? ', ' + address.country.name : ''}`
       : String(value);
@@ -621,7 +621,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   onShippingAddressChange(value: string | number): void {
     this.selectedShippingAddress = String(value);
     // Find the address and store the full address string for the order
-    const address = this.loadedAddresses.find(a => a.id === String(value));
+    const address = this.loadedAddresses.find(a => String(a.id) === String(value));
     const addressStr = address
       ? `${address.street}, ${address.city}${address.country?.name ? ', ' + address.country.name : ''}`
       : String(value);
@@ -685,7 +685,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.order.update(o => ({ ...o, enableSale: value }));
   }
 
-  toggleProductGroup(groupId: string): void {
+  toggleProductGroup(groupId: number | string): void {
     this.order.update(o => ({
       ...o,
       productGroups: o.productGroups.map(g =>
@@ -733,7 +733,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     console.log('[ShopOrdersEdit] Saving order ID:', orderData.id);
     console.log('[ShopOrdersEdit] Payload:', JSON.stringify(updatePayload, null, 2));
 
-    this.orderService.updateOrder(orderData.id, updatePayload as Partial<Order>).subscribe({
+    this.orderService.updateOrder(String(orderData.id), updatePayload as Partial<Order>).subscribe({
       next: (updatedOrder) => {
         console.log('[ShopOrdersEdit] Order saved successfully:', updatedOrder);
         this.toastService.success('Order saved successfully');

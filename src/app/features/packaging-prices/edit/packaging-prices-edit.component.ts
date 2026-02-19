@@ -13,7 +13,7 @@ import { PackagingPriceService } from '@core/services/http/packaging-price.servi
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 const EMPTY_PACKAGING_PRICE: PackagingPrice = {
-  id: '',
+  id: 0,
   name: '',
   sizeFrom: null,
   sizeTo: null,
@@ -93,7 +93,7 @@ export class PackagingPricesEditComponent implements OnInit {
     this.packagingPriceService.getPackagingPriceById(id).subscribe({
       next: (packagingPrice) => {
         this.packagingPrice.set({
-          id: packagingPrice.id || id,
+          id: packagingPrice.id || Number(id),
           name: packagingPrice.name || '',
           sizeFrom: packagingPrice.sizeFrom ?? null,
           sizeTo: packagingPrice.sizeTo ?? null,

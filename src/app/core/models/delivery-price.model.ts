@@ -1,11 +1,11 @@
 export interface DeliveryPriceDeliveryType {
   '@id'?: string;
-  id: string;
+  id: number;
   name: string;
 }
 
 export interface DeliveryPrice {
-  id: string;
+  id: number;
   name: string;
   deliveryType: DeliveryPriceDeliveryType | string | null;
   dhlZone: number | null;

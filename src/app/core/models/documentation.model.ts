@@ -3,7 +3,7 @@ import { PaginationLinks } from "@models/pagination.model";
 export interface DocumentationMedia {
   '@id'?: string;
   '@type'?: string;
-  id: string;
+  id: number;
   filename: string;
   mimeType: string;
   filePath: string;
@@ -14,7 +14,7 @@ export interface DocumentationMedia {
 export interface Documentation {
   '@id'?: string;
   '@type'?: string;
-  id: string;
+  id: number;
   title: string;
   slug: string;
   content: string;
@@ -30,7 +30,7 @@ export interface Documentation {
 export interface DocumentationRevision {
   '@id'?: string;
   '@type'?: string;
-  id: string;
+  id: number;
   title: string;
   content: string;
   editedBy: DocumentationUser | string | null;
@@ -41,7 +41,7 @@ export interface DocumentationRevision {
 
 export interface DocumentationUser {
   '@id'?: string;
-  id: string;
+  id: number;
   email: string;
   firstName: string;
   lastName: string;

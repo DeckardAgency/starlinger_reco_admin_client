@@ -46,7 +46,8 @@ export class ClientService {
         searchParams: Record<string, string> = {}
     ): Observable<TransformedClientsResponse> {
         let params = new HttpParams()
-            .set('page', page.toString());
+            .set('page', page.toString())
+            .set('itemsPerPage', '500');
 
         // Add sorting parameters
         if (sortField && sortDirection) {

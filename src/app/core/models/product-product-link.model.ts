@@ -1,9 +1,9 @@
 export interface ProductProductLink {
   '@id': string;
   '@type': string;
-  id: string;
-  parentProductId: string;
-  childProductId: string;
+  id: number;
+  parentProductId: number;
+  childProductId: number;
   relationTypeId: number | null;
   ord: number | null;
   createdAt: string;

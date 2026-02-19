@@ -16,7 +16,7 @@ import { DHL_ZONES } from '@core/models/country.model';
 import { CountryService } from '@core/services/http/country.service';
 
 interface CountryDetail {
-  id: string;
+  id: number;
   name: string;
   code: string;
   iso31661Alpha3Code: string;
@@ -25,7 +25,7 @@ interface CountryDetail {
 }
 
 const EMPTY_COUNTRY: CountryDetail = {
-  id: '',
+  id: 0,
   name: '',
   code: '',
   iso31661Alpha3Code: '',
@@ -115,7 +115,7 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
     this.countryService.getCountryById(id).subscribe({
       next: (country) => {
         this.country.set({
-          id: country.id || id,
+          id: country.id || Number(id),
           name: country.name || '',
           code: country.code || '',
           iso31661Alpha3Code: country.iso31661Alpha3Code || '',

@@ -22,7 +22,7 @@ import { AccountGroupService } from '@core/services/http/account-group.service';
 import { ClientService } from '@core/services/http/client.service';
 
 interface DiscountDetail {
-  id: string;
+  id: number;
   name: string;
   active: boolean;
   dateFrom: string;
@@ -40,7 +40,7 @@ interface DiscountProduct {
 }
 
 const EMPTY_DISCOUNT: DiscountDetail = {
-  id: '',
+  id: 0,
   name: '',
   active: false,
   dateFrom: '',
@@ -183,7 +183,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
         // Map API property names to component's local interface
         const discountAny = discount as any;
         this.discount.set({
-          id: discount.id || id,
+          id: discount.id || Number(id),
           name: discount.name || '',
           active: discount.isActive || false,
           dateFrom: discount.dateValidFrom || '',
@@ -218,7 +218,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     this.accountGroupService.getAccountGroups(1, 100).subscribe({
       next: (response) => {
         this.accountGroupOptions.set(
-          (response.member || []).map(g => ({ value: g.id, label: g.name }))
+          (response.member || []).map(g => ({ value: String(g.id), label: g.name }))
         );
         this.cdr.markForCheck();
       },
@@ -228,7 +228,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     this.clientService.getClients(1, 'name', 'asc').subscribe({
       next: (response) => {
         this.accountOptions.set(
-          (response.clients || []).map(c => ({ value: c.id, label: c.name }))
+          (response.clients || []).map(c => ({ value: String(c.id), label: c.name }))
         );
         this.cdr.markForCheck();
       },

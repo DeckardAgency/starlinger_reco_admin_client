@@ -208,7 +208,7 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
       this.closeDropdown();
       return;
     }
-    this.packagingPriceService.deletePackagingPrice(packagingPrice.id).subscribe({
+    this.packagingPriceService.deletePackagingPrice(String(packagingPrice.id)).subscribe({
       next: () => {
         this.packagingPrices.update(list => list.filter(pp => pp.id !== packagingPrice.id));
         this.cdr.markForCheck();
@@ -227,7 +227,7 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
     if (!confirmed) return;
 
     const deletePromises = selected.map(pp =>
-      this.packagingPriceService.deletePackagingPrice(pp.id).toPromise()
+      this.packagingPriceService.deletePackagingPrice(String(pp.id)).toPromise()
     );
 
     Promise.all(deletePromises).then(() => {

@@ -54,19 +54,19 @@
   ></ui-table-checkbox-selection>
 </ng-template>
 
-<!-- Size From Template -->
-<ng-template #sizeFromTemplate let-row>
-  <span>{{ formatDecimal(row.sizeFrom) }}</span>
+<!-- Date Template -->
+<ng-template #dateTemplate let-row>
+  <span>{{ row.date | date:'dd.MM.yyyy' }}</span>
 </ng-template>
 
-<!-- Size To Template -->
-<ng-template #sizeToTemplate let-row>
-  <span>{{ formatDecimal(row.sizeTo) }}</span>
+<!-- Fuel Surcharge Template -->
+<ng-template #fuelSurchargeTemplate let-row>
+  <span>{{ formatDecimal(row.fuelSurcharge) }}</span>
 </ng-template>
 
-<!-- Price Base Template -->
-<ng-template #priceBaseTemplate let-row>
-  <span>{{ formatDecimal(row.priceBase) }}</span>
+<!-- Delivery Type Template -->
+<ng-template #deliveryTypeTemplate let-row>
+  <span>{{ row.deliveryType?.name || '-' }}</span>
 </ng-template>
 
 <!-- Actions Template -->

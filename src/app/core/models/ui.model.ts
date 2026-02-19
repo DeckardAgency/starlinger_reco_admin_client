@@ -12,7 +12,7 @@ export interface SectionState {
 }
 
 export interface SearchResult {
-  id: string;
+  id: number;
   title: string;
   type: string;
   badge?: string;

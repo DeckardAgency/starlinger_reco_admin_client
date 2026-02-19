@@ -1455,7 +1455,7 @@ export const DUMMY_USER_CREDENTIALS = {
 };
 
 export const mockDevelopmentUser = {
-  id: 'dev-user-001',
+  id: 0,
   email: DUMMY_USER_CREDENTIALS.email,
   username: DUMMY_USER_CREDENTIALS.email,
   roles: ['ROLE_USER', 'ROLE_CLIENT'] as string[],
@@ -1466,7 +1466,7 @@ export const mockDevelopmentUser = {
   client: {
     '@id': '/api/clients/dev-001',
     '@type': 'Client',
-    id: 'dev-client-001',
+    id: 0,
     name: 'Starlinger Development',
     code: 'STL-DEV',
     isActive: true,

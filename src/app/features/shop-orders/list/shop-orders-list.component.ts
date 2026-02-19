@@ -17,7 +17,7 @@ import { AlertService } from '@services/alert.service';
 import { Order } from '@core/models/order.model';
 
 interface ShopOrder {
-  id: string;
+  id: number;
   type: 'order';
   dateCreated: string;
   internalRef: string;
@@ -115,7 +115,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
     // Filter by search
     if (query) {
       result = result.filter(o =>
-        o.id.toLowerCase().includes(query) ||
+        String(o.id).includes(query) ||
         o.internalRef.toLowerCase().includes(query) ||
         o.customer.name.toLowerCase().includes(query) ||
         o.dateCreated.includes(query)
@@ -182,7 +182,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
       id: order.id,
       type: 'order',
       dateCreated: this.formatDate(order.createdAt),
-      internalRef: order.orderNumber || order.id,
+      internalRef: order.orderNumber || String(order.id),
       customer: { name: userName, initials: this.getInitials(userName) },
       partsOrdered: order.items?.length || 0,
       status: this.mapStatus(order.status)

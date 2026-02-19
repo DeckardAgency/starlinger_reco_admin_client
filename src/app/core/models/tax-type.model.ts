@@ -1,5 +1,5 @@
 export interface TaxType {
-  id: string;
+  id: number;
   name: string;
   percent: string;
   remoteId?: number | null;

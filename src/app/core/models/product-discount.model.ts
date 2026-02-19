@@ -1,8 +1,8 @@
 export interface ProductDiscount {
   '@id': string;
   '@type': string;
-  id: string;
-  productId: string;
+  id: number;
+  productId: number;
   discountPriceBase: string | null;
   discountPriceRetail: string | null;
   rebate: string | null;

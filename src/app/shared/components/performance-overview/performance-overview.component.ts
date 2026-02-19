@@ -30,14 +30,11 @@ interface DashboardResponse {
         start: string;
         end: string;
     };
-    shopOrders: MetricData;
-    manualInquiries: MetricData;
-    activeInquiries: MetricData;
-    cancelledInquiries: MetricData;
-    activeCarts: MetricData;
-    completedCarts: MetricData;
-    totalShopRevenue: MetricData & { formatted: string };
-    cancelledOrdersRevenue: MetricData & { formatted: string };
+    shopOrders?: MetricData;
+    activeCarts?: MetricData;
+    completedCarts?: MetricData;
+    totalShopRevenue?: MetricData & { formatted: string };
+    cancelledOrdersRevenue?: MetricData & { formatted: string };
 }
 
 @Component({
@@ -148,54 +145,42 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
             this.dateRangeForm.get('dateRange')?.setValue({ start, end }, { emitEvent: false });
         }
 
+        const zero: MetricData = { value: 0, percentageChange: 0, trend: 'neutral' };
+
         this.metrics = [
             {
                 label: 'Shop orders',
-                value: data.shopOrders.value,
-                percentage: data.shopOrders.percentageChange,
-                isIncreasing: data.shopOrders.trend === 'up',
+                value: (data.shopOrders ?? zero).value,
+                percentage: (data.shopOrders ?? zero).percentageChange,
+                isIncreasing: (data.shopOrders ?? zero).trend === 'up',
                 infoTooltip: 'Total number of orders placed in your shop'
             },
             {
-                label: 'Active inquiries',
-                value: data.activeInquiries.value,
-                percentage: data.activeInquiries.percentageChange,
-                isIncreasing: data.activeInquiries.trend === 'up',
-                infoTooltip: 'Inquiries that are currently in process'
-            },
-            {
-                label: 'Cancelled inquiries',
-                value: data.cancelledInquiries.value,
-                percentage: data.cancelledInquiries.percentageChange,
-                isIncreasing: data.cancelledInquiries.trend === 'up',
-                infoTooltip: 'Inquiries that were cancelled'
-            },
-            {
                 label: 'Active carts',
-                value: data.activeCarts.value,
-                percentage: data.activeCarts.percentageChange,
-                isIncreasing: data.activeCarts.trend === 'up',
+                value: (data.activeCarts ?? zero).value,
+                percentage: (data.activeCarts ?? zero).percentageChange,
+                isIncreasing: (data.activeCarts ?? zero).trend === 'up',
                 infoTooltip: 'Shopping carts that are currently active'
             },
             {
                 label: 'Completed carts',
-                value: data.completedCarts.value,
-                percentage: data.completedCarts.percentageChange,
-                isIncreasing: data.completedCarts.trend === 'up',
+                value: (data.completedCarts ?? zero).value,
+                percentage: (data.completedCarts ?? zero).percentageChange,
+                isIncreasing: (data.completedCarts ?? zero).trend === 'up',
                 infoTooltip: 'Shopping carts that were completed'
             },
             {
                 label: 'Total shop revenue',
-                value: data.totalShopRevenue.formatted,
-                percentage: data.totalShopRevenue.percentageChange,
-                isIncreasing: data.totalShopRevenue.trend === 'up',
+                value: (data.totalShopRevenue ?? { ...zero, formatted: '0,00 €' }).formatted,
+                percentage: (data.totalShopRevenue ?? zero).percentageChange,
+                isIncreasing: (data.totalShopRevenue ?? zero).trend === 'up',
                 infoTooltip: 'Total revenue generated from completed orders'
             },
             {
                 label: 'Cancelled orders revenue',
-                value: data.cancelledOrdersRevenue.formatted,
-                percentage: data.cancelledOrdersRevenue.percentageChange,
-                isIncreasing: data.cancelledOrdersRevenue.trend === 'up',
+                value: (data.cancelledOrdersRevenue ?? { ...zero, formatted: '0,00 €' }).formatted,
+                percentage: (data.cancelledOrdersRevenue ?? zero).percentageChange,
+                isIncreasing: (data.cancelledOrdersRevenue ?? zero).trend === 'up',
                 infoTooltip: 'Revenue lost from cancelled orders'
             }
         ];
@@ -204,8 +189,6 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
     private setDefaultMetrics() {
         this.metrics = [
             { label: 'Shop orders', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Total number of orders placed in your shop' },
-            { label: 'Active inquiries', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Inquiries that are currently in process' },
-            { label: 'Cancelled inquiries', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Inquiries that were cancelled' },
             { label: 'Active carts', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Shopping carts that are currently active' },
             { label: 'Completed carts', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Shopping carts that were completed' },
             { label: 'Total shop revenue', value: '0,00 €', percentage: 0, isIncreasing: false, infoTooltip: 'Total revenue generated from completed orders' },

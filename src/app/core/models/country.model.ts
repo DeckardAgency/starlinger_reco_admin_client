@@ -1,12 +1,12 @@
 export interface CountryTaxType {
   '@id'?: string;
-  id: string;
+  id: number;
   name: string;
   percent: string;
 }
 
 export interface Country {
-  id: string;
+  id: number;
   name: string;
   code: string;
   iso31661Alpha3Code?: string | null;

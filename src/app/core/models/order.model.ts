@@ -5,7 +5,7 @@ export interface OrderProduct {
     '@context'?: string;
     '@id': string;
     '@type': string;
-    id: string;
+    id: number;
     name: string;
     partNo: string;
     weight: string;
@@ -16,7 +16,7 @@ export interface OrderItem {
     '@context'?: string;
     '@id': string;
     '@type': string;
-    id: string;
+    id: number;
     orderRef?: string;
     product: OrderProduct;
     quantity: number;
@@ -31,7 +31,7 @@ export interface OrderLog {
     '@context'?: string;
     '@id': string;
     '@type': string;
-    id: string;
+    id: number;
     previousStatus: string;
     newStatus: string;
     comment: string;
@@ -42,7 +42,7 @@ export interface Order {
     '@context'?: string;
     '@id': string;
     '@type': string;
-    id: string;
+    id: number;
     orderNumber: string;
     status: string;
     totalAmount: number;

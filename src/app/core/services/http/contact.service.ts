@@ -35,7 +35,8 @@ export class ContactService {
         searchParams: Record<string, string> = {}
     ): Observable<TransformedContactsResponse> {
         let params = new HttpParams()
-            .set('page', page.toString());
+            .set('page', page.toString())
+            .set('itemsPerPage', '500');
 
         // Add sorting parameters
         if (sortField && sortDirection) {

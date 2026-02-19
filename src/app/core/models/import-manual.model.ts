@@ -1,7 +1,7 @@
 export interface ImportManualStatus {
   '@id'?: string;
   '@type'?: string;
-  id: string;
+  id: number;
   name: string;
   legacyId?: number;
   createdAt?: string;
@@ -11,7 +11,7 @@ export interface ImportManualStatus {
 export interface ImportManualType {
   '@id'?: string;
   '@type'?: string;
-  id: string;
+  id: number;
   name: string;
   managerCode?: string;
   method?: string;
@@ -27,7 +27,7 @@ export interface ImportManualType {
 export interface ImportManualUser {
   '@id'?: string;
   '@type'?: string;
-  id: string;
+  id: number;
   email: string;
   firstName?: string;
   lastName?: string;
@@ -36,7 +36,7 @@ export interface ImportManualUser {
 export interface ImportManual {
   '@id'?: string;
   '@type'?: string;
-  id: string;
+  id: number;
   file?: string;
   filename?: string;
   fileType?: string;

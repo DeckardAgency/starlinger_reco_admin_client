@@ -29,7 +29,7 @@ export class OrderService {
         searchParams: Record<string, string> = {},
         filters: { status?: string[], isDraft?: boolean } = {}
     ): Observable<TransformedOrdersResponse> {
-        let params = new HttpParams().set('page', page.toString());
+        let params = new HttpParams().set('page', page.toString()).set('itemsPerPage', '500');
 
         // Add sorting parameters
         if (sortField && sortDirection) {

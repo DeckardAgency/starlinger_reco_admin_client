@@ -12,7 +12,7 @@ type SortField = 'type' | 'name' | 'size';
 type SortDirection = 'asc' | 'desc';
 
 interface DocumentFile {
-    id: string;
+    id: number;
     type: FileType;
     name: string;
     size: string;
@@ -45,7 +45,7 @@ export class ProductDocumentComponent implements OnInit, OnChanges {
     // Internal documents array that we'll manipulate
     internalDocuments: DocumentFile[] = [];
 
-    activeDropdownId: string | null = null;
+    activeDropdownId: number | null = null;
     sortField: SortField = 'name';
     sortDirection: SortDirection = 'asc';
 
@@ -263,7 +263,7 @@ export class ProductDocumentComponent implements OnInit, OnChanges {
         // No need to emit changes for selection
     }
 
-    toggleDropdown(docId: string, event: Event): void {
+    toggleDropdown(docId: number, event: Event): void {
         event.stopPropagation();
         this.activeDropdownId = this.activeDropdownId === docId ? null : docId;
     }

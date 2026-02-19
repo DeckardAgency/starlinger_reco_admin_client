@@ -26,7 +26,7 @@ import { environment } from '@env/environment';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface PaymentTypeDetail {
-  id: string;
+  id: number;
   name: string;
   isActive: boolean;
   enableInstallments: boolean;
@@ -43,7 +43,7 @@ interface PaymentTypeDetail {
 }
 
 const EMPTY_PAYMENT_TYPE: PaymentTypeDetail = {
-  id: '',
+  id: 0,
   name: '',
   isActive: false,
   enableInstallments: false,
@@ -122,13 +122,13 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
   isHeaderDropdownOpen = signal(false);
 
   // Document action dropdown state
-  activeDocActionId = signal<string | null>(null);
+  activeDocActionId = signal<number | null>(null);
 
   // Rename modal state
   isRenameModalOpen = signal(false);
   renameValue = signal('');
   renameExtension = signal('');
-  renameDocumentId = signal<string | null>(null);
+  renameDocumentId = signal<number | null>(null);
 
   // Selection state
   selectAll = signal(false);
@@ -202,7 +202,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
         }
 
         this.paymentType.set({
-          id: paymentType.id || id,
+          id: paymentType.id || Number(id),
           name: paymentType.name || '',
           isActive: paymentType.isActive ?? false,
           enableInstallments: paymentType.enableInstallments || false,
@@ -464,7 +464,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     this.paymentType.update(p => ({ ...p, documents: updated }));
   }
 
-  toggleDocumentActions(docId: string): void {
+  toggleDocumentActions(docId: number): void {
     if (this.activeDocActionId() === docId) {
       this.activeDocActionId.set(null);
     } else {
@@ -495,7 +495,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     this.isHeaderDropdownOpen.set(isOpen);
   }
 
-  renameDocument(docId: string): void {
+  renameDocument(docId: number): void {
     const doc = this.paymentType().documents.find(d => d.id === docId);
     if (doc) {
       const { name, ext } = this.splitFilename(doc.name);
@@ -507,8 +507,8 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     this.activeDocActionId.set(null);
   }
 
-  downloadDocument(docId: string): void {
-    this.mediaService.getMediaItem(docId)
+  downloadDocument(docId: number): void {
+    this.mediaService.getMediaItem(String(docId))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (media) => {
@@ -539,8 +539,8 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
       });
   }
 
-  deleteDocument(docId: string): void {
-    this.mediaService.deleteMediaItem(docId)
+  deleteDocument(docId: number): void {
+    this.mediaService.deleteMediaItem(String(docId))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -576,7 +576,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     this.paymentType.update(p => ({ ...p, documents: updated }));
 
     // Persist rename to API
-    this.mediaService.updateMediaItem(docId, { filename: fullName } as any)
+    this.mediaService.updateMediaItem(String(docId), { filename: fullName } as any)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         error: (err) => console.error('Error renaming document:', err)
@@ -606,7 +606,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     if (selected.length === 0) return;
 
     selected.forEach(doc => {
-      this.mediaService.deleteMediaItem(doc.id)
+      this.mediaService.deleteMediaItem(String(doc.id))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           error: (err) => console.error('Error deleting document:', err)

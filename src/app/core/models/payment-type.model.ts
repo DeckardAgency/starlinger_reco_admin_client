@@ -1,5 +1,5 @@
 export interface PaymentType {
-  id: string;
+  id: number;
   name: string;
   isActive: boolean;
   enableInstallments: boolean;
@@ -25,7 +25,7 @@ export interface PaymentType {
 }
 
 export interface PaymentTypeDocument {
-  id: string;
+  id: number;
   fileType: string;
   name: string;
   size: string;

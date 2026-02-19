@@ -131,7 +131,7 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
   private loadCountries(): void {
     this.isLoading.set(true);
 
-    this.countryService.getCountries(1, 200).subscribe({
+    this.countryService.getCountries(1, 500).subscribe({
       next: (response) => {
         const items = (response.member || []).map(c => ({ ...c, selected: false }));
         this.countries.set(items);

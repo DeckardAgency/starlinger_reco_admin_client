@@ -16,7 +16,7 @@ import { Product as ApiProduct } from '@core/models';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 
 interface Product {
-  id: string;
+  id: number;
   code: string;
   name: string;
   shortDescription: string;
@@ -145,7 +145,7 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   private loadProducts(): void {
     this.isLoading.set(true);
 
-    this.productService.getProducts(1, 100).subscribe({
+    this.productService.getProducts(1, 500).subscribe({
       next: (response) => {
         const items = (response.member || []).map(p => this.mapApiProductToDisplay(p));
         this.products.set(items);
@@ -241,7 +241,7 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
 
   onClone(product: Product): void {
     this.closeDropdown();
-    this.productService.getProductById(product.id).subscribe({
+    this.productService.getProductById(String(product.id)).subscribe({
       next: (fullProduct) => {
         const cloneData: Record<string, unknown> = {
           name: `Copy of ${fullProduct.name}`,

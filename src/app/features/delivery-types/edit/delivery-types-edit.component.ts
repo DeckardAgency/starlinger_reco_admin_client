@@ -26,7 +26,7 @@ import { MediaItem } from '@core/models/media.model';
 import { environment } from '@env/environment';
 
 interface DeliveryTypeDetail {
-  id: string;
+  id: number;
   name: string;
   isActive: boolean;
   readyForShop: boolean;
@@ -39,7 +39,7 @@ interface DeliveryTypeDetail {
 }
 
 const EMPTY_DELIVERY_TYPE: DeliveryTypeDetail = {
-  id: '',
+  id: 0,
   name: '',
   isActive: false,
   readyForShop: false,
@@ -114,13 +114,13 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
   isHeaderDropdownOpen = signal(false);
 
   // Document action dropdown state
-  activeDocActionId = signal<string | null>(null);
+  activeDocActionId = signal<number | null>(null);
 
   // Rename modal state
   isRenameModalOpen = signal(false);
   renameValue = signal('');
   renameExtension = signal('');
-  renameDocumentId = signal<string | null>(null);
+  renameDocumentId = signal<number | null>(null);
 
   // Selection state
   selectAll = signal(false);
@@ -182,7 +182,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
     this.deliveryTypeService.getDeliveryTypeById(id).subscribe({
       next: (deliveryType) => {
         this.deliveryType.set({
-          id: deliveryType.id || id,
+          id: deliveryType.id || Number(id),
           name: deliveryType.name || '',
           isActive: deliveryType.isActive ?? false,
           readyForShop: deliveryType.readyForShop ?? false,
@@ -192,7 +192,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
           sortOrder: deliveryType.sortOrder || 0,
           shortDescription: deliveryType.shortDescription || '',
           documents: ((deliveryType as any).documents || []).map((m: any) => ({
-            id: typeof m === 'string' ? m.split('/').pop() : m.id,
+            id: typeof m === 'string' ? Number(m.split('/').pop()) : m.id,
             fileType: this.getFileType(typeof m === 'object' ? m.mimeType : '', typeof m === 'object' ? m.filename : ''),
             name: typeof m === 'object' ? (m.filename || 'unknown') : 'unknown',
             filePath: typeof m === 'object' ? m.filePath : undefined,
@@ -406,7 +406,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
     this.deliveryType.update(dt => ({ ...dt, documents: updated }));
   }
 
-  toggleDocumentActions(docId: string): void {
+  toggleDocumentActions(docId: number): void {
     if (this.activeDocActionId() === docId) {
       this.activeDocActionId.set(null);
     } else {
@@ -433,7 +433,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
     }
   }
 
-  renameDocument(docId: string): void {
+  renameDocument(docId: number): void {
     const doc = this.deliveryType().documents.find(d => d.id === docId);
     if (doc) {
       const { name, ext } = this.splitFilename(doc.name);
@@ -445,8 +445,8 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
     this.activeDocActionId.set(null);
   }
 
-  downloadDocument(docId: string): void {
-    this.mediaService.getMediaItem(docId)
+  downloadDocument(docId: number): void {
+    this.mediaService.getMediaItem(String(docId))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (media) => {
@@ -477,8 +477,8 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
       });
   }
 
-  deleteDocument(docId: string): void {
-    this.mediaService.deleteMediaItem(docId)
+  deleteDocument(docId: number): void {
+    this.mediaService.deleteMediaItem(String(docId))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -514,7 +514,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
     this.deliveryType.update(dt => ({ ...dt, documents: updated }));
 
     // Persist rename to API
-    this.mediaService.updateMediaItem(docId, { filename: fullName } as any)
+    this.mediaService.updateMediaItem(String(docId), { filename: fullName } as any)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         error: (err) => console.error('Error renaming document:', err)
@@ -544,7 +544,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
     if (selected.length === 0) return;
 
     selected.forEach(doc => {
-      this.mediaService.deleteMediaItem(doc.id)
+      this.mediaService.deleteMediaItem(String(doc.id))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           error: (err) => console.error('Error deleting document:', err)

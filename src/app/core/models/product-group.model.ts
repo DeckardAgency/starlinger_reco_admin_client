@@ -6,7 +6,7 @@
 export interface ProductGroup {
   '@id': string;
   '@type': string;
-  id: string;
+  id: number;
   name: string;
   slug: string;
   description?: string;

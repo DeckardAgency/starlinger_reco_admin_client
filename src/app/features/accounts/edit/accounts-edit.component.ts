@@ -30,7 +30,7 @@ import { AccountGroupService } from '@core/services/http/account-group.service';
 
 // Interfaces for tab data
 interface Address {
-  id: string;
+  id: number;
   street: string;
   city: string;
   country: string;
@@ -42,7 +42,7 @@ interface ShopOrder {
   orderId: string;
   type: 'order' | 'manual';
   dateCreated: string;
-  internalRef: string;
+  internalRef: number;
   customer: {
     name: string;
     initials: string;
@@ -207,12 +207,12 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Handle account group change
   onAccountGroupChange(value: string | number): void {
-    this.account.update(a => ({ ...a, accountGroupId: String(value) }));
+    this.account.update(a => ({ ...a, accountGroupId: Number(value) }));
   }
 
   // Clear account group
   clearAccountGroup(): void {
-    this.account.update(a => ({ ...a, accountGroupId: '' }));
+    this.account.update(a => ({ ...a, accountGroupId: undefined }));
   }
 
   // Table actions
@@ -328,7 +328,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.accountGroupService.getAccountGroups(1, 100).subscribe({
       next: (response) => {
         this.accountGroupOptions.set(
-          (response.member || []).map(g => ({ value: g.id, label: g.name }))
+          (response.member || []).map(g => ({ value: String(g.id), label: g.name }))
         );
         this.cdr.markForCheck();
       },
@@ -385,7 +385,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.contactService.getContactsByAccount(accountId).subscribe({
       next: (response) => {
         const contacts = response.contacts.map(c => ({
-          id: String(c.id),
+          id: c.id,
           fullName: c.fullName || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || '–',
           email: c.email ?? '',
           phone: c.phone ?? '',
@@ -474,7 +474,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       isActive: c.isActive,
       isLegalEntity: c.isLegalEntity ?? false,
       accountType: c.accountType ?? '',
-      accountGroupId: c.accountGroup?.id ?? '',
+      accountGroupId: c.accountGroup?.id ?? undefined,
       phone: c.phoneNumber,
       web: (c as { web?: string }).web
     };
@@ -750,7 +750,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   deleteAddress(address: Address): void {
-    this.addressService.deleteAddress(address.id).subscribe({
+    this.addressService.deleteAddress(String(address.id)).subscribe({
       next: () => {
         this.addresses.update(addresses =>
           addresses.filter(a => a.id !== address.id)
