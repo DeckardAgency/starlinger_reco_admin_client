@@ -14,8 +14,10 @@ import {
 } from '@app/ui-kit/molecules';
 import { FuelSurcharge } from '@core/models/fuel-surcharge.model';
 import { FuelSurchargeService } from '@core/services/http/fuel-surcharge.service';
+import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
 import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-fuel-surcharges-list',
@@ -40,6 +42,7 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private fuelSurchargeService = inject(FuelSurchargeService);
+  private deliveryTypeService = inject(DeliveryTypeService);
   private alertService = inject(AlertService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
@@ -60,7 +63,7 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   sortDirection = signal<'asc' | 'desc' | null>(null);
 
   // Dropdown state
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
 
   // Header dropdown state
   isHeaderDropdownOpen = signal(false);
@@ -125,9 +128,25 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
 
   private loadFuelSurcharges(): void {
     this.isLoading.set(true);
-    this.fuelSurchargeService.getFuelSurcharges().subscribe({
-      next: (response) => {
-        this.fuelSurcharges.set(response.member.map((fs: FuelSurcharge) => ({ ...fs, selected: false })));
+    forkJoin({
+      surcharges: this.fuelSurchargeService.getFuelSurcharges(),
+      deliveryTypes: this.deliveryTypeService.getDeliveryTypes(1, 100)
+    }).subscribe({
+      next: ({ surcharges, deliveryTypes }) => {
+        // Build a map of delivery type IRI → name
+        const dtMap = new Map<string, string>();
+        for (const dt of deliveryTypes.member || []) {
+          dtMap.set(`/api/v1/delivery_types/${dt.id}`, dt.name || `Type ${dt.id}`);
+        }
+
+        this.fuelSurcharges.set(surcharges.member.map((fs: FuelSurcharge) => {
+          // Resolve IRI string to object with name
+          let resolvedDt = fs.deliveryType;
+          if (typeof fs.deliveryType === 'string') {
+            resolvedDt = { id: 0, name: dtMap.get(fs.deliveryType) || '-' };
+          }
+          return { ...fs, deliveryType: resolvedDt, selected: false };
+        }));
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
@@ -167,7 +186,7 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
     this.router.navigate(['/admin/fuel-surcharges/new']);
   }
 
-  toggleDropdown(fuelSurchargeId: string): void {
+  toggleDropdown(fuelSurchargeId: number): void {
     if (this.openDropdownId() === fuelSurchargeId) {
       this.openDropdownId.set(null);
     } else {

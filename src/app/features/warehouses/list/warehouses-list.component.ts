@@ -60,7 +60,7 @@ export class WarehousesListComponent implements OnInit, AfterViewInit {
   sortDirection = signal<'asc' | 'desc' | null>(null);
 
   // Dropdown state
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
 
   // Header dropdown state
   isHeaderDropdownOpen = signal(false);
@@ -173,7 +173,7 @@ export class WarehousesListComponent implements OnInit, AfterViewInit {
     this.router.navigate(['/admin/warehouses/new']);
   }
 
-  toggleDropdown(warehouseId: string, event: Event | void): void {
+  toggleDropdown(warehouseId: number, event: Event | void): void {
     if (event) {
       (event as Event).stopPropagation();
     }

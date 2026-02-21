@@ -9,7 +9,7 @@
   ></ui-breadcrumbs>
 
   <ui-detail-header
-    [title]="isEditMode() ? 'Edit option' : 'Add option'"
+    [title]="isEditMode() ? 'Edit fuel surcharge' : 'Add fuel surcharge'"
     [isEditMode]="isEditMode()"
     [showSaveAndContinue]="true"
     [showDiscard]="false"
@@ -20,27 +20,27 @@
 
   <div class="page-content">
     <div class="form-card">
-      <ui-form-field label="Name" layout="horizontal">
-        <input type="text" [value]="fuelSurcharge().name" (input)="onNameChange($event)" placeholder="Enter name">
+      <ui-form-field label="Date" layout="horizontal" [required]="true" [error]="getError('date')">
+        <input type="date" [value]="fuelSurcharge().date" (input)="onDateChange($event)">
       </ui-form-field>
 
-      <ui-form-field label="Size from" layout="horizontal">
+      <ui-form-field label="Surcharge" layout="horizontal" [required]="true" [error]="getError('fuelSurcharge')">
+        <input type="number" step="0.0001" [value]="fuelSurcharge().fuelSurcharge" (input)="onFuelSurchargeChange($event)" placeholder="0.0000">
+      </ui-form-field>
+
+      <ui-form-field label="Delivery type" layout="horizontal">
         <ui-select
           variant="pill"
-          [options]="sizeFromOptions()"
-          [value]="selectedSizeFrom"
-          placeholder="Select"
-          (selectChange)="onSizeFromChange($event)"
-          (cleared)="clearSizeFrom()">
+          [options]="deliveryTypeOptions()"
+          [value]="selectedDeliveryType"
+          placeholder="Select delivery type"
+          (selectChange)="onDeliveryTypeChange($event)"
+          (cleared)="clearDeliveryType()">
         </ui-select>
       </ui-form-field>
 
-      <ui-form-field label="Size to" layout="horizontal">
-        <input type="text" [value]="fuelSurcharge().sizeTo" (input)="onSizeToChange($event)" placeholder="0.0000">
-      </ui-form-field>
-
-      <ui-form-field label="Price base" layout="horizontal" [required]="true" [error]="getError('priceBase')">
-        <input type="text" [value]="fuelSurcharge().priceBase" (input)="onPriceBaseChange($event)" placeholder="0.0000">
+      <ui-form-field label="Name" layout="horizontal">
+        <input type="text" [value]="fuelSurcharge().name" (input)="onNameChange($event)" placeholder="Optional name">
       </ui-form-field>
     </div>
   </div>

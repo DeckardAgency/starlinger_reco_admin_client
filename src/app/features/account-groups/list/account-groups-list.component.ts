@@ -50,7 +50,7 @@ export class AccountGroupsListComponent implements OnInit, AfterViewInit {
   isLoading = signal(true);
   sortColumn = signal<string | null>(null);
   sortDirection = signal<'asc' | 'desc' | null>(null);
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
   isHeaderDropdownOpen = signal(false);
   selectAll = signal(false);
 
@@ -152,7 +152,7 @@ export class AccountGroupsListComponent implements OnInit, AfterViewInit {
     this.router.navigate(['/admin/account-groups/new']);
   }
 
-  toggleDropdown(id: string): void {
+  toggleDropdown(id: number): void {
     if (this.openDropdownId() === id) {
       this.openDropdownId.set(null);
     } else {

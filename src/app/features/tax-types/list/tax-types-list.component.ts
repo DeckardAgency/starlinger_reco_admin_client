@@ -58,7 +58,7 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
   sortDirection = signal<'asc' | 'desc' | null>(null);
 
   // Dropdown state
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
 
   // Header dropdown state (for select all)
   isHeaderDropdownOpen = signal(false);
@@ -175,7 +175,7 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
     this.router.navigate(['/admin/tax-types/new']);
   }
 
-  toggleDropdown(taxTypeId: string): void {
+  toggleDropdown(taxTypeId: number): void {
     if (this.openDropdownId() === taxTypeId) {
       this.openDropdownId.set(null);
     } else {

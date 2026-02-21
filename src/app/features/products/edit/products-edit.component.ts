@@ -193,7 +193,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   sortDirection = signal<'asc' | 'desc' | null>(null);
 
   // Dropdowns
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
   isHeaderDropdownOpen = signal(false);
   isRelatedHeaderDropdownOpen = signal(false);
   isDocHeaderDropdownOpen = signal(false);

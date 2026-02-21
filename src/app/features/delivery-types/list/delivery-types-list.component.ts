@@ -60,7 +60,7 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
   sortDirection = signal<'asc' | 'desc' | null>(null);
 
   // Dropdown state
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
 
   // Header dropdown state
   isHeaderDropdownOpen = signal(false);
@@ -174,7 +174,7 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
     this.router.navigate(['/admin/delivery-types/new']);
   }
 
-  toggleDropdown(deliveryTypeId: string, event: Event | void): void {
+  toggleDropdown(deliveryTypeId: number, event: Event | void): void {
     if (event) {
       (event as Event).stopPropagation();
     }

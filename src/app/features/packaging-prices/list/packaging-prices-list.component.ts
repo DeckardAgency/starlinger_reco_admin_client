@@ -60,7 +60,7 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
   sortDirection = signal<'asc' | 'desc' | null>(null);
 
   // Dropdown state
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
 
   // Header dropdown state
   isHeaderDropdownOpen = signal(false);
@@ -172,7 +172,7 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
     this.router.navigate(['/admin/packaging-prices/new']);
   }
 
-  toggleDropdown(packagingPriceId: string): void {
+  toggleDropdown(packagingPriceId: number): void {
     if (this.openDropdownId() === packagingPriceId) {
       this.openDropdownId.set(null);
     } else {

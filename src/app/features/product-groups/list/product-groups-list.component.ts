@@ -67,7 +67,7 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
   sortDirection = signal<'asc' | 'desc' | null>(null);
 
   // Dropdown state
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
 
   // Header dropdown state (for select all)
   isHeaderDropdownOpen = signal(false);
@@ -190,7 +190,7 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
     this.router.navigate(['/admin/product-groups/new']);
   }
 
-  toggleDropdown(id: string, event: Event | void): void {
+  toggleDropdown(id: number, event: Event | void): void {
     if (event) {
       (event as Event).stopPropagation();
     }

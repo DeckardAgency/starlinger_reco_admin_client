@@ -11,40 +11,28 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
 import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { FuelSurchargeService } from '@core/services/http/fuel-surcharge.service';
+import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
 
 interface FuelSurchargeDetail {
   id: number;
+  date: string;
+  fuelSurcharge: string;
+  deliveryTypeId: string;
   name: string;
-  sizeFrom: string;
-  sizeTo: string;
-  priceBase: string;
 }
 
 const EMPTY_FUEL_SURCHARGE: FuelSurchargeDetail = {
   id: 0,
-  name: '',
-  sizeFrom: '',
-  sizeTo: '',
-  priceBase: ''
+  date: '',
+  fuelSurcharge: '',
+  deliveryTypeId: '',
+  name: ''
 };
 
 interface SelectOption {
   value: string;
   label: string;
 }
-
-const SIZE_FROM_OPTIONS: SelectOption[] = [
-  { value: '0', label: '0' },
-  { value: '50', label: '50' },
-  { value: '100', label: '100' },
-  { value: '150', label: '150' },
-  { value: '200', label: '200' },
-  { value: '250', label: '250' },
-  { value: '300', label: '300' },
-  { value: '400', label: '400' },
-  { value: '500', label: '500' },
-  { value: '1000', label: '1000' }
-];
 
 @Component({
   selector: 'app-fuel-surcharges-edit',
@@ -68,6 +56,7 @@ export class FuelSurchargesEditComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private cdr = inject(ChangeDetectorRef);
   private fuelSurchargeService = inject(FuelSurchargeService);
+  private deliveryTypeService = inject(DeliveryTypeService);
   private toastService = inject(ToastService);
 
   private fuelSurchargeId: string | null = null;
@@ -76,15 +65,16 @@ export class FuelSurchargesEditComponent implements OnInit {
   isEditMode = signal(false);
   isLoading = signal(false);
 
-  sizeFromOptions = signal<SelectOption[]>(SIZE_FROM_OPTIONS);
-  selectedSizeFrom = '';
+  deliveryTypeOptions = signal<SelectOption[]>([]);
+  selectedDeliveryType = '';
 
   // Validation state
   touched = signal<Record<string, boolean>>({});
   errors = computed(() => {
     const fs = this.fuelSurcharge();
     const errs: Record<string, string> = {};
-    if (!fs.priceBase?.trim()) errs['priceBase'] = 'Price base is required';
+    if (!fs.date) errs['date'] = 'Date is required';
+    if (!fs.fuelSurcharge?.trim()) errs['fuelSurcharge'] = 'Surcharge value is required';
     return errs;
   });
   isValid = computed(() => Object.keys(this.errors()).length === 0);
@@ -103,21 +93,51 @@ export class FuelSurchargesEditComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.loadDeliveryTypes();
+  }
+
+  private loadDeliveryTypes(): void {
+    this.deliveryTypeService.getDeliveryTypes(1, 100).subscribe({
+      next: (response) => {
+        this.deliveryTypeOptions.set(
+          (response.member || []).map(dt => ({
+            value: String(dt.id),
+            label: dt.name || `Type ${dt.id}`
+          }))
+        );
+        this.cdr.markForCheck();
+      }
+    });
+  }
 
   private loadFuelSurcharge(id: string): void {
     this.isLoading.set(true);
 
     this.fuelSurchargeService.getFuelSurchargeById(id).subscribe({
       next: (fuelSurcharge) => {
+        // deliveryType comes as IRI string like "/api/v1/delivery_types/1" or as object
+        let deliveryTypeId = '';
+        if (fuelSurcharge.deliveryType) {
+          if (typeof fuelSurcharge.deliveryType === 'string') {
+            const match = fuelSurcharge.deliveryType.match(/\/(\d+)$/);
+            deliveryTypeId = match ? match[1] : '';
+          } else if (typeof fuelSurcharge.deliveryType === 'object' && fuelSurcharge.deliveryType.id) {
+            deliveryTypeId = String(fuelSurcharge.deliveryType.id);
+          }
+        }
+
+        // date comes as ISO string "2024-06-01T00:00:00+00:00" — extract date part
+        const dateStr = fuelSurcharge.date ? fuelSurcharge.date.split('T')[0] : '';
+
         this.fuelSurcharge.set({
           id: fuelSurcharge.id || Number(id),
-          name: fuelSurcharge.name || '',
-          sizeFrom: fuelSurcharge.sizeFrom || '',
-          sizeTo: fuelSurcharge.sizeTo || '',
-          priceBase: fuelSurcharge.priceBase || ''
+          date: dateStr,
+          fuelSurcharge: fuelSurcharge.fuelSurcharge || '',
+          deliveryTypeId,
+          name: fuelSurcharge.name || ''
         });
-        this.selectedSizeFrom = fuelSurcharge.sizeFrom || '';
+        this.selectedDeliveryType = deliveryTypeId;
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
@@ -135,7 +155,7 @@ export class FuelSurchargesEditComponent implements OnInit {
 
   // Validation helpers
   markAllTouched(): void {
-    this.touched.set({ priceBase: true });
+    this.touched.set({ date: true, fuelSurcharge: true });
   }
 
   markFieldTouched(field: string): void {
@@ -147,30 +167,31 @@ export class FuelSurchargesEditComponent implements OnInit {
   }
 
   // Form handlers
+  onDateChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.fuelSurcharge.update(fs => ({ ...fs, date: input.value }));
+    this.markFieldTouched('date');
+  }
+
+  onFuelSurchargeChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.fuelSurcharge.update(fs => ({ ...fs, fuelSurcharge: input.value }));
+    this.markFieldTouched('fuelSurcharge');
+  }
+
+  onDeliveryTypeChange(value: string | number): void {
+    this.selectedDeliveryType = String(value);
+    this.fuelSurcharge.update(fs => ({ ...fs, deliveryTypeId: String(value) }));
+  }
+
+  clearDeliveryType(): void {
+    this.selectedDeliveryType = '';
+    this.fuelSurcharge.update(fs => ({ ...fs, deliveryTypeId: '' }));
+  }
+
   onNameChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.fuelSurcharge.update(fs => ({ ...fs, name: input.value }));
-  }
-
-  onSizeFromChange(value: string | number): void {
-    this.selectedSizeFrom = String(value);
-    this.fuelSurcharge.update(fs => ({ ...fs, sizeFrom: String(value) }));
-  }
-
-  clearSizeFrom(): void {
-    this.selectedSizeFrom = '';
-    this.fuelSurcharge.update(fs => ({ ...fs, sizeFrom: '' }));
-  }
-
-  onSizeToChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.fuelSurcharge.update(fs => ({ ...fs, sizeTo: input.value }));
-  }
-
-  onPriceBaseChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.fuelSurcharge.update(fs => ({ ...fs, priceBase: input.value }));
-    this.markFieldTouched('priceBase');
   }
 
   // Save actions
@@ -192,10 +213,10 @@ export class FuelSurchargesEditComponent implements OnInit {
     const formData = this.fuelSurcharge();
 
     const payload: Record<string, unknown> = {
+      date: formData.date || null,
+      fuelSurcharge: formData.fuelSurcharge ? String(formData.fuelSurcharge) : null,
       name: formData.name || null,
-      sizeFrom: formData.sizeFrom ? String(formData.sizeFrom) : null,
-      sizeTo: formData.sizeTo ? String(formData.sizeTo) : null,
-      priceBase: formData.priceBase ? String(formData.priceBase) : null
+      deliveryType: formData.deliveryTypeId ? `/api/v1/delivery_types/${formData.deliveryTypeId}` : null
     };
 
     const isCreating = !this.isEditMode();

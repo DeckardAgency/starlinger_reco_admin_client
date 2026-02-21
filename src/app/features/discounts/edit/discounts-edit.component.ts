@@ -110,7 +110,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   totalPages = computed(() => Math.ceil(this.totalItems() / this.itemsPerPage()));
 
   // Dropdown state
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
 
   // Calendar state
   showDateFromCalendar = signal(false);
@@ -443,7 +443,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   // Dropdown
-  toggleDropdown(productId: string): void {
+  toggleDropdown(productId: number): void {
     if (this.openDropdownId() === productId) {
       this.openDropdownId.set(null);
     } else {

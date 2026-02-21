@@ -73,7 +73,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   sortDirection = signal<'asc' | 'desc' | null>(null);
 
   // Dropdown state
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
 
   // Active tab
   activeTab = signal('latest');
@@ -246,7 +246,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
     console.log('Exporting data...');
   }
 
-  toggleDropdown(orderId: string): void {
+  toggleDropdown(orderId: number): void {
     if (this.openDropdownId() === orderId) {
       this.openDropdownId.set(null);
     } else {

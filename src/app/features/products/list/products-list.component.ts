@@ -66,7 +66,7 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   sortDirection = signal<'asc' | 'desc' | null>(null);
 
   // Dropdown state
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
 
   // Header dropdown state (for select all)
   isHeaderDropdownOpen = signal(false);
@@ -205,7 +205,7 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
     this.router.navigate(['/admin/products/new']);
   }
 
-  toggleDropdown(productId: string): void {
+  toggleDropdown(productId: number): void {
     if (this.openDropdownId() === productId) {
       this.openDropdownId.set(null);
     } else {

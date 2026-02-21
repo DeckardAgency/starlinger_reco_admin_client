@@ -88,7 +88,7 @@ export class UsersListComponent implements OnInit, AfterViewInit {
   ];
 
   // Dropdown state
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
 
   // Header dropdown state
   isHeaderDropdownOpen = signal(false);
@@ -262,7 +262,7 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     this.router.navigate(['/admin/users/new']);
   }
 
-  toggleDropdown(userId: string, event: Event | void): void {
+  toggleDropdown(userId: number, event: Event | void): void {
     if (event) {
       (event as Event).stopPropagation();
     }

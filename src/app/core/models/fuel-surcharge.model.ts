@@ -3,7 +3,7 @@ export interface FuelSurcharge {
   name?: string;
   date?: string;
   fuelSurcharge?: string;
-  deliveryType?: { id: number; name: string } | null;
+  deliveryType?: { id: number; name: string } | string | null;
   sizeFrom?: string;
   sizeTo?: string;
   priceBase?: string;

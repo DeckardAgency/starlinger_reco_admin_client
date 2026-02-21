@@ -64,7 +64,7 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
   sortDirection = signal<'asc' | 'desc' | null>(null);
 
   // Dropdown state
-  openDropdownId = signal<string | null>(null);
+  openDropdownId = signal<number | null>(null);
 
   // Header dropdown state (for select all)
   isHeaderDropdownOpen = signal(false);
@@ -202,7 +202,7 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
     this.router.navigate(['/admin/discounts/new']);
   }
 
-  toggleDropdown(discountId: string): void {
+  toggleDropdown(discountId: number): void {
     if (this.openDropdownId() === discountId) {
       this.openDropdownId.set(null);
     } else {
