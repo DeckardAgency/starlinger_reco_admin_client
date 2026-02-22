@@ -19,7 +19,7 @@
     <div class="table-container">
       <ui-data-table
         [columns]="columns"
-        [data]="filteredDeliveryPrices()"
+        [data]="deliveryPrices()"
         [sortColumn]="sortColumn()"
         [sortDirection]="sortDirection()"
         (sort)="onSortChange($event)"
@@ -27,9 +27,13 @@
     </div>
 
     <ui-table-footer
-      [showingFrom]="1"
-      [showingTo]="filteredDeliveryPrices().length"
+      [showingFrom]="showingFrom()"
+      [showingTo]="showingTo()"
       [totalItems]="totalItems()"
+      [showPagination]="true"
+      [currentPage]="currentPage()"
+      [itemsPerPage]="itemsPerPage()"
+      (pageChange)="onPageChange($event)"
     ></ui-table-footer>
   </main>
 </div>

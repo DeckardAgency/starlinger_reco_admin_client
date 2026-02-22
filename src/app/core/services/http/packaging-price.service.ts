@@ -9,9 +9,9 @@ import { BaseHttpService } from './base-http.service';
 export class PackagingPriceService extends BaseHttpService {
   private readonly endpoint = `${this.apiUrl}/packaging_prices`;
 
-  getPackagingPrices(page: number = 1, itemsPerPage: number = 100): Observable<PackagingPricesCollection> {
-    const params = this.buildParams({ page, itemsPerPage });
-    return this.getWithJsonLd<PackagingPricesCollection>(this.endpoint, params);
+  getPackagingPrices(params: Record<string, string | number | boolean> = {}): Observable<PackagingPricesCollection> {
+    const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
+    return this.getWithJsonLd<PackagingPricesCollection>(this.endpoint, httpParams);
   }
 
   getPackagingPriceById(id: string): Observable<PackagingPrice> {

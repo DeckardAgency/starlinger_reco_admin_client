@@ -9,9 +9,9 @@ import { BaseHttpService } from './base-http.service';
 export class DeliveryPriceService extends BaseHttpService {
   private readonly endpoint = `${this.apiUrl}/delivery_prices`;
 
-  getDeliveryPrices(page: number = 1, itemsPerPage: number = 100): Observable<DeliveryPricesCollection> {
-    const params = this.buildParams({ page, itemsPerPage });
-    return this.getWithJsonLd<DeliveryPricesCollection>(this.endpoint, params);
+  getDeliveryPrices(params: Record<string, string | number | boolean> = {}): Observable<DeliveryPricesCollection> {
+    const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
+    return this.getWithJsonLd<DeliveryPricesCollection>(this.endpoint, httpParams);
   }
 
   getDeliveryPriceById(id: string): Observable<DeliveryPrice> {

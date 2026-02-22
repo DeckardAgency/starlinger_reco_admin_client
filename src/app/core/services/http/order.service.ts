@@ -23,49 +23,25 @@ export class OrderService {
      * Get orders with pagination, sorting and filtering
      */
     getOrders(
-        page: number = 1,
-        sortField?: string,
-        sortDirection?: 'asc' | 'desc',
-        searchParams: Record<string, string> = {},
-        filters: { status?: string[], isDraft?: boolean } = {}
+        params: Record<string, string | number | boolean> = {}
     ): Observable<TransformedOrdersResponse> {
-        let params = new HttpParams().set('page', page.toString()).set('itemsPerPage', '500');
+        const mergedParams = { page: 1, itemsPerPage: 30, ...params };
+        let httpParams = new HttpParams();
 
-        // Add sorting parameters
-        if (sortField && sortDirection) {
-            // Format as order[fieldName]=direction
-            params = params.set(`order[${sortField}]`, sortDirection);
-        }
-
-        // Add search parameters
-        if (searchParams['query']) {
-            // If general search query is provided, search in orderNumber
-            params = params.set('orderNumber', searchParams['query']);
-        }
-
-        // Add isDraft filter if provided
-        if (filters.isDraft !== undefined) {
-            params = params.set('isDraft', filters.isDraft.toString());
-        }
-
-        // Add status filters if provided
-        if (filters.status && filters.status.length > 0) {
-            filters.status.forEach(status => {
-                params = params.append('status[]', status);
-            });
-        }
-
-        // Add any other search parameters
-        Object.keys(searchParams).forEach(key => {
-            if (key !== 'query') { // Skip query as we've already handled it
-                params = params.set(key, searchParams[key]);
+        Object.keys(mergedParams).forEach(key => {
+            const value = (mergedParams as any)[key];
+            if (key === 'status[]') {
+                // Handle array status params - already appended individually
+                httpParams = httpParams.append('status[]', String(value));
+            } else {
+                httpParams = httpParams.set(key, String(value));
             }
         });
 
-        return this.http.get<OrdersResponse>(this.apiUrl, { params }).pipe(
-            tap(response => console.log('Raw API response:', response)),
+        const page = Number(mergedParams['page']) || 1;
+
+        return this.http.get<OrdersResponse>(this.apiUrl, { params: httpParams }).pipe(
             map(response => {
-                // Transform the API response format to match what the component expects
                 const ordersResponse: TransformedOrdersResponse = {
                     orders: response.member || [],
                     totalOrders: response.totalItems || 0,
@@ -79,12 +55,10 @@ export class OrderService {
                     totalPages: this.extractTotalPages(response)
                 };
 
-                console.log('Transformed orders response:', ordersResponse);
                 return ordersResponse;
             }),
             catchError(error => {
                 console.error('API error:', error);
-                // Return a valid empty response on error
                 return of({
                     orders: [],
                     totalOrders: 0,

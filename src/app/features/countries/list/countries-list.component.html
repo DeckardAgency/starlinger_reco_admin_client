@@ -21,12 +21,12 @@
     <div class="table-container">
       @if (isLoading()) {
         <p>Loading countries...</p>
-      } @else if (filteredCountries().length === 0) {
+      } @else if (countries().length === 0) {
         <p class="empty-state">No countries found</p>
       } @else {
         <ui-data-table
           [columns]="columns"
-          [data]="filteredCountries()"
+          [data]="countries()"
           [sortColumn]="sortColumn()"
           [sortDirection]="sortDirection()"
           (sort)="onSortChange($event)"
@@ -35,8 +35,8 @@
     </div>
 
     <ui-table-footer
-      [showingFrom]="1"
-      [showingTo]="filteredCountries().length"
+      [showingFrom]="showingFrom()"
+      [showingTo]="showingTo()"
       [totalItems]="totalItems()"
       [showPagination]="true"
       [currentPage]="currentPage()"

@@ -122,7 +122,7 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
   }
 
   private loadDeliveryTypes(): void {
-    this.deliveryTypeService.getDeliveryTypes(1, 100)
+    this.deliveryTypeService.getDeliveryTypes({ itemsPerPage: 100 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {

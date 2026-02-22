@@ -243,7 +243,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   private loadDeliveryTypes(): void {
-    this.deliveryTypeService.getDeliveryTypes(1, 100)
+    this.deliveryTypeService.getDeliveryTypes({ itemsPerPage: 100 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -258,7 +258,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   private loadPaymentTypes(): void {
-    this.paymentTypeService.getPaymentTypes(1, 100)
+    this.paymentTypeService.getPaymentTypes({ itemsPerPage: 100 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -273,7 +273,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   private loadClients(): void {
-    this.clientService.getClients(1)
+    this.clientService.getClients({ page: 1, itemsPerPage: 500 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -313,7 +313,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     if (!clientCode) return;
 
     // Load contacts (users) for this client
-    this.userService.getUsers({ clientCode, itemsPerPage: 100 })
+    this.userService.getUsers({ 'client.code': clientCode, itemsPerPage: 100 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {

@@ -9,9 +9,9 @@ import { BaseHttpService } from './base-http.service';
 export class AccountGroupService extends BaseHttpService {
   private readonly endpoint = `${this.apiUrl}/account_groups`;
 
-  getAccountGroups(page: number = 1, itemsPerPage: number = 100): Observable<AccountGroupsCollection> {
-    const params = this.buildParams({ page, itemsPerPage });
-    return this.getWithJsonLd<AccountGroupsCollection>(this.endpoint, params);
+  getAccountGroups(params: Record<string, string | number | boolean> = {}): Observable<AccountGroupsCollection> {
+    const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
+    return this.getWithJsonLd<AccountGroupsCollection>(this.endpoint, httpParams);
   }
 
   getAccountGroupById(id: string): Observable<AccountGroup> {

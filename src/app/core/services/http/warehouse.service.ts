@@ -9,9 +9,9 @@ import { BaseHttpService } from './base-http.service';
 export class WarehouseService extends BaseHttpService {
   private readonly endpoint = `${this.apiUrl}/warehouses`;
 
-  getWarehouses(page: number = 1, itemsPerPage: number = 100): Observable<WarehousesCollection> {
-    const params = this.buildParams({ page, itemsPerPage });
-    return this.getWithJsonLd<WarehousesCollection>(this.endpoint, params);
+  getWarehouses(params: Record<string, string | number | boolean> = {}): Observable<WarehousesCollection> {
+    const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
+    return this.getWithJsonLd<WarehousesCollection>(this.endpoint, httpParams);
   }
 
   getWarehouseById(id: string): Observable<Warehouse> {

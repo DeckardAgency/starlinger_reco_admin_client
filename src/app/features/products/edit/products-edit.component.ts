@@ -321,7 +321,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadProductGroups(): void {
-    this.productGroupService.getProductGroups(1, 100)
+    this.productGroupService.getProductGroups({ page: 1, itemsPerPage: 100 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -336,7 +336,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadTaxTypes(): void {
-    this.taxTypeService.getTaxTypes(1, 100)
+    this.taxTypeService.getTaxTypes({ itemsPerPage: 100 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -469,7 +469,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     const query = this.searchQuery();
     const obs = query
       ? this.productService.searchProducts(query)
-      : this.productService.getProducts(this.currentPage(), this.itemsPerPage);
+      : this.productService.getProducts({ page: this.currentPage(), itemsPerPage: this.itemsPerPage });
 
     obs.pipe(takeUntil(this.destroy$))
       .subscribe({

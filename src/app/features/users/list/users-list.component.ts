@@ -1,7 +1,9 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, OnInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, OnInit, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -50,6 +52,9 @@ export class UsersListComponent implements OnInit, AfterViewInit {
   private cdr = inject(ChangeDetectorRef);
   private userService = inject(UserService);
   private alertService = inject(AlertService);
+  private destroyRef = inject(DestroyRef);
+
+  private searchSubject = new Subject<string>();
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -108,55 +113,29 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
   ];
 
+  // Pagination
+  currentPage = signal(1);
+  itemsPerPage = signal(30);
+  totalItems = signal(0);
+
+  // Computed pagination display
+  showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
+  showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
+
   // Data
   users = signal<AdminUser[]>([]);
 
-  // Filtered and sorted users
-  filteredUsers = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const sortCol = this.sortColumn();
-    const sortDir = this.sortDirection();
-    let result = this.users();
-
-    // Filter
-    if (query) {
-      result = result.filter(u =>
-        u.firstName.toLowerCase().includes(query) ||
-        u.lastName.toLowerCase().includes(query) ||
-        u.email.toLowerCase().includes(query) ||
-        String(u.id).includes(query)
-      );
-    }
-
-    // Sort
-    if (sortCol && sortDir) {
-      result = [...result].sort((a, b) => {
-        let aVal: unknown;
-        let bVal: unknown;
-        if (sortCol === 'name') {
-          aVal = `${a.firstName} ${a.lastName}`;
-          bVal = `${b.firstName} ${b.lastName}`;
-        } else {
-          aVal = (a as unknown as Record<string, unknown>)[sortCol];
-          bVal = (b as unknown as Record<string, unknown>)[sortCol];
-        }
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return sortDir === 'asc' ? 1 : -1;
-        if (bVal == null) return sortDir === 'asc' ? -1 : 1;
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  });
-
-  // Total count
-  totalItems = computed(() => this.filteredUsers().length);
+  constructor() {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(query => {
+      this.searchQuery.set(query);
+      this.currentPage.set(1);
+      this.loadUsers();
+    });
+  }
 
   ngOnInit(): void {
     this.loadUsers();
@@ -165,36 +144,48 @@ export class UsersListComponent implements OnInit, AfterViewInit {
   private loadUsers(): void {
     this.isLoading.set(true);
 
-    // Build filter params
-    const filters: {
-      page: number;
-      itemsPerPage: number;
-      hasClient?: boolean;
-      roles?: string;
-    } = { page: 1, itemsPerPage: 500 };
+    const params: Record<string, string | number | boolean> = {
+      page: this.currentPage(),
+      itemsPerPage: this.itemsPerPage()
+    };
+
+    // Apply search
+    const query = this.searchQuery().trim();
+    if (query) {
+      params['email'] = query;
+    }
 
     // Apply hasClient filter
     if (this.hasClientFilter === 'yes') {
-      filters.hasClient = true;
+      params['hasClient'] = true;
     } else if (this.hasClientFilter === 'no') {
-      filters.hasClient = false;
+      params['hasClient'] = false;
     }
 
     // Apply role filter
     if (this.roleFilter !== 'all') {
-      filters.roles = this.roleFilter;
+      params['roles'] = this.roleFilter;
     }
 
-    this.userService.getUsers(filters).subscribe({
+    // Apply sorting
+    const sortCol = this.sortColumn();
+    const sortDir = this.sortDirection();
+    if (sortCol && sortDir) {
+      params[`order[${sortCol}]`] = sortDir;
+    }
+
+    this.userService.getUsers(params).subscribe({
       next: (response) => {
         const items = (response.member || []).map(u => this.mapUserToAdminUser(u));
         this.users.set(items);
+        this.totalItems.set(response.totalItems || 0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Failed to load users:', error);
         this.users.set([]);
+        this.totalItems.set(0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -233,29 +224,32 @@ export class UsersListComponent implements OnInit, AfterViewInit {
       { key: 'id', label: 'id', sortable: true, width: '112px' },
       { key: 'name', label: 'Name', sortable: true, template: this.nameTemplate },
       { key: 'email', label: 'Email', sortable: true },
-      { key: 'role', label: 'Role', sortable: true, template: this.roleTemplate },
+      { key: 'role', label: 'Role', sortable: false, template: this.roleTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
 
   onSearchChange(query: string): void {
-    this.searchQuery.set(query);
-    console.log('Searching:', this.searchQuery);
+    this.searchSubject.next(query);
   }
 
   onHasClientFilterChange(value: HasClientFilter): void {
     this.hasClientFilter = value;
+    this.currentPage.set(1);
     this.loadUsers();
   }
 
   onRoleFilterChange(value: string): void {
     this.roleFilter = value;
+    this.currentPage.set(1);
     this.loadUsers();
   }
 
   onSortChange(event: SortEvent): void {
     this.sortColumn.set(event.column);
     this.sortDirection.set(event.direction);
+    this.currentPage.set(1);
+    this.loadUsers();
   }
 
   onAddUser(): void {
@@ -303,20 +297,31 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     }
     this.userService.deleteUser(String(user.id)).subscribe({
       next: () => {
-        this.users.update(list => list.filter(u => u.id !== user.id));
-        this.cdr.markForCheck();
+        this.loadUsers();
       },
       error: (error) => console.error('Error deleting user:', error)
     });
     this.closeDropdown();
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const selected = this.users().filter(u => u.selected);
-    console.log('Bulk delete users:', selected);
-    const remaining = this.users().filter(u => !u.selected);
-    this.users.set(remaining);
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} user(s)?`, 'Delete');
+    if (confirmed) {
+      selected.forEach(u => {
+        this.userService.deleteUser(String(u.id)).subscribe({
+          next: () => {
+            this.loadUsers();
+          }
+        });
+      });
+    }
     this.selectAll.set(false);
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+    this.loadUsers();
   }
 
   onHeaderDropdownToggle(isOpen: boolean): void {

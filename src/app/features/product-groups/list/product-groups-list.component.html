@@ -21,12 +21,12 @@
     <div class="table-container">
       @if (isLoading()) {
         <p>Loading product groups...</p>
-      } @else if (filteredProductGroups().length === 0) {
+      } @else if (productGroups().length === 0) {
         <p class="empty-state">No product groups found</p>
       } @else {
         <ui-data-table
           [columns]="columns"
-          [data]="filteredProductGroups()"
+          [data]="productGroups()"
           [sortColumn]="sortColumn()"
           [sortDirection]="sortDirection()"
           (sort)="onSortChange($event)"
@@ -35,8 +35,8 @@
     </div>
 
     <ui-table-footer
-      [showingFrom]="1"
-      [showingTo]="filteredProductGroups().length"
+      [showingFrom]="showingFrom()"
+      [showingTo]="showingTo()"
       [totalItems]="totalItems()"
       [showPagination]="true"
       [currentPage]="currentPage()"

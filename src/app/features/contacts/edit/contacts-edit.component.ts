@@ -173,7 +173,7 @@ export class ContactsEditComponent implements OnInit, OnDestroy {
   }
 
   private loadAccounts(): void {
-    this.clientService.getClients(1, 'name', 'asc').subscribe({
+    this.clientService.getClients({ page: 1, itemsPerPage: 500, 'order[name]': 'asc' }).subscribe({
       next: (response) => {
         const options = response.clients.map(client => ({
           value: String(client.id),

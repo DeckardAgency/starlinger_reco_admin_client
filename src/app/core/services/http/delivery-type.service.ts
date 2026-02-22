@@ -9,9 +9,9 @@ import { BaseHttpService } from './base-http.service';
 export class DeliveryTypeService extends BaseHttpService {
   private readonly endpoint = `${this.apiUrl}/delivery_types`;
 
-  getDeliveryTypes(page: number = 1, itemsPerPage: number = 100): Observable<DeliveryTypesCollection> {
-    const params = this.buildParams({ page, itemsPerPage });
-    return this.getWithJsonLd<DeliveryTypesCollection>(this.endpoint, params);
+  getDeliveryTypes(params: Record<string, string | number | boolean> = {}): Observable<DeliveryTypesCollection> {
+    const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
+    return this.getWithJsonLd<DeliveryTypesCollection>(this.endpoint, httpParams);
   }
 
   getDeliveryTypeById(id: string): Observable<DeliveryType> {

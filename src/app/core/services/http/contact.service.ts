@@ -29,27 +29,18 @@ export class ContactService {
      * Get contacts with pagination, sorting and filtering
      */
     getContacts(
-        page: number = 1,
-        sortField?: string,
-        sortDirection?: 'asc' | 'desc',
-        searchParams: Record<string, string> = {}
+        params: Record<string, string | number | boolean> = {}
     ): Observable<TransformedContactsResponse> {
-        let params = new HttpParams()
-            .set('page', page.toString())
-            .set('itemsPerPage', '500');
+        const mergedParams = { page: 1, itemsPerPage: 30, ...params };
+        let httpParams = new HttpParams();
 
-        // Add sorting parameters
-        if (sortField && sortDirection) {
-            params = params.set(`order[${sortField}]`, sortDirection);
-        }
-
-        // Add search parameters
-        Object.keys(searchParams).forEach(key => {
-            params = params.set(key, searchParams[key]);
+        Object.keys(mergedParams).forEach(key => {
+            httpParams = httpParams.set(key, String((mergedParams as any)[key]));
         });
 
-        return this.http.get<ContactsResponse>(this.apiUrl, { params }).pipe(
-            tap(response => console.log('Contacts API response:', response)),
+        const page = Number(mergedParams['page']) || 1;
+
+        return this.http.get<ContactsResponse>(this.apiUrl, { params: httpParams }).pipe(
             map(response => this.transformContactsResponse(response, page)),
             catchError(error => {
                 console.error('Contacts API error:', error);
@@ -77,7 +68,7 @@ export class ContactService {
      * Get contacts by account ID
      */
     getContactsByAccount(accountId: number | string): Observable<TransformedContactsResponse> {
-        return this.getContacts(1, 'lastName', 'asc', { 'accountId': String(accountId) });
+        return this.getContacts({ page: 1, 'order[lastName]': 'asc', accountId: String(accountId) });
     }
 
     /**

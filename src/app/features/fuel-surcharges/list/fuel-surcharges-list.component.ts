@@ -1,7 +1,9 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, inject, OnInit, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged, forkJoin } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -17,7 +19,6 @@ import { FuelSurchargeService } from '@core/services/http/fuel-surcharge.service
 import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
 import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
-import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-fuel-surcharges-list',
@@ -44,6 +45,9 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   private fuelSurchargeService = inject(FuelSurchargeService);
   private deliveryTypeService = inject(DeliveryTypeService);
   private alertService = inject(AlertService);
+  private destroyRef = inject(DestroyRef);
+
+  private searchSubject = new Subject<string>();
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -83,44 +87,28 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
     { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
   ];
 
+  // Pagination
+  currentPage = signal(1);
+  itemsPerPage = signal(30);
+  totalItems = signal(0);
+
+  showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
+  showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
+
   // Data
   fuelSurcharges = signal<FuelSurcharge[]>([]);
 
-  // Filtered and sorted fuel surcharges
-  filteredFuelSurcharges = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const sortCol = this.sortColumn();
-    const sortDir = this.sortDirection();
-    let result = this.fuelSurcharges();
-
-    if (query) {
-      result = result.filter(fs =>
-        (fs.name || '').toLowerCase().includes(query) ||
-        String(fs.id).includes(query)
-      );
-    }
-
-    if (sortCol && sortDir) {
-      result = [...result].sort((a, b) => {
-        const aVal = (a as unknown as Record<string, unknown>)[sortCol];
-        const bVal = (b as unknown as Record<string, unknown>)[sortCol];
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return sortDir === 'asc' ? 1 : -1;
-        if (bVal == null) return sortDir === 'asc' ? -1 : 1;
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  });
-
-  // Total count
-  totalItems = computed(() => this.filteredFuelSurcharges().length);
+  constructor() {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(query => {
+      this.searchQuery.set(query);
+      this.currentPage.set(1);
+      this.loadFuelSurcharges();
+    });
+  }
 
   ngOnInit(): void {
     this.loadFuelSurcharges();
@@ -128,9 +116,26 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
 
   private loadFuelSurcharges(): void {
     this.isLoading.set(true);
+
+    const params: Record<string, string | number | boolean> = {
+      page: this.currentPage(),
+      itemsPerPage: this.itemsPerPage()
+    };
+
+    const query = this.searchQuery().trim();
+    if (query) {
+      params['name'] = query;
+    }
+
+    const sortCol = this.sortColumn();
+    const sortDir = this.sortDirection();
+    if (sortCol && sortDir) {
+      params[`order[${sortCol}]`] = sortDir;
+    }
+
     forkJoin({
-      surcharges: this.fuelSurchargeService.getFuelSurcharges(),
-      deliveryTypes: this.deliveryTypeService.getDeliveryTypes(1, 100)
+      surcharges: this.fuelSurchargeService.getFuelSurcharges(params),
+      deliveryTypes: this.deliveryTypeService.getDeliveryTypes({ itemsPerPage: 100 })
     }).subscribe({
       next: ({ surcharges, deliveryTypes }) => {
         // Build a map of delivery type IRI → name
@@ -147,11 +152,14 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
           }
           return { ...fs, deliveryType: resolvedDt, selected: false };
         }));
+        this.totalItems.set(surcharges.totalItems || 0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Error loading fuel surcharges:', error);
+        this.fuelSurcharges.set([]);
+        this.totalItems.set(0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -174,12 +182,19 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   }
 
   onSearchChange(query: string): void {
-    this.searchQuery.set(query);
+    this.searchSubject.next(query);
   }
 
   onSortChange(event: SortEvent): void {
     this.sortColumn.set(event.column);
     this.sortDirection.set(event.direction);
+    this.currentPage.set(1);
+    this.loadFuelSurcharges();
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+    this.loadFuelSurcharges();
   }
 
   onAddFuelSurcharge(): void {
@@ -224,8 +239,7 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
     }
     this.fuelSurchargeService.deleteFuelSurcharge(String(fuelSurcharge.id)).subscribe({
       next: () => {
-        this.fuelSurcharges.update(list => list.filter(fs => fs.id !== fuelSurcharge.id));
-        this.cdr.markForCheck();
+        this.loadFuelSurcharges();
       },
       error: (error) => console.error('Error deleting fuel surcharge:', error)
     });
@@ -242,9 +256,8 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
       this.fuelSurchargeService.deleteFuelSurcharge(String(fs.id)).toPromise()
     );
     Promise.all(deleteOps).then(() => {
-      this.fuelSurcharges.update(list => list.filter(fs => !fs.selected));
       this.selectAll.set(false);
-      this.cdr.markForCheck();
+      this.loadFuelSurcharges();
     }).catch(error => {
       console.error('Error bulk deleting fuel surcharges:', error);
       this.loadFuelSurcharges();

@@ -9,9 +9,9 @@ import { BaseHttpService } from './base-http.service';
 export class FuelSurchargeService extends BaseHttpService {
   private readonly endpoint = `${this.apiUrl}/fuel_surcharges`;
 
-  getFuelSurcharges(page: number = 1, itemsPerPage: number = 100): Observable<FuelSurchargesCollection> {
-    const params = this.buildParams({ page, itemsPerPage });
-    return this.getWithJsonLd<FuelSurchargesCollection>(this.endpoint, params);
+  getFuelSurcharges(params: Record<string, string | number | boolean> = {}): Observable<FuelSurchargesCollection> {
+    const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
+    return this.getWithJsonLd<FuelSurchargesCollection>(this.endpoint, httpParams);
   }
 
   getFuelSurchargeById(id: string): Observable<FuelSurcharge> {

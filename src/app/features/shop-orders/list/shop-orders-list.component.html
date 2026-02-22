@@ -12,7 +12,7 @@
     <ui-list-header
       title="Shop orders"
       icon="file-check"
-      [count]="totalCount()"
+      [count]="totalItems()"
       [showSearch]="true"
       [showAddButton]="false"
       [showBulkDeleteButton]="false"
@@ -36,6 +36,8 @@
 
       @if (isLoading()) {
         <div class="loading-state">Loading shop orders...</div>
+      } @else if (orders().length === 0) {
+        <div class="empty-state">No shop orders found</div>
       } @else {
         <ui-data-table
           [columns]="columns"
@@ -50,9 +52,13 @@
 
     <!-- Table Footer -->
     <ui-table-footer
-      [showingFrom]="1"
-      [showingTo]="orders().length"
-      [totalItems]="orders().length"
+      [showingFrom]="showingFrom()"
+      [showingTo]="showingTo()"
+      [totalItems]="totalItems()"
+      [showPagination]="true"
+      [currentPage]="currentPage()"
+      [itemsPerPage]="itemsPerPage()"
+      (pageChange)="onPageChange($event)"
     ></ui-table-footer>
   </main>
 </div>

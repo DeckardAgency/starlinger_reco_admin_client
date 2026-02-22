@@ -14,13 +14,9 @@ export class ProductGroupService extends BaseHttpService {
   /**
    * Get all product groups with optional pagination
    */
-  getProductGroups(page: number = 1, itemsPerPage: number = 30): Observable<ProductGroupsCollection> {
-    const params = this.buildParams({
-      page,
-      itemsPerPage
-    });
-
-    return this.getWithJsonLd<ProductGroupsCollection>(this.endpoint, params);
+  getProductGroups(params: Record<string, string | number | boolean> = {}): Observable<ProductGroupsCollection> {
+    const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
+    return this.getWithJsonLd<ProductGroupsCollection>(this.endpoint, httpParams);
   }
 
   /**

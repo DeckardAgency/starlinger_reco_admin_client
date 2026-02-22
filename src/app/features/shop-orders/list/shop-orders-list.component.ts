@@ -1,7 +1,9 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, OnInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, OnInit, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
@@ -56,6 +58,9 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   private cdr = inject(ChangeDetectorRef);
   private orderService = inject(OrderService);
   private alertService = inject(AlertService);
+  private destroyRef = inject(DestroyRef);
+
+  private searchSubject = new Subject<string>();
 
   @ViewChild('typeTemplate') typeTemplate!: TemplateRef<any>;
   @ViewChild('customerTemplate') customerTemplate!: TemplateRef<any>;
@@ -94,56 +99,29 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
     { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
   ];
 
+  // Pagination
+  currentPage = signal(1);
+  itemsPerPage = signal(30);
+  totalItems = signal(0);
+
+  // Computed pagination display
+  showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
+  showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
+
   // Data from API
-  allOrders = signal<ShopOrder[]>([]);
+  orders = signal<ShopOrder[]>([]);
 
-  // Filtered orders based on active tab, search, and sorting
-  orders = computed(() => {
-    const tab = this.activeTab();
-    const query = this.searchQuery().toLowerCase().trim();
-    const sortCol = this.sortColumn();
-    const sortDir = this.sortDirection();
-    let result = this.allOrders();
-
-    // Filter by tab
-    if (tab === 'completed') {
-      result = result.filter(o => o.status === 'completed');
-    } else if (tab === 'cancelled') {
-      result = result.filter(o => o.status === 'cancelled');
-    }
-
-    // Filter by search
-    if (query) {
-      result = result.filter(o =>
-        String(o.id).includes(query) ||
-        o.internalRef.toLowerCase().includes(query) ||
-        o.customer.name.toLowerCase().includes(query) ||
-        o.dateCreated.includes(query)
-      );
-    }
-
-    // Sort
-    if (sortCol && sortDir) {
-      result = [...result].sort((a, b) => {
-        const aVal = (a as unknown as Record<string, unknown>)[sortCol];
-        const bVal = (b as unknown as Record<string, unknown>)[sortCol];
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return sortDir === 'asc' ? 1 : -1;
-        if (bVal == null) return sortDir === 'asc' ? -1 : 1;
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  });
-
-  // Total count
-  totalCount = computed(() => this.allOrders().length);
+  constructor() {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(query => {
+      this.searchQuery.set(query);
+      this.currentPage.set(1);
+      this.loadData();
+    });
+  }
 
   ngOnInit(): void {
     this.loadData();
@@ -157,19 +135,49 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   private loadData(): void {
     this.isLoading.set(true);
 
-    this.orderService.getOrders().subscribe({
+    const params: Record<string, string | number | boolean> = {
+      page: this.currentPage(),
+      itemsPerPage: this.itemsPerPage(),
+      isDraft: false
+    };
+
+    // Apply search
+    const query = this.searchQuery().trim();
+    if (query) {
+      params['orderNumber'] = query;
+    }
+
+    // Apply tab-based status filter
+    const tab = this.activeTab();
+    if (tab === 'completed') {
+      params['status'] = 'completed';
+    } else if (tab === 'cancelled') {
+      params['status'] = 'canceled';
+    }
+    // 'latest' tab shows all non-draft orders (no status filter)
+
+    // Apply sorting
+    const sortCol = this.sortColumn();
+    const sortDir = this.sortDirection();
+    if (sortCol && sortDir) {
+      params[`order[${sortCol}]`] = sortDir;
+    } else {
+      // Default sort by createdAt desc
+      params['order[createdAt]'] = 'desc';
+    }
+
+    this.orderService.getOrders(params).subscribe({
       next: (response) => {
         const orderItems = response.orders.map(o => this.mapOrderToShopOrder(o));
-        const sorted = orderItems.sort((a, b) =>
-          this.parseDate(b.dateCreated) - this.parseDate(a.dateCreated)
-        );
-        this.allOrders.set(sorted);
+        this.orders.set(orderItems);
+        this.totalItems.set(response.totalOrders || 0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Failed to load shop orders:', error);
-        this.allOrders.set([]);
+        this.orders.set([]);
+        this.totalItems.set(0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -203,11 +211,6 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
     return `${day}-${month}-${year}`;
   }
 
-  private parseDate(dateStr: string): number {
-    const [day, month, year] = dateStr.split('-').map(Number);
-    return new Date(year, month - 1, day).getTime();
-  }
-
   private mapStatus(status: string): 'completed' | 'cancelled' | 'pending' {
     const s = (status || '').toLowerCase();
     if (['completed', 'delivered'].includes(s)) return 'completed';
@@ -220,26 +223,29 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
       { key: 'id', label: 'Order ID', sortable: true, width: '112px' },
       { key: 'type', label: 'Type', sortable: false, width: '128px', template: this.typeTemplate },
       { key: 'dateCreated', label: 'Date Created', sortable: true, width: '190px' },
-      { key: 'internalRef', label: 'Internal reference number', sortable: false },
+      { key: 'internalRef', label: 'Internal reference number', sortable: true },
       { key: 'customer', label: 'Customer', sortable: false, template: this.customerTemplate },
       { key: 'partsOrdered', label: 'Parts ordered', sortable: false, width: '128px' },
-      { key: 'status', label: 'Status', sortable: false, width: '128px', template: this.statusTemplate },
+      { key: 'status', label: 'Status', sortable: true, width: '128px', template: this.statusTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
 
   onTabChange(tabId: string): void {
     this.activeTab.set(tabId);
+    this.currentPage.set(1);
+    this.loadData();
   }
 
   onSearchChange(query: string): void {
-    this.searchQuery.set(query);
-    console.log('Searching:', this.searchQuery);
+    this.searchSubject.next(query);
   }
 
   onSortChange(event: SortEvent): void {
     this.sortColumn.set(event.column);
     this.sortDirection.set(event.direction);
+    this.currentPage.set(1);
+    this.loadData();
   }
 
   onExport(): void {
@@ -271,7 +277,6 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   }
 
   onView(order: ShopOrder): void {
-    console.log('View order:', order);
     this.router.navigate(['/admin/shop-orders', order.id, 'edit']);
     this.closeDropdown();
   }
@@ -284,12 +289,16 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
     }
     this.orderService.deleteOrder(String(order.id)).subscribe({
       next: () => {
-        this.allOrders.update(list => list.filter(o => o.id !== order.id));
-        this.cdr.markForCheck();
+        this.loadData();
       },
       error: (error) => console.error('Error deleting order:', error)
     });
     this.closeDropdown();
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+    this.loadData();
   }
 
   getTypeLabel(type: string): string {

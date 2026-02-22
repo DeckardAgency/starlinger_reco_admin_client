@@ -1,7 +1,9 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, OnInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, OnInit, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { DeliveryPrice } from '@core/models/delivery-price.model';
@@ -42,6 +44,9 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
   private cdr = inject(ChangeDetectorRef);
   private deliveryPriceService = inject(DeliveryPriceService);
   private alertService = inject(AlertService);
+  private destroyRef = inject(DestroyRef);
+
+  private searchSubject = new Subject<string>();
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -82,46 +87,26 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
 
   // Pagination
   currentPage = signal(1);
-  itemsPerPage = signal(17);
+  itemsPerPage = signal(30);
+  totalItems = signal(0);
+
+  showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
+  showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
 
   // Data
   deliveryPrices = signal<DeliveryPrice[]>([]);
 
-  // Filtered and sorted delivery prices
-  filteredDeliveryPrices = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const sortCol = this.sortColumn();
-    const sortDir = this.sortDirection();
-    let result = this.deliveryPrices();
-
-    if (query) {
-      result = result.filter(dp =>
-        (dp.name || '').toLowerCase().includes(query) ||
-        String(dp.id).includes(query)
-      );
-    }
-
-    if (sortCol && sortDir) {
-      result = [...result].sort((a, b) => {
-        const aVal = (a as unknown as Record<string, unknown>)[sortCol];
-        const bVal = (b as unknown as Record<string, unknown>)[sortCol];
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return sortDir === 'asc' ? 1 : -1;
-        if (bVal == null) return sortDir === 'asc' ? -1 : 1;
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  });
-
-  // Total count
-  totalItems = computed(() => this.filteredDeliveryPrices().length);
+  constructor() {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(query => {
+      this.searchQuery.set(query);
+      this.currentPage.set(1);
+      this.loadDeliveryPrices();
+    });
+  }
 
   ngOnInit(): void {
     this.loadDeliveryPrices();
@@ -130,16 +115,34 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
   private loadDeliveryPrices(): void {
     this.isLoading.set(true);
 
-    this.deliveryPriceService.getDeliveryPrices(1, 100).subscribe({
+    const params: Record<string, string | number | boolean> = {
+      page: this.currentPage(),
+      itemsPerPage: this.itemsPerPage()
+    };
+
+    const query = this.searchQuery().trim();
+    if (query) {
+      params['name'] = query;
+    }
+
+    const sortCol = this.sortColumn();
+    const sortDir = this.sortDirection();
+    if (sortCol && sortDir) {
+      params[`order[${sortCol}]`] = sortDir;
+    }
+
+    this.deliveryPriceService.getDeliveryPrices(params).subscribe({
       next: (response) => {
         const items = (response.member || []).map(dp => ({ ...dp, selected: false }));
         this.deliveryPrices.set(items);
+        this.totalItems.set(response.totalItems || 0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Failed to load delivery prices:', error);
         this.deliveryPrices.set([]);
+        this.totalItems.set(0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -154,29 +157,31 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
   private initColumns(): void {
     this.columns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
-      { key: 'name', label: 'ID', sortable: false },
+      { key: 'name', label: 'ID', sortable: true },
       { key: 'deliveryType', label: 'Delivery type', sortable: false, template: this.deliveryTypeTemplate },
-      { key: 'sizeFrom', label: 'Size from', sortable: false },
-      { key: 'priceBase', label: 'Price base', sortable: false, template: this.priceTemplate },
-      { key: 'stepStartsAt', label: 'Step starts at', sortable: false },
-      { key: 'forEveryNextSize', label: 'For every next size', sortable: false },
-      { key: 'priceBaseStep', label: 'Price base step', sortable: false },
+      { key: 'sizeFrom', label: 'Size from', sortable: true },
+      { key: 'priceBase', label: 'Price base', sortable: true, template: this.priceTemplate },
+      { key: 'stepStartsAt', label: 'Step starts at', sortable: true },
+      { key: 'forEveryNextSize', label: 'For every next size', sortable: true },
+      { key: 'priceBaseStep', label: 'Price base step', sortable: true },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
 
   onSearchQueryChange(query: string): void {
-    this.searchQuery.set(query);
-    this.onSearch();
-  }
-
-  onSearch(): void {
-    console.log('Searching:', this.searchQuery);
+    this.searchSubject.next(query);
   }
 
   onSortChange(event: SortEvent): void {
     this.sortColumn.set(event.column);
     this.sortDirection.set(event.direction);
+    this.currentPage.set(1);
+    this.loadDeliveryPrices();
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+    this.loadDeliveryPrices();
   }
 
   onAddDeliveryPrice(): void {
@@ -215,8 +220,7 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
     }
     this.deliveryPriceService.deleteDeliveryPrice(String(deliveryPrice.id)).subscribe({
       next: () => {
-        this.deliveryPrices.update(list => list.filter(dp => dp.id !== deliveryPrice.id));
-        this.cdr.markForCheck();
+        this.loadDeliveryPrices();
       },
       error: (error) => console.error('Error deleting delivery price:', error)
     });
@@ -233,9 +237,8 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
       this.deliveryPriceService.deleteDeliveryPrice(String(dp.id)).toPromise()
     );
     Promise.all(deleteOps).then(() => {
-      this.deliveryPrices.update(list => list.filter(dp => !dp.selected));
       this.selectAll.set(false);
-      this.cdr.markForCheck();
+      this.loadDeliveryPrices();
     }).catch(error => {
       console.error('Error bulk deleting delivery prices:', error);
       this.loadDeliveryPrices();
@@ -282,9 +285,5 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
       return (deliveryType as { name: string }).name;
     }
     return String(deliveryType);
-  }
-
-  onPageChange(page: number): void {
-    this.currentPage.set(page);
   }
 }

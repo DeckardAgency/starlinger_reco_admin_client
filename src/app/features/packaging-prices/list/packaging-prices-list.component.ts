@@ -1,7 +1,9 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, inject, OnInit, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -41,6 +43,7 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
   private cdr = inject(ChangeDetectorRef);
   private packagingPriceService = inject(PackagingPriceService);
   private alertService = inject(AlertService);
+  private destroyRef = inject(DestroyRef);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -51,6 +54,12 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
 
   // Search state
   searchQuery = signal('');
+  private searchSubject = new Subject<string>();
+
+  // Pagination state
+  currentPage = signal(1);
+  itemsPerPage = signal(30);
+  totalItems = signal(0);
 
   // Loading state
   isLoading = signal(false);
@@ -71,6 +80,10 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
   selectedCount = computed(() => this.packagingPrices().filter(pp => pp.selected).length);
   hasSelected = computed(() => this.selectedCount() > 0);
 
+  // Pagination display
+  showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
+  showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
+
   // Table columns
   columns: TableColumn[] = [];
 
@@ -83,41 +96,17 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
   // Data
   packagingPrices = signal<PackagingPrice[]>([]);
 
-  // Filtered and sorted packaging prices
-  filteredPackagingPrices = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const sortCol = this.sortColumn();
-    const sortDir = this.sortDirection();
-    let result = this.packagingPrices();
-
-    if (query) {
-      result = result.filter(pp =>
-        (pp.name || '').toLowerCase().includes(query) ||
-        String(pp.id).includes(query)
-      );
-    }
-
-    if (sortCol && sortDir) {
-      result = [...result].sort((a, b) => {
-        const aVal = (a as unknown as Record<string, unknown>)[sortCol];
-        const bVal = (b as unknown as Record<string, unknown>)[sortCol];
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return sortDir === 'asc' ? 1 : -1;
-        if (bVal == null) return sortDir === 'asc' ? -1 : 1;
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  });
-
-  // Total count
-  totalItems = computed(() => this.filteredPackagingPrices().length);
+  constructor() {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(query => {
+      this.searchQuery.set(query);
+      this.currentPage.set(1);
+      this.loadPackagingPrices();
+    });
+  }
 
   ngOnInit(): void {
     this.loadPackagingPrices();
@@ -125,13 +114,31 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
 
   private loadPackagingPrices(): void {
     this.isLoading.set(true);
-    this.packagingPriceService.getPackagingPrices().subscribe({
+
+    const params: Record<string, string | number | boolean> = {
+      page: this.currentPage(),
+      itemsPerPage: this.itemsPerPage(),
+    };
+
+    const query = this.searchQuery().trim();
+    if (query) {
+      params['name'] = query;
+    }
+
+    const sortCol = this.sortColumn();
+    const sortDir = this.sortDirection();
+    if (sortCol && sortDir) {
+      params[`order[${sortCol}]`] = sortDir;
+    }
+
+    this.packagingPriceService.getPackagingPrices(params).subscribe({
       next: (response) => {
-        const prices = response.member.map((pp: PackagingPrice) => ({
+        const prices = (response.member || []).map((pp: PackagingPrice) => ({
           ...pp,
           selected: false
         }));
         this.packagingPrices.set(prices);
+        this.totalItems.set(response.totalItems || 0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
@@ -160,12 +167,19 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
   }
 
   onSearchChange(query: string): void {
-    this.searchQuery.set(query);
+    this.searchSubject.next(query);
   }
 
   onSortChange(event: SortEvent): void {
     this.sortColumn.set(event.column);
     this.sortDirection.set(event.direction);
+    this.currentPage.set(1);
+    this.loadPackagingPrices();
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+    this.loadPackagingPrices();
   }
 
   onAddPackagingPrice(): void {
@@ -210,8 +224,7 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
     }
     this.packagingPriceService.deletePackagingPrice(String(packagingPrice.id)).subscribe({
       next: () => {
-        this.packagingPrices.update(list => list.filter(pp => pp.id !== packagingPrice.id));
-        this.cdr.markForCheck();
+        this.loadPackagingPrices();
       },
       error: (error) => {
         console.error('Error deleting packaging price:', error);
@@ -231,9 +244,8 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
     );
 
     Promise.all(deletePromises).then(() => {
-      this.packagingPrices.update(list => list.filter(pp => !pp.selected));
       this.selectAll.set(false);
-      this.cdr.markForCheck();
+      this.loadPackagingPrices();
     }).catch(error => {
       console.error('Error bulk deleting packaging prices:', error);
       this.loadPackagingPrices();

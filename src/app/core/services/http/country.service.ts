@@ -10,9 +10,9 @@ import { BaseHttpService } from './base-http.service';
 export class CountryService extends BaseHttpService {
   private readonly endpoint = `${this.apiUrl}/countries`;
 
-  getCountries(page: number = 1, itemsPerPage: number = 100): Observable<CountriesCollection> {
-    const params = this.buildParams({ page, itemsPerPage });
-    return this.getWithJsonLd<CountriesCollection>(this.endpoint, params);
+  getCountries(params: Record<string, string | number | boolean> = {}): Observable<CountriesCollection> {
+    const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
+    return this.getWithJsonLd<CountriesCollection>(this.endpoint, httpParams);
   }
 
   getCountryById(id: string): Observable<Country> {

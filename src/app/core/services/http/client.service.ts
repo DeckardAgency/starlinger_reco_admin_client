@@ -40,47 +40,18 @@ export class ClientService {
      * Transforms the API response format to match what components expect
      */
     getClients(
-        page: number = 1,
-        sortField?: string,
-        sortDirection?: 'asc' | 'desc',
-        searchParams: Record<string, string> = {}
+        params: Record<string, string | number | boolean> = {}
     ): Observable<TransformedClientsResponse> {
-        let params = new HttpParams()
-            .set('page', page.toString())
-            .set('itemsPerPage', '500');
+        const mergedParams = { page: 1, itemsPerPage: 30, ...params };
+        let httpParams = new HttpParams();
 
-        // Add sorting parameters
-        if (sortField && sortDirection) {
-            params = params.set(`order[${sortField}]`, sortDirection);
-        }
-
-        // Add search parameters
-        // Based on the PHP entity's SearchFilter: name (partial), code (exact)
-        if (searchParams['name']) {
-            params = params.set('name', searchParams['name']);
-        }
-        if (searchParams['code']) {
-            params = params.set('code', searchParams['code']);
-        }
-
-        // Add any other search parameters
-        Object.keys(searchParams).forEach(key => {
-            if (key !== 'name' && key !== 'code') {
-                params = params.set(key, searchParams[key]);
-            }
+        Object.keys(mergedParams).forEach(key => {
+            httpParams = httpParams.set(key, String((mergedParams as any)[key]));
         });
 
-        // Log request parameters for debugging
-        console.log('Request parameters:', {
-            page,
-            sortField,
-            sortDirection,
-            searchParams,
-            httpParams: params.toString()
-        });
+        const page = Number(mergedParams['page']) || 1;
 
-        return this.http.get<ClientsResponse>(this.apiUrl, { params }).pipe(
-            tap(response => console.log('Raw API response:', response)),
+        return this.http.get<ClientsResponse>(this.apiUrl, { params: httpParams }).pipe(
             map(response => this.transformClientsResponse(response, page)),
             catchError(error => {
                 console.error('API error:', error);

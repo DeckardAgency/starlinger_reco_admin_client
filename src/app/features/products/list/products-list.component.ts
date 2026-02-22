@@ -1,7 +1,9 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, OnInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, OnInit, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
@@ -50,6 +52,9 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   private cdr = inject(ChangeDetectorRef);
   private productService = inject(ProductService);
   private alertService = inject(AlertService);
+  private destroyRef = inject(DestroyRef);
+
+  private searchSubject = new Subject<string>();
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -90,48 +95,29 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
     { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
   ];
 
+  // Pagination
+  currentPage = signal(1);
+  itemsPerPage = signal(30);
+  totalItems = signal(0);
+
+  // Computed pagination display
+  showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
+  showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
+
   // Data from API
   products = signal<Product[]>([]);
 
-  // Filtered and sorted products
-  filteredProducts = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const sortCol = this.sortColumn();
-    const sortDir = this.sortDirection();
-    let result = this.products();
-
-    // Filter
-    if (query) {
-      result = result.filter(p =>
-        p.name.toLowerCase().includes(query) ||
-        p.code.toLowerCase().includes(query) ||
-        p.shortDescription.toLowerCase().includes(query) ||
-        String(p.id).includes(query)
-      );
-    }
-
-    // Sort
-    if (sortCol && sortDir) {
-      result = [...result].sort((a, b) => {
-        const aVal = (a as unknown as Record<string, unknown>)[sortCol];
-        const bVal = (b as unknown as Record<string, unknown>)[sortCol];
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return sortDir === 'asc' ? 1 : -1;
-        if (bVal == null) return sortDir === 'asc' ? -1 : 1;
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  });
-
-  // Total count
-  totalCount = computed(() => this.filteredProducts().length);
+  constructor() {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(query => {
+      this.searchQuery.set(query);
+      this.currentPage.set(1);
+      this.loadProducts();
+    });
+  }
 
   ngOnInit(): void {
     this.loadProducts();
@@ -145,16 +131,34 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   private loadProducts(): void {
     this.isLoading.set(true);
 
-    this.productService.getProducts(1, 500).subscribe({
+    const params: Record<string, string | number | boolean> = {
+      page: this.currentPage(),
+      itemsPerPage: this.itemsPerPage()
+    };
+
+    const query = this.searchQuery().trim();
+    if (query) {
+      params['name'] = query;
+    }
+
+    const sortCol = this.sortColumn();
+    const sortDir = this.sortDirection();
+    if (sortCol && sortDir) {
+      params[`order[${sortCol}]`] = sortDir;
+    }
+
+    this.productService.getProducts(params).subscribe({
       next: (response) => {
         const items = (response.member || []).map(p => this.mapApiProductToDisplay(p));
         this.products.set(items);
+        this.totalItems.set(response.totalItems || 0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Failed to load products:', error);
         this.products.set([]);
+        this.totalItems.set(0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -176,24 +180,25 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   private initColumns(): void {
     this.columns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
-      { key: 'id', label: 'Product ID', sortable: false, width: '112px' },
-      { key: 'code', label: 'Code', sortable: false, width: '128px' },
+      { key: 'id', label: 'Product ID', sortable: true, width: '112px' },
+      { key: 'code', label: 'Code', sortable: true, width: '128px' },
       { key: 'name', label: 'Name', sortable: true, width: '266px' },
-      { key: 'shortDescription', label: 'Short description', sortable: false },
-      { key: 'qty', label: 'Qty', sortable: false, width: '96px' },
-      { key: 'qtyStep', label: 'Qty step', sortable: false, width: '96px' },
+      { key: 'shortDescription', label: 'Short description', sortable: true },
+      { key: 'qty', label: 'Qty', sortable: true, width: '96px' },
+      { key: 'qtyStep', label: 'Qty step', sortable: true, width: '96px' },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
 
   onSearchChange(query: string): void {
-    this.searchQuery.set(query);
-    console.log('Searching:', this.searchQuery);
+    this.searchSubject.next(query);
   }
 
   onSortChange(event: SortEvent): void {
     this.sortColumn.set(event.column);
     this.sortDirection.set(event.direction);
+    this.currentPage.set(1);
+    this.loadProducts();
   }
 
   onExport(): void {
@@ -201,7 +206,6 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   }
 
   onAddProduct(): void {
-    console.log('Adding new product...');
     this.router.navigate(['/admin/products/new']);
   }
 
@@ -234,7 +238,6 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   }
 
   onEdit(product: Product): void {
-    console.log('Edit product:', product);
     this.router.navigate(['/admin/products', product.id, 'edit']);
     this.closeDropdown();
   }
@@ -284,20 +287,31 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
     }
     this.productService.deleteProduct(String(product.id)).subscribe({
       next: () => {
-        this.products.update(list => list.filter(p => p.id !== product.id));
-        this.cdr.markForCheck();
+        this.loadProducts();
       },
       error: (error) => console.error('Error deleting product:', error)
     });
     this.closeDropdown();
   }
 
-  onBulkDelete(): void {
+  async onBulkDelete(): Promise<void> {
     const selected = this.products().filter(p => p.selected);
-    console.log('Bulk delete products:', selected);
-    const remaining = this.products().filter(p => !p.selected);
-    this.products.set(remaining);
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} product(s)?`, 'Delete');
+    if (confirmed) {
+      selected.forEach(p => {
+        this.productService.deleteProduct(String(p.id)).subscribe({
+          next: () => {
+            this.loadProducts();
+          }
+        });
+      });
+    }
     this.selectAll.set(false);
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+    this.loadProducts();
   }
 
   onHeaderDropdownToggle(isOpen: boolean): void {

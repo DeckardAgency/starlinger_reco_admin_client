@@ -1,7 +1,9 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, inject, signal, computed, TemplateRef, ViewChild, AfterViewInit, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, inject, signal, computed, TemplateRef, ViewChild, AfterViewInit, OnInit, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
@@ -41,6 +43,9 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private clientService = inject(ClientService);
   private alertService = inject(AlertService);
+  private destroyRef = inject(DestroyRef);
+
+  private searchSubject = new Subject<string>();
 
   @ViewChild('statusTemplate') statusTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
@@ -62,44 +67,29 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
   ];
 
+  // Pagination
+  currentPage = signal(1);
+  itemsPerPage = signal(30);
+  totalItems = signal(0);
+
+  // Computed pagination display
+  showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
+  showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
+
   // Data from API
   accounts = signal<Account[]>([]);
-  filteredAccounts = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const sortCol = this.sortColumn();
-    const sortDir = this.sortDirection();
-    let result = this.accounts();
 
-    // Filter
-    if (query) {
-      result = result.filter(account =>
-        account.name.toLowerCase().includes(query) ||
-        (account.email && account.email.toLowerCase().includes(query)) ||
-        (account.oib && account.oib.toLowerCase().includes(query)) ||
-        (account.code && account.code.toLowerCase().includes(query)) ||
-        String(account.id).includes(query)
-      );
-    }
-
-    // Sort
-    if (sortCol && sortDir) {
-      result = [...result].sort((a, b) => {
-        const aVal = (a as unknown as Record<string, unknown>)[sortCol];
-        const bVal = (b as unknown as Record<string, unknown>)[sortCol];
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return sortDir === 'asc' ? 1 : -1;
-        if (bVal == null) return sortDir === 'asc' ? -1 : 1;
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  });
+  constructor() {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(query => {
+      this.searchQuery.set(query);
+      this.currentPage.set(1);
+      this.loadAccounts();
+    });
+  }
 
   ngOnInit(): void {
     this.loadAccounts();
@@ -113,16 +103,34 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   private loadAccounts(): void {
     this.isLoading.set(true);
 
-    this.clientService.getClients(1, this.sortColumn() || undefined, this.sortDirection() || undefined, {}).subscribe({
+    const params: Record<string, string | number | boolean> = {
+      page: this.currentPage(),
+      itemsPerPage: this.itemsPerPage()
+    };
+
+    const query = this.searchQuery().trim();
+    if (query) {
+      params['name'] = query;
+    }
+
+    const sortCol = this.sortColumn();
+    const sortDir = this.sortDirection();
+    if (sortCol && sortDir) {
+      params[`order[${sortCol}]`] = sortDir;
+    }
+
+    this.clientService.getClients(params).subscribe({
       next: (response) => {
         const accounts = response.clients.map(client => this.mapClientToAccount(client));
         this.accounts.set(accounts);
+        this.totalItems.set(response.totalClients || 0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Failed to load accounts:', error);
         this.accounts.set([]);
+        this.totalItems.set(0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -159,13 +167,14 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   }
 
   onSearchQueryChange(query: string): void {
-    this.searchQuery.set(query);
+    this.searchSubject.next(query);
   }
 
   onSort(event: SortEvent): void {
     this.sortColumn.set(event.column);
     this.sortDirection.set(event.direction);
-    this.cdr.markForCheck();
+    this.currentPage.set(1);
+    this.loadAccounts();
   }
 
   stringifyId(id: string | number): string {
@@ -211,8 +220,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     }
     this.clientService.deleteClient(String(account.id)).subscribe({
       next: () => {
-        this.accounts.update(list => list.filter(a => a.id !== account.id));
-        this.cdr.markForCheck();
+        this.loadAccounts();
       },
       error: (error) => console.error('Error deleting account:', error)
     });
@@ -223,15 +231,8 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   }
 
-  get totalResults(): number {
-    return this.filteredAccounts().length;
-  }
-
-  get showingFrom(): number {
-    return this.filteredAccounts().length > 0 ? 1 : 0;
-  }
-
-  get showingTo(): number {
-    return this.filteredAccounts().length;
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+    this.loadAccounts();
   }
 }

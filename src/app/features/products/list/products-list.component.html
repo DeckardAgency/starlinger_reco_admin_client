@@ -12,7 +12,7 @@
     <ui-list-header
       title="Product list"
       icon="package"
-      [count]="totalCount()"
+      [count]="totalItems()"
       addButtonLabel="Add product"
       [showSearch]="true"
       [showBulkDeleteButton]="true"
@@ -32,12 +32,12 @@
     <div class="table-container">
       @if (isLoading()) {
         <p>Loading products...</p>
-      } @else if (filteredProducts().length === 0) {
+      } @else if (products().length === 0) {
         <p class="empty-state">No products found</p>
       } @else {
         <ui-data-table
           [columns]="columns"
-          [data]="filteredProducts()"
+          [data]="products()"
           [sortColumn]="sortColumn()"
           [sortDirection]="sortDirection()"
           (sort)="onSortChange($event)"
@@ -47,9 +47,13 @@
 
     <!-- Table Footer -->
     <ui-table-footer
-      [showingFrom]="1"
-      [showingTo]="filteredProducts().length"
-      [totalItems]="totalCount()"
+      [showingFrom]="showingFrom()"
+      [showingTo]="showingTo()"
+      [totalItems]="totalItems()"
+      [showPagination]="true"
+      [currentPage]="currentPage()"
+      [itemsPerPage]="itemsPerPage()"
+      (pageChange)="onPageChange($event)"
     ></ui-table-footer>
   </main>
 </div>

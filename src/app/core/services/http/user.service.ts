@@ -74,36 +74,10 @@ export class UserService extends BaseHttpService {
    * @param filters Optional filters like pagination, sorting, search, hasClient, roles
    * @returns Observable with the collection of users
    */
-  getUsers(filters?: {
-    page?: number;
-    itemsPerPage?: number;
-    search?: string;
-    clientCode?: string;
-    hasClient?: boolean | null;
-    roles?: string;
-  }): Observable<UserCollectionResponse> {
-    let params = new HttpParams();
-
-    if (filters?.page) {
-      params = params.set('page', filters.page.toString());
-    }
-    if (filters?.itemsPerPage) {
-      params = params.set('itemsPerPage', filters.itemsPerPage.toString());
-    }
-    if (filters?.search) {
-      params = params.set('email', filters.search);
-    }
-    if (filters?.clientCode) {
-      params = params.set('client.code', filters.clientCode);
-    }
-    if (filters?.hasClient !== undefined && filters?.hasClient !== null) {
-      params = params.set('hasClient', filters.hasClient.toString());
-    }
-    if (filters?.roles) {
-      params = params.set('roles', filters.roles);
-    }
-
-    return this.getWithJsonLd<UserCollectionResponse>(this.usersUrl, params);
+  getUsers(params: Record<string, string | number | boolean> = {}): Observable<UserCollectionResponse> {
+    const mergedParams = { page: 1, itemsPerPage: 30, ...params };
+    const httpParams = this.buildParams(mergedParams);
+    return this.getWithJsonLd<UserCollectionResponse>(this.usersUrl, httpParams);
   }
 
   /**

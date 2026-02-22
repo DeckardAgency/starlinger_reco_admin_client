@@ -215,7 +215,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private loadDropdownOptions(): void {
-    this.accountGroupService.getAccountGroups(1, 100).subscribe({
+    this.accountGroupService.getAccountGroups({ itemsPerPage: 100 }).subscribe({
       next: (response) => {
         this.accountGroupOptions.set(
           (response.member || []).map(g => ({ value: String(g.id), label: g.name }))
@@ -225,7 +225,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
       error: (err) => console.error('Error loading account groups:', err)
     });
 
-    this.clientService.getClients(1, 'name', 'asc').subscribe({
+    this.clientService.getClients({ page: 1, itemsPerPage: 500, 'order[name]': 'asc' }).subscribe({
       next: (response) => {
         this.accountOptions.set(
           (response.clients || []).map(c => ({ value: String(c.id), label: c.name }))

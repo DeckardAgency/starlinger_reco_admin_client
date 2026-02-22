@@ -9,9 +9,9 @@ import { BaseHttpService } from './base-http.service';
 export class TaxTypeService extends BaseHttpService {
   private readonly endpoint = `${this.apiUrl}/tax_types`;
 
-  getTaxTypes(page: number = 1, itemsPerPage: number = 100): Observable<TaxTypesCollection> {
-    const params = this.buildParams({ page, itemsPerPage });
-    return this.getWithJsonLd<TaxTypesCollection>(this.endpoint, params);
+  getTaxTypes(params: Record<string, string | number | boolean> = {}): Observable<TaxTypesCollection> {
+    const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
+    return this.getWithJsonLd<TaxTypesCollection>(this.endpoint, httpParams);
   }
 
   getTaxTypeById(id: string): Observable<TaxType> {

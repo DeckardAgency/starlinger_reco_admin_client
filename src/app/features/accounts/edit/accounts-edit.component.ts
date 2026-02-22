@@ -325,7 +325,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadAccountGroups(): void {
-    this.accountGroupService.getAccountGroups(1, 100).subscribe({
+    this.accountGroupService.getAccountGroups({ itemsPerPage: 100 }).subscribe({
       next: (response) => {
         this.accountGroupOptions.set(
           (response.member || []).map(g => ({ value: String(g.id), label: g.name }))
@@ -413,7 +413,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadClientOrders(clientCode: string): void {
-    this.orderService.getOrders(1, 'createdAt', 'desc', { 'user.client.code': clientCode }).subscribe({
+    this.orderService.getOrders({ page: 1, itemsPerPage: 500, 'order[createdAt]': 'desc', 'user.client.code': clientCode }).subscribe({
       next: (response) => {
         this.shopOrders.set(this.mapOrdersToShopOrders(response.orders));
         this.cdr.markForCheck();

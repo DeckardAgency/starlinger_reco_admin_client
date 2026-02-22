@@ -19,10 +19,12 @@
     <div class="table-container">
       @if (isLoading()) {
         <p>Loading accounts...</p>
+      } @else if (accounts().length === 0) {
+        <p class="empty-state">No accounts found</p>
       } @else {
         <ui-data-table
           [columns]="columns"
-          [data]="filteredAccounts()"
+          [data]="accounts()"
           [sortColumn]="sortColumn()"
           [sortDirection]="sortDirection()"
           (sort)="onSort($event)">
@@ -31,9 +33,13 @@
     </div>
 
     <ui-table-footer
-      [showingFrom]="showingFrom"
-      [showingTo]="showingTo"
-      [totalItems]="totalResults"
+      [showingFrom]="showingFrom()"
+      [showingTo]="showingTo()"
+      [totalItems]="totalItems()"
+      [showPagination]="true"
+      [currentPage]="currentPage()"
+      [itemsPerPage]="itemsPerPage()"
+      (pageChange)="onPageChange($event)"
     ></ui-table-footer>
   </main>
 </div>

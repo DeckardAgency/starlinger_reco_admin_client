@@ -9,9 +9,9 @@ import { BaseHttpService } from './base-http.service';
 export class DiscountService extends BaseHttpService {
   private readonly endpoint = `${this.apiUrl}/discounts`;
 
-  getDiscounts(page: number = 1, itemsPerPage: number = 100): Observable<DiscountsCollection> {
-    const params = this.buildParams({ page, itemsPerPage });
-    return this.getWithJsonLd<DiscountsCollection>(this.endpoint, params);
+  getDiscounts(params: Record<string, string | number | boolean> = {}): Observable<DiscountsCollection> {
+    const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
+    return this.getWithJsonLd<DiscountsCollection>(this.endpoint, httpParams);
   }
 
   getDiscountById(id: string): Observable<Discount> {

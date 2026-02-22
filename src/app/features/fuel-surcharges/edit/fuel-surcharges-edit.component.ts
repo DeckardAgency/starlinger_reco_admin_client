@@ -98,7 +98,7 @@ export class FuelSurchargesEditComponent implements OnInit {
   }
 
   private loadDeliveryTypes(): void {
-    this.deliveryTypeService.getDeliveryTypes(1, 100).subscribe({
+    this.deliveryTypeService.getDeliveryTypes({ itemsPerPage: 100 }).subscribe({
       next: (response) => {
         this.deliveryTypeOptions.set(
           (response.member || []).map(dt => ({

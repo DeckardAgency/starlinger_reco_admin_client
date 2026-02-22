@@ -14,13 +14,9 @@ export class ProductService extends BaseHttpService {
   /**
    * Get all products with optional pagination
    */
-  getProducts(page: number = 1, itemsPerPage: number = 30): Observable<ProductsCollection> {
-    const params = this.buildParams({
-      page,
-      itemsPerPage
-    });
-
-    return this.getWithJsonLd<ProductsCollection>(this.endpoint, params);
+  getProducts(params: Record<string, string | number | boolean> = {}): Observable<ProductsCollection> {
+    const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
+    return this.getWithJsonLd<ProductsCollection>(this.endpoint, httpParams);
   }
 
   /**

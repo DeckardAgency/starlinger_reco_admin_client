@@ -1,7 +1,9 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, OnInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, OnInit, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -43,6 +45,7 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
   private cdr = inject(ChangeDetectorRef);
   private deliveryTypeService = inject(DeliveryTypeService);
   private alertService = inject(AlertService);
+  private destroyRef = inject(DestroyRef);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -51,6 +54,12 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
 
   // Search state
   searchQuery = signal('');
+  private searchSubject = new Subject<string>();
+
+  // Pagination state
+  currentPage = signal(1);
+  itemsPerPage = signal(30);
+  totalItems = signal(0);
 
   // Loading state
   isLoading = signal(true);
@@ -71,6 +80,10 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
   selectedCount = computed(() => this.deliveryTypes().filter(d => d.selected).length);
   hasSelected = computed(() => this.selectedCount() > 0);
 
+  // Pagination display
+  showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
+  showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
+
   // Table columns
   columns: TableColumn[] = [];
 
@@ -80,48 +93,20 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
     { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
   ];
 
-  // Pagination
-  currentPage = signal(1);
-  itemsPerPage = signal(17);
-
   // Data
   deliveryTypes = signal<DeliveryType[]>([]);
 
-  // Filtered and sorted delivery types
-  filteredDeliveryTypes = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const sortCol = this.sortColumn();
-    const sortDir = this.sortDirection();
-    let result = this.deliveryTypes();
-
-    if (query) {
-      result = result.filter(d =>
-        d.name.toLowerCase().includes(query) ||
-        String(d.id).includes(query)
-      );
-    }
-
-    if (sortCol && sortDir) {
-      result = [...result].sort((a, b) => {
-        const aVal = (a as unknown as Record<string, unknown>)[sortCol];
-        const bVal = (b as unknown as Record<string, unknown>)[sortCol];
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return sortDir === 'asc' ? 1 : -1;
-        if (bVal == null) return sortDir === 'asc' ? -1 : 1;
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  });
-
-  // Total count
-  totalItems = computed(() => this.filteredDeliveryTypes().length);
+  constructor() {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(query => {
+      this.searchQuery.set(query);
+      this.currentPage.set(1);
+      this.loadDeliveryTypes();
+    });
+  }
 
   ngOnInit(): void {
     this.loadDeliveryTypes();
@@ -130,10 +115,27 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
   private loadDeliveryTypes(): void {
     this.isLoading.set(true);
 
-    this.deliveryTypeService.getDeliveryTypes(1, 100).subscribe({
+    const params: Record<string, string | number | boolean> = {
+      page: this.currentPage(),
+      itemsPerPage: this.itemsPerPage(),
+    };
+
+    const query = this.searchQuery().trim();
+    if (query) {
+      params['name'] = query;
+    }
+
+    const sortCol = this.sortColumn();
+    const sortDir = this.sortDirection();
+    if (sortCol && sortDir) {
+      params[`order[${sortCol}]`] = sortDir;
+    }
+
+    this.deliveryTypeService.getDeliveryTypes(params).subscribe({
       next: (response) => {
         const items = (response.member || []).map(d => ({ ...d, selected: false }));
         this.deliveryTypes.set(items);
+        this.totalItems.set(response.totalItems || 0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
@@ -154,20 +156,26 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
   private initColumns(): void {
     this.columns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
-      { key: 'name', label: 'Name', sortable: false },
-      { key: 'isActive', label: 'Active', sortable: false, width: '192px', template: this.activeTemplate },
+      { key: 'name', label: 'Name', sortable: true },
+      { key: 'isActive', label: 'Active', sortable: true, width: '192px', template: this.activeTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
 
   onSearchChange(query: string): void {
-    this.searchQuery.set(query);
-    console.log('Searching:', this.searchQuery);
+    this.searchSubject.next(query);
   }
 
   onSortChange(event: SortEvent): void {
     this.sortColumn.set(event.column);
     this.sortDirection.set(event.direction);
+    this.currentPage.set(1);
+    this.loadDeliveryTypes();
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+    this.loadDeliveryTypes();
   }
 
   onAddDeliveryType(): void {
@@ -215,8 +223,7 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
     }
     this.deliveryTypeService.deleteDeliveryType(String(deliveryType.id)).subscribe({
       next: () => {
-        this.deliveryTypes.update(list => list.filter(d => d.id !== deliveryType.id));
-        this.cdr.markForCheck();
+        this.loadDeliveryTypes();
       },
       error: (error) => console.error('Error deleting delivery type:', error)
     });
@@ -233,9 +240,8 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
       this.deliveryTypeService.deleteDeliveryType(String(d.id)).toPromise()
     );
     Promise.all(deleteOps).then(() => {
-      this.deliveryTypes.update(list => list.filter(d => !d.selected));
       this.selectAll.set(false);
-      this.cdr.markForCheck();
+      this.loadDeliveryTypes();
     }).catch(error => {
       console.error('Error bulk deleting delivery types:', error);
       this.loadDeliveryTypes();
@@ -279,9 +285,5 @@ export class DeliveryTypesListComponent implements OnInit, AfterViewInit {
       },
       error: (error) => console.error('Error toggling active:', error)
     });
-  }
-
-  onPageChange(page: number): void {
-    this.currentPage.set(page);
   }
 }

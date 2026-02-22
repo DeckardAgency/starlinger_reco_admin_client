@@ -1,7 +1,9 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, OnInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed, ViewChild, TemplateRef, AfterViewInit, OnInit, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -41,6 +43,7 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
   private cdr = inject(ChangeDetectorRef);
   private taxTypeService = inject(TaxTypeService);
   private alertService = inject(AlertService);
+  private destroyRef = inject(DestroyRef);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -49,6 +52,12 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
 
   // Search state
   searchQuery = signal('');
+  private searchSubject = new Subject<string>();
+
+  // Pagination state
+  currentPage = signal(1);
+  itemsPerPage = signal(30);
+  totalItems = signal(0);
 
   // Loading state
   isLoading = signal(true);
@@ -60,17 +69,18 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
   // Dropdown state
   openDropdownId = signal<number | null>(null);
 
-  // Header dropdown state (for select all)
+  // Header dropdown state
   isHeaderDropdownOpen = signal(false);
 
   // Selection state
   selectAll = signal(false);
 
-  // Computed: selected tax types count
   selectedCount = computed(() => this.taxTypes().filter(t => t.selected).length);
-
-  // Computed: has any selected
   hasSelected = computed(() => this.selectedCount() > 0);
+
+  // Pagination display
+  showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
+  showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
 
   // Table columns
   columns: TableColumn[] = [];
@@ -81,48 +91,20 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
     { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
   ];
 
-  // Pagination
-  currentPage = signal(1);
-  itemsPerPage = signal(17);
-
-  // Data loaded from mock interceptor
+  // Data
   taxTypes = signal<TaxType[]>([]);
 
-  // Filtered and sorted tax types
-  filteredTaxTypes = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const sortCol = this.sortColumn();
-    const sortDir = this.sortDirection();
-    let result = this.taxTypes();
-
-    if (query) {
-      result = result.filter(t =>
-        t.name.toLowerCase().includes(query) ||
-        String(t.id).includes(query)
-      );
-    }
-
-    if (sortCol && sortDir) {
-      result = [...result].sort((a, b) => {
-        const aVal = (a as unknown as Record<string, unknown>)[sortCol];
-        const bVal = (b as unknown as Record<string, unknown>)[sortCol];
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return sortDir === 'asc' ? 1 : -1;
-        if (bVal == null) return sortDir === 'asc' ? -1 : 1;
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  });
-
-  // Total count
-  totalItems = computed(() => this.filteredTaxTypes().length);
+  constructor() {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(query => {
+      this.searchQuery.set(query);
+      this.currentPage.set(1);
+      this.loadTaxTypes();
+    });
+  }
 
   ngOnInit(): void {
     this.loadTaxTypes();
@@ -131,10 +113,27 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
   private loadTaxTypes(): void {
     this.isLoading.set(true);
 
-    this.taxTypeService.getTaxTypes(1, 100).subscribe({
+    const params: Record<string, string | number | boolean> = {
+      page: this.currentPage(),
+      itemsPerPage: this.itemsPerPage(),
+    };
+
+    const query = this.searchQuery().trim();
+    if (query) {
+      params['name'] = query;
+    }
+
+    const sortCol = this.sortColumn();
+    const sortDir = this.sortDirection();
+    if (sortCol && sortDir) {
+      params[`order[${sortCol}]`] = sortDir;
+    }
+
+    this.taxTypeService.getTaxTypes(params).subscribe({
       next: (response) => {
         const items = (response.member || []).map(t => ({ ...t, selected: false }));
         this.taxTypes.set(items);
+        this.totalItems.set(response.totalItems || 0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
@@ -155,20 +154,26 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
   private initColumns(): void {
     this.columns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
-      { key: 'name', label: 'Name', sortable: false },
-      { key: 'percent', label: 'Percent', sortable: false, width: '192px', template: this.percentTemplate },
+      { key: 'name', label: 'Name', sortable: true },
+      { key: 'percent', label: 'Percent', sortable: true, width: '192px', template: this.percentTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
 
   onSearchChange(query: string): void {
-    this.searchQuery.set(query);
-    console.log('Searching:', this.searchQuery);
+    this.searchSubject.next(query);
   }
 
   onSortChange(event: SortEvent): void {
     this.sortColumn.set(event.column);
     this.sortDirection.set(event.direction);
+    this.currentPage.set(1);
+    this.loadTaxTypes();
+  }
+
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+    this.loadTaxTypes();
   }
 
   onAddTaxType(): void {
@@ -213,8 +218,7 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
     }
     this.taxTypeService.deleteTaxType(String(taxType.id)).subscribe({
       next: () => {
-        this.taxTypes.update(list => list.filter(t => t.id !== taxType.id));
-        this.cdr.markForCheck();
+        this.loadTaxTypes();
       },
       error: (error) => console.error('Error deleting tax type:', error)
     });
@@ -231,9 +235,8 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
       this.taxTypeService.deleteTaxType(String(t.id)).toPromise()
     );
     Promise.all(deleteOps).then(() => {
-      this.taxTypes.update(list => list.filter(t => !t.selected));
       this.selectAll.set(false);
-      this.cdr.markForCheck();
+      this.loadTaxTypes();
     }).catch(error => {
       console.error('Error bulk deleting tax types:', error);
       this.loadTaxTypes();
@@ -265,10 +268,6 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
     );
     this.taxTypes.set(updated);
     this.selectAll.set(updated.every(t => t.selected));
-  }
-
-  onPageChange(page: number): void {
-    this.currentPage.set(page);
   }
 
   formatPercent(value: number | string): string {

@@ -1,7 +1,9 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, inject, signal, computed, TemplateRef, ViewChild, AfterViewInit, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, inject, signal, computed, TemplateRef, ViewChild, AfterViewInit, OnInit, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { ContactService } from '@core/services/http/contact.service';
@@ -41,6 +43,13 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
   private contactService = inject(ContactService);
   private clientService = inject(ClientService);
   private alertService = inject(AlertService);
+  private destroyRef = inject(DestroyRef);
+
+  private searchSubject = new Subject<string>();
+
+  // Account name lookup map (loaded once)
+  private accountMap = new Map<number, string>();
+  private accountsLoaded = false;
 
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
   @ViewChild('phoneTemplate') phoneTemplate!: TemplateRef<any>;
@@ -60,47 +69,32 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
     { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
   ];
 
+  // Pagination
+  currentPage = signal(1);
+  itemsPerPage = signal(30);
+  totalItems = signal(0);
+
+  // Computed pagination display
+  showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
+  showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
+
   // Data from API
   contacts = signal<Contact[]>([]);
-  filteredContacts = computed(() => {
-    const query = this.searchQuery().toLowerCase().trim();
-    const sortCol = this.sortColumn();
-    const sortDir = this.sortDirection();
-    let result = this.contacts();
 
-    // Filter
-    if (query) {
-      result = result.filter(c =>
-        (c.firstName && c.firstName.toLowerCase().includes(query)) ||
-        (c.lastName && c.lastName.toLowerCase().includes(query)) ||
-        (c.account && c.account.toLowerCase().includes(query)) ||
-        (c.email && c.email.toLowerCase().includes(query)) ||
-        String(c.id).includes(query)
-      );
-    }
-
-    // Sort
-    if (sortCol && sortDir) {
-      result = [...result].sort((a, b) => {
-        const aVal = (a as unknown as Record<string, unknown>)[sortCol];
-        const bVal = (b as unknown as Record<string, unknown>)[sortCol];
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return sortDir === 'asc' ? 1 : -1;
-        if (bVal == null) return sortDir === 'asc' ? -1 : 1;
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  });
+  constructor() {
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(query => {
+      this.searchQuery.set(query);
+      this.currentPage.set(1);
+      this.loadContacts();
+    });
+  }
 
   ngOnInit(): void {
-    this.loadContacts();
+    this.loadInitialData();
   }
 
   ngAfterViewInit(): void {
@@ -108,34 +102,80 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
     this.cdr.detectChanges();
   }
 
-  private loadContacts(): void {
+  private loadInitialData(): void {
     this.isLoading.set(true);
 
-    // Load contacts and accounts in parallel
+    // Load accounts once for name resolution, then load contacts
     forkJoin({
-      contacts: this.contactService.getContacts(1, undefined, undefined, { itemsPerPage: '100' }),
-      accounts: this.clientService.getClients(1, 'name', 'asc')
+      contacts: this.contactService.getContacts({
+        page: this.currentPage(),
+        itemsPerPage: this.itemsPerPage()
+      }),
+      accounts: this.clientService.getClients({ page: 1, itemsPerPage: 500, 'order[name]': 'asc' })
     }).subscribe({
       next: ({ contacts, accounts }) => {
-        // Create account lookup map (client IDs are integers)
-        const accountMap = new Map<number, string>();
+        // Build account lookup map
         accounts.clients.forEach(client => {
-          accountMap.set(client.id, client.name);
+          this.accountMap.set(client.id, client.name);
         });
+        this.accountsLoaded = true;
 
         // Resolve account names for each contact
         const contactsWithAccount = contacts.contacts.map(c => ({
           ...c,
-          account: c.accountId ? accountMap.get(c.accountId) || '' : ''
+          account: c.accountId ? this.accountMap.get(c.accountId) || '' : ''
         }));
 
         this.contacts.set(contactsWithAccount);
+        this.totalItems.set(contacts.totalContacts || 0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
       error: (error) => {
         console.error('Failed to load contacts:', error);
         this.contacts.set([]);
+        this.totalItems.set(0);
+        this.isLoading.set(false);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private loadContacts(): void {
+    this.isLoading.set(true);
+
+    const params: Record<string, string | number | boolean> = {
+      page: this.currentPage(),
+      itemsPerPage: this.itemsPerPage()
+    };
+
+    const query = this.searchQuery().trim();
+    if (query) {
+      params['firstName'] = query;
+    }
+
+    const sortCol = this.sortColumn();
+    const sortDir = this.sortDirection();
+    if (sortCol && sortDir) {
+      params[`order[${sortCol}]`] = sortDir;
+    }
+
+    this.contactService.getContacts(params).subscribe({
+      next: (response) => {
+        const contactsWithAccount = response.contacts.map(c => ({
+          ...c,
+          account: c.accountId ? this.accountMap.get(c.accountId) || '' : ''
+        }));
+
+        this.contacts.set(contactsWithAccount);
+        this.totalItems.set(response.totalContacts || 0);
+        this.isLoading.set(false);
+        this.cdr.markForCheck();
+      },
+      error: (error) => {
+        console.error('Failed to load contacts:', error);
+        this.contacts.set([]);
+        this.totalItems.set(0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -147,9 +187,9 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
       { key: 'id', label: 'Id', sortable: true, width: '88px' },
       { key: 'firstName', label: 'First name', sortable: true },
       { key: 'lastName', label: 'Last name', sortable: true },
-      { key: 'account', label: 'Account', sortable: true },
+      { key: 'account', label: 'Account', sortable: false },
       { key: 'email', label: 'Email', sortable: true },
-      { key: 'phone', label: 'Phone', sortable: false, width: '160px', template: this.phoneTemplate },
+      { key: 'phone', label: 'Phone', sortable: true, width: '160px', template: this.phoneTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
   }
@@ -159,17 +199,22 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
   }
 
   onSearchQueryChange(query: string): void {
-    this.searchQuery.set(query);
+    this.searchSubject.next(query);
   }
 
   onSort(event: SortEvent): void {
     this.sortColumn.set(event.column);
     this.sortDirection.set(event.direction);
-    this.cdr.markForCheck();
+    this.currentPage.set(1);
+    this.loadContacts();
   }
 
   onRefresh(): void {
-    this.loadContacts();
+    if (this.accountsLoaded) {
+      this.loadContacts();
+    } else {
+      this.loadInitialData();
+    }
   }
 
   onExport(): void {
@@ -209,8 +254,7 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
     }
     this.contactService.deleteContact(contact.id).subscribe({
       next: () => {
-        this.contacts.update(list => list.filter(c => c.id !== contact.id));
-        this.cdr.markForCheck();
+        this.loadContacts();
       },
       error: (error) => console.error('Error deleting contact:', error)
     });
@@ -221,15 +265,8 @@ export class ContactsListComponent implements OnInit, AfterViewInit {
     return phone || '–';
   }
 
-  get totalResults(): number {
-    return this.filteredContacts().length;
-  }
-
-  get showingFrom(): number {
-    return this.filteredContacts().length > 0 ? 1 : 0;
-  }
-
-  get showingTo(): number {
-    return this.filteredContacts().length;
+  onPageChange(page: number): void {
+    this.currentPage.set(page);
+    this.loadContacts();
   }
 }

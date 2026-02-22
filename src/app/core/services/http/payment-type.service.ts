@@ -9,9 +9,9 @@ import { BaseHttpService } from './base-http.service';
 export class PaymentTypeService extends BaseHttpService {
   private readonly endpoint = `${this.apiUrl}/payment_types`;
 
-  getPaymentTypes(page: number = 1, itemsPerPage: number = 100): Observable<PaymentTypesCollection> {
-    const params = this.buildParams({ page, itemsPerPage });
-    return this.getWithJsonLd<PaymentTypesCollection>(this.endpoint, params);
+  getPaymentTypes(params: Record<string, string | number | boolean> = {}): Observable<PaymentTypesCollection> {
+    const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
+    return this.getWithJsonLd<PaymentTypesCollection>(this.endpoint, httpParams);
   }
 
   getPaymentTypeById(id: string): Observable<PaymentType> {

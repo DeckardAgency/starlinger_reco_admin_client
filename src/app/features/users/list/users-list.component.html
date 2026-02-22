@@ -54,12 +54,12 @@
     <div class="table-container">
       @if (isLoading()) {
         <p>Loading users...</p>
-      } @else if (filteredUsers().length === 0) {
+      } @else if (users().length === 0) {
         <p class="empty-state">No users found</p>
       } @else {
         <ui-data-table
           [columns]="columns"
-          [data]="filteredUsers()"
+          [data]="users()"
           [sortColumn]="sortColumn()"
           [sortDirection]="sortDirection()"
           (sort)="onSortChange($event)"
@@ -69,9 +69,13 @@
 
     <!-- Table Footer -->
     <ui-table-footer
-      [showingFrom]="1"
-      [showingTo]="filteredUsers().length"
+      [showingFrom]="showingFrom()"
+      [showingTo]="showingTo()"
       [totalItems]="totalItems()"
+      [showPagination]="true"
+      [currentPage]="currentPage()"
+      [itemsPerPage]="itemsPerPage()"
+      (pageChange)="onPageChange($event)"
     ></ui-table-footer>
   </main>
 
