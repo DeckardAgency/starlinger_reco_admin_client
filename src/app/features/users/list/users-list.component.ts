@@ -19,6 +19,8 @@ import { UserService } from '@core/services/http/user.service';
 import { AlertService } from '@services/alert.service';
 import { User, USER_ROLES } from '@core/models';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
+import { ColumnSettingsService } from '@core/services/column-settings.service';
 
 // Filter types
 type HasClientFilter = 'all' | 'yes' | 'no';
@@ -41,7 +43,8 @@ interface RoleOption {
     TableFooterComponent,
     TableActionsDropdownComponent,
     TableCheckboxSelectionComponent,
-    MobileFooterComponent
+    MobileFooterComponent,
+    ColumnSelectorComponent
   ],
   templateUrl: './users-list.component.html',
   styleUrls: ['./users-list.component.scss'],
@@ -53,6 +56,7 @@ export class UsersListComponent implements OnInit, AfterViewInit {
   private userService = inject(UserService);
   private alertService = inject(AlertService);
   private destroyRef = inject(DestroyRef);
+  private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
 
@@ -85,7 +89,6 @@ export class UsersListComponent implements OnInit, AfterViewInit {
 
   roleOptions: RoleOption[] = [
     { value: 'all', label: 'All Roles' },
-    { value: USER_ROLES.SUPER_ADMIN, label: 'Super Admin' },
     { value: USER_ROLES.ADMIN, label: 'Admin' },
     { value: USER_ROLES.CLIENT_ADMIN, label: 'Client Admin' },
     { value: USER_ROLES.CLIENT, label: 'Client' },
@@ -104,7 +107,10 @@ export class UsersListComponent implements OnInit, AfterViewInit {
   selectedCount = computed(() => this.users().filter(u => u.selected).length);
   hasSelected = computed(() => this.selectedCount() > 0);
 
-  // Table columns
+  // Column selector
+  readonly COLUMN_STORAGE_KEY = 'users';
+  columnDefs: ColumnDefinition[] = [];
+  private allColumns: TableColumn[] = [];
   columns: TableColumn[] = [];
 
   // Table actions for dropdown
@@ -206,9 +212,8 @@ export class UsersListComponent implements OnInit, AfterViewInit {
 
   private mapRolesToAdminRole(roles: string[]): AdminUserRoleType | null {
     if (!roles || roles.length === 0) return null;
-    if (roles.includes('ROLE_SUPER_ADMIN') || roles.includes('ROLE_ADMIN')) return 'admin';
+    if (roles.includes('ROLE_ADMIN')) return 'admin';
     if (roles.includes('ROLE_CLIENT_ADMIN')) return 'admin';
-    if (roles.includes('ROLE_VIEWER')) return 'viewer';
     if (roles.includes('ROLE_CLIENT')) return 'editor';
     return 'editor';
   }
@@ -219,7 +224,16 @@ export class UsersListComponent implements OnInit, AfterViewInit {
   }
 
   private initColumns(): void {
-    this.columns = [
+    const defaultColumnDefs: ColumnDefinition[] = [
+      { key: 'id', label: 'Id', visible: true, locked: true },
+      { key: 'name', label: 'Name', visible: true, locked: true },
+      { key: 'email', label: 'Email', visible: true },
+      { key: 'role', label: 'Role', visible: true }
+    ];
+
+    this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
+
+    this.allColumns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
       { key: 'id', label: 'id', sortable: true, width: '112px' },
       { key: 'name', label: 'Name', sortable: true, template: this.nameTemplate },
@@ -227,6 +241,22 @@ export class UsersListComponent implements OnInit, AfterViewInit {
       { key: 'role', label: 'Role', sortable: false, template: this.roleTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
+
+    this.applyColumnVisibility();
+  }
+
+  onColumnsChange(columns: ColumnDefinition[]): void {
+    this.columnDefs = columns;
+    this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.applyColumnVisibility();
+    this.cdr.markForCheck();
+  }
+
+  private applyColumnVisibility(): void {
+    const visibleKeys = new Set(this.columnDefs.filter(c => c.visible).map(c => c.key));
+    this.columns = this.allColumns.filter(col =>
+      ['checkbox', 'actions'].includes(col.key) || visibleKeys.has(col.key)
+    );
   }
 
   onSearchChange(query: string): void {
@@ -361,6 +391,20 @@ export class UsersListComponent implements OnInit, AfterViewInit {
   }
 
   onExport(): void {
-    console.log('Export users');
+    this.userService.exportToExcel(
+      this.sortColumn() || undefined,
+      this.sortDirection() || undefined,
+      this.searchQuery() || undefined
+    ).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `users-${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => console.error('Export failed:', err)
+    });
   }
 }

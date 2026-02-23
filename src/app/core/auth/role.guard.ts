@@ -47,7 +47,7 @@ export class RoleGuard {
      * Get the home URL for a user based on their roles
      */
     getHomeUrlForUser(userRoles: string[]): UrlTree {
-        if (userRoles.includes(USER_ROLES.SUPER_ADMIN)) {
+        if (userRoles.includes(USER_ROLES.ADMIN)) {
             return this.router.createUrlTree(['/admin/dashboard']);
         }
         if (userRoles.includes(USER_ROLES.CLIENT_ADMIN)) {

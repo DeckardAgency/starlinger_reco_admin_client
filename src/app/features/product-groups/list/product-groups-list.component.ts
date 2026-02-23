@@ -20,6 +20,8 @@ import { ProductGroupService } from '@core/services/http/product-group.service';
 import { AlertService } from '@services/alert.service';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
+import { ColumnSettingsService } from '@core/services/column-settings.service';
 
 interface ProductGroupRow extends ProductGroup {
   selected?: boolean;
@@ -39,7 +41,8 @@ interface ProductGroupRow extends ProductGroup {
     TableFooterComponent,
     TableActionsDropdownComponent,
     TableCheckboxSelectionComponent,
-    MobileFooterComponent
+    MobileFooterComponent,
+    ColumnSelectorComponent
   ],
   templateUrl: './product-groups-list.component.html',
   styleUrls: ['./product-groups-list.component.scss'],
@@ -52,6 +55,7 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
   private alertService = inject(AlertService);
   private toastService = inject(ToastService);
   private destroyRef = inject(DestroyRef);
+  private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
 
@@ -85,6 +89,11 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
 
   // Computed: has any selected
   hasSelected = computed(() => this.selectedCount() > 0);
+
+  // Column selector
+  readonly COLUMN_STORAGE_KEY = 'product-groups';
+  columnDefs: ColumnDefinition[] = [];
+  private allColumns: TableColumn[] = [];
 
   // Table columns
   columns: TableColumn[] = [];
@@ -166,7 +175,18 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
   }
 
   private initColumns(): void {
-    this.columns = [
+    const defaultColumnDefs: ColumnDefinition[] = [
+      { key: 'id', label: 'ID', visible: true },
+      { key: 'name', label: 'Name', visible: true, locked: true },
+      { key: 'productGroupCode', label: 'Code', visible: true },
+      { key: 'totalProducts', label: 'Products', visible: true },
+      { key: 'isActive', label: 'Active', visible: true },
+      { key: 'showOnHomepage', label: 'Homepage', visible: true }
+    ];
+
+    this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
+
+    this.allColumns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
       { key: 'id', label: 'ID', sortable: true, width: '112px' },
       { key: 'name', label: 'Name', sortable: true },
@@ -176,6 +196,22 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
       { key: 'showOnHomepage', label: 'Homepage', sortable: true, width: '120px', template: this.homepageTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
+
+    this.applyColumnVisibility();
+  }
+
+  onColumnsChange(columns: ColumnDefinition[]): void {
+    this.columnDefs = columns;
+    this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.applyColumnVisibility();
+    this.cdr.markForCheck();
+  }
+
+  private applyColumnVisibility(): void {
+    const visibleKeys = new Set(this.columnDefs.filter(c => c.visible).map(c => c.key));
+    this.columns = this.allColumns.filter(col =>
+      col.key === 'actions' || col.key === 'checkbox' || visibleKeys.has(col.key)
+    );
   }
 
   onSearchChange(query: string): void {

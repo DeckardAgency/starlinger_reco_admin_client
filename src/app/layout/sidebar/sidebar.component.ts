@@ -163,30 +163,30 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Check if current user is a Super Admin (Starlinger Admin)
-   * This takes highest priority - if user has SUPER_ADMIN role, show admin UI
+   * Check if current user is an Admin (Starlinger Admin)
+   * This takes highest priority - if user has ADMIN role, show admin UI
    */
-  get isSuperAdmin(): boolean {
-    return this.authService.hasRole(USER_ROLES.SUPER_ADMIN);
+  get isAdmin(): boolean {
+    return this.authService.hasRole(USER_ROLES.ADMIN);
   }
 
   /**
    * Check if current user is a Customer Admin (Client Admin)
-   * Only true if user has CLIENT_ADMIN but NOT SUPER_ADMIN
+   * Only true if user has CLIENT_ADMIN but NOT ADMIN
    */
   get isCustomerAdmin(): boolean {
     return this.authService.hasRole(USER_ROLES.CLIENT_ADMIN) && 
-           !this.authService.hasRole(USER_ROLES.SUPER_ADMIN);
+           !this.authService.hasRole(USER_ROLES.ADMIN);
   }
 
   /**
    * Check if current user is a Customer (Client)
-   * Only true if user has CLIENT but NOT CLIENT_ADMIN or SUPER_ADMIN
+   * Only true if user has CLIENT but NOT CLIENT_ADMIN or ADMIN
    */
   get isCustomer(): boolean {
     return this.authService.hasRole(USER_ROLES.CLIENT) && 
            !this.authService.hasRole(USER_ROLES.CLIENT_ADMIN) &&
-           !this.authService.hasRole(USER_ROLES.SUPER_ADMIN);
+           !this.authService.hasRole(USER_ROLES.ADMIN);
   }
 
   /**
@@ -218,8 +218,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
    * Get the correct support link based on user role
    */
   getSupportLink(): string {
-    if (this.isSuperAdmin) {
-      return '/admin/support';
+    if (this.isAdmin) {
+      return '/admin/support-tickets/list';
     } else if (this.isCustomerAdmin) {
       return '/customer-admin/support';
     } else {
@@ -231,8 +231,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
    * Get the correct documentation link based on user role
    */
   getDocumentationLink(): string {
-    if (this.isSuperAdmin) {
-      return '/admin/documentation';
+    if (this.isAdmin) {
+      return '/admin/documentation/list';
     } else if (this.isCustomerAdmin) {
       return '/customer-admin/documentation';
     } else {

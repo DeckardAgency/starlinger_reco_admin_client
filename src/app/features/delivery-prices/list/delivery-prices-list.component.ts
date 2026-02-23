@@ -9,6 +9,8 @@ import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organism
 import { DeliveryPrice } from '@core/models/delivery-price.model';
 import { DeliveryPriceService } from '@core/services/http/delivery-price.service';
 import { AlertService } from '@services/alert.service';
+import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
+import { ColumnSettingsService } from '@core/services/column-settings.service';
 
 // Consolidated components
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -33,7 +35,8 @@ import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
     TableCheckboxSelectionComponent,
     TableFooterComponent,
     MobileFooterComponent,
-    BadgeComponent
+    BadgeComponent,
+    ColumnSelectorComponent
   ],
   templateUrl: './delivery-prices-list.component.html',
   styleUrls: ['./delivery-prices-list.component.scss'],
@@ -45,6 +48,7 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
   private deliveryPriceService = inject(DeliveryPriceService);
   private alertService = inject(AlertService);
   private destroyRef = inject(DestroyRef);
+  private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
 
@@ -75,6 +79,11 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
 
   selectedCount = computed(() => this.deliveryPrices().filter(dp => dp.selected).length);
   hasSelected = computed(() => this.selectedCount() > 0);
+
+  // Column selector
+  readonly COLUMN_STORAGE_KEY = 'delivery-prices';
+  columnDefs: ColumnDefinition[] = [];
+  private allColumns: TableColumn[] = [];
 
   // Table columns
   columns: TableColumn[] = [];
@@ -155,7 +164,19 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
   }
 
   private initColumns(): void {
-    this.columns = [
+    const defaultColumnDefs: ColumnDefinition[] = [
+      { key: 'name', label: 'ID', visible: true, locked: true },
+      { key: 'deliveryType', label: 'Delivery type', visible: true },
+      { key: 'sizeFrom', label: 'Size from', visible: true },
+      { key: 'priceBase', label: 'Price base', visible: true },
+      { key: 'stepStartsAt', label: 'Step starts at', visible: true },
+      { key: 'forEveryNextSize', label: 'For every next size', visible: true },
+      { key: 'priceBaseStep', label: 'Price base step', visible: true }
+    ];
+
+    this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
+
+    this.allColumns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
       { key: 'name', label: 'ID', sortable: true },
       { key: 'deliveryType', label: 'Delivery type', sortable: false, template: this.deliveryTypeTemplate },
@@ -166,6 +187,22 @@ export class DeliveryPricesListComponent implements OnInit, AfterViewInit {
       { key: 'priceBaseStep', label: 'Price base step', sortable: true },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
+
+    this.applyColumnVisibility();
+  }
+
+  onColumnsChange(columns: ColumnDefinition[]): void {
+    this.columnDefs = columns;
+    this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.applyColumnVisibility();
+    this.cdr.markForCheck();
+  }
+
+  private applyColumnVisibility(): void {
+    const visibleKeys = new Set(this.columnDefs.filter(c => c.visible).map(c => c.key));
+    this.columns = this.allColumns.filter(col =>
+      col.key === 'actions' || col.key === 'checkbox' || visibleKeys.has(col.key)
+    );
   }
 
   onSearchQueryChange(query: string): void {

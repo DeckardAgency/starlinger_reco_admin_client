@@ -19,6 +19,8 @@ import { PaymentType } from '@core/models/payment-type.model';
 import { PaymentTypeService } from '@core/services/http/payment-type.service';
 import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
+import { ColumnSettingsService } from '@core/services/column-settings.service';
 
 @Component({
   selector: 'app-payment-types-list',
@@ -34,7 +36,8 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
     TableActionsDropdownComponent,
     TableCheckboxSelectionComponent,
     ToggleComponent,
-    MobileFooterComponent
+    MobileFooterComponent,
+    ColumnSelectorComponent
   ],
   templateUrl: './payment-types-list.component.html',
   styleUrls: ['./payment-types-list.component.scss'],
@@ -46,6 +49,7 @@ export class PaymentTypesListComponent implements OnInit, AfterViewInit {
   private paymentTypeService = inject(PaymentTypeService);
   private alertService = inject(AlertService);
   private destroyRef = inject(DestroyRef);
+  private columnSettingsService = inject(ColumnSettingsService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -83,6 +87,11 @@ export class PaymentTypesListComponent implements OnInit, AfterViewInit {
   // Pagination display
   showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
   showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
+
+  // Column selector
+  readonly COLUMN_STORAGE_KEY = 'payment-types';
+  columnDefs: ColumnDefinition[] = [];
+  private allColumns: TableColumn[] = [];
 
   // Table columns
   columns: TableColumn[] = [];
@@ -154,13 +163,37 @@ export class PaymentTypesListComponent implements OnInit, AfterViewInit {
   }
 
   private initColumns(): void {
-    this.columns = [
+    const defaultColumnDefs: ColumnDefinition[] = [
+      { key: 'id', label: 'ID', visible: true },
+      { key: 'name', label: 'Name', visible: true, locked: true },
+      { key: 'isActive', label: 'Active', visible: true }
+    ];
+
+    this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
+
+    this.allColumns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
       { key: 'id', label: 'ID', sortable: true, width: '112px' },
       { key: 'name', label: 'Name', sortable: true },
       { key: 'isActive', label: 'Active', sortable: true, width: '192px', template: this.activeTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
+
+    this.applyColumnVisibility();
+  }
+
+  onColumnsChange(columns: ColumnDefinition[]): void {
+    this.columnDefs = columns;
+    this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.applyColumnVisibility();
+    this.cdr.markForCheck();
+  }
+
+  private applyColumnVisibility(): void {
+    const visibleKeys = new Set(this.columnDefs.filter(c => c.visible).map(c => c.key));
+    this.columns = this.allColumns.filter(col =>
+      col.key === 'actions' || col.key === 'checkbox' || visibleKeys.has(col.key)
+    );
   }
 
   onSearchChange(query: string): void {

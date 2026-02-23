@@ -9,7 +9,6 @@ import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
-import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { DHL_ZONES } from '@core/models/country.model';
@@ -49,7 +48,6 @@ interface SelectOption {
     BreadcrumbsComponent,
     DetailHeaderComponent,
     MobileFooterComponent,
-    IconComponent,
     SelectComponent
   ],
   templateUrl: './countries-edit.component.html',

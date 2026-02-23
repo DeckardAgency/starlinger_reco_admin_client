@@ -18,6 +18,8 @@ import { Country } from '@core/models/country.model';
 import { CountryService } from '@core/services/http/country.service';
 import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
+import { ColumnSettingsService } from '@core/services/column-settings.service';
 
 @Component({
   selector: 'app-countries-list',
@@ -32,7 +34,8 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
     TableFooterComponent,
     TableActionsDropdownComponent,
     TableCheckboxSelectionComponent,
-    MobileFooterComponent
+    MobileFooterComponent,
+    ColumnSelectorComponent
   ],
   templateUrl: './countries-list.component.html',
   styleUrls: ['./countries-list.component.scss'],
@@ -44,6 +47,7 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
   private countryService = inject(CountryService);
   private alertService = inject(AlertService);
   private destroyRef = inject(DestroyRef);
+  private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
 
@@ -75,6 +79,11 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
 
   // Computed: has any selected
   hasSelected = computed(() => this.selectedCount() > 0);
+
+  // Column selector
+  readonly COLUMN_STORAGE_KEY = 'countries';
+  columnDefs: ColumnDefinition[] = [];
+  private allColumns: TableColumn[] = [];
 
   // Table columns
   columns: TableColumn[] = [];
@@ -156,12 +165,35 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
   }
 
   private initColumns(): void {
-    this.columns = [
+    const defaultColumnDefs: ColumnDefinition[] = [
+      { key: 'name', label: 'Name', visible: true, locked: true },
+      { key: 'code', label: 'Code', visible: true }
+    ];
+
+    this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
+
+    this.allColumns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
       { key: 'name', label: 'Name', sortable: true },
       { key: 'code', label: 'Code', sortable: true, width: '192px' },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
+
+    this.applyColumnVisibility();
+  }
+
+  onColumnsChange(columns: ColumnDefinition[]): void {
+    this.columnDefs = columns;
+    this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.applyColumnVisibility();
+    this.cdr.markForCheck();
+  }
+
+  private applyColumnVisibility(): void {
+    const visibleKeys = new Set(this.columnDefs.filter(c => c.visible).map(c => c.key));
+    this.columns = this.allColumns.filter(col =>
+      col.key === 'actions' || col.key === 'checkbox' || visibleKeys.has(col.key)
+    );
   }
 
   onSearchChange(query: string): void {

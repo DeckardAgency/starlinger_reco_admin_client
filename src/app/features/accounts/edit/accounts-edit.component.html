@@ -6,7 +6,7 @@
   } @else if (loadError()) {
     <div class="page-content">
       <p class="error-message">{{ loadError() }}</p>
-      <button type="button" class="btn btn--outline" (click)="goBack()">Back to accounts</button>
+      <button type="button" class="btn btn--outline" (click)="goBack()">Back to clients</button>
     </div>
   } @else {
   <!-- Page Header with Breadcrumb -->
@@ -14,14 +14,14 @@
     variant="page-header"
     separator="chevron"
     [items]="[
-      { label: 'Accounts', route: '/admin/accounts' },
+      { label: 'Clients', route: '/admin/clients' },
       { label: isEditMode() ? 'Edit' : 'Add' }
     ]"
   ></ui-breadcrumbs>
 
   <!-- Detail Header -->
   <ui-detail-header
-    [title]="isEditMode() ? 'Account detail' : 'New account'"
+    [title]="isEditMode() ? 'Client detail' : 'New client'"
     [isEditMode]="isEditMode()"
     [showSaveAndContinue]="true"
     [showDiscard]="false"
@@ -62,7 +62,7 @@
             <input type="text" [value]="account().name" (input)="updateAccount('name', $event)" placeholder="Company title">
           </ui-form-field>
 
-          <ui-form-field label="Account type" layout="horizontal" [error]="getError('accountType')" [required]="true">
+          <ui-form-field label="Client type" layout="horizontal" [error]="getError('accountType')" [required]="true">
             <ui-select
               variant="pill"
               [options]="accountTypeOptions"
@@ -73,7 +73,7 @@
             </ui-select>
           </ui-form-field>
 
-          <ui-form-field label="Account group" layout="horizontal">
+          <ui-form-field label="Client group" layout="horizontal">
             <ui-select
               variant="pill"
               [options]="accountGroupOptions()"
@@ -148,28 +148,28 @@
 
           <!-- Add Button (desktop: inline, mobile: hidden) -->
           <button
-            *ngIf="activeTab() === 'contacts' || activeTab() === 'addresses'"
+            *ngIf="activeTab() === 'users' || activeTab() === 'addresses'"
             class="btn btn--outline tabs-header__add-btn"
-            (click)="onAddContact()">
+            (click)="onAddTabItem()">
             <span>{{ addButtonText() }}</span>
             <ui-icon name="plus" size="sm"></ui-icon>
           </button>
         </div>
 
         <!-- Add Button Row (mobile only) -->
-        <div class="tabs-action-row" *ngIf="activeTab() === 'contacts' || activeTab() === 'addresses'">
-          <button class="btn btn--outline btn--full-width" (click)="onAddContact()">
+        <div class="tabs-action-row" *ngIf="activeTab() === 'users' || activeTab() === 'addresses'">
+          <button class="btn btn--outline btn--full-width" (click)="onAddTabItem()">
             <span>{{ addButtonText() }}</span>
             <ui-icon name="plus" size="sm"></ui-icon>
           </button>
         </div>
 
-        <!-- Contacts Table -->
-        <div class="table-wrapper" *ngIf="activeTab() === 'contacts'">
+        <!-- Users Table -->
+        <div class="table-wrapper" *ngIf="activeTab() === 'users'">
           <ui-data-table
-            [columns]="contactsColumns"
-            [data]="contacts()"
-            emptyMessage="No results"
+            [columns]="usersColumns"
+            [data]="clientUsers()"
+            emptyMessage="No users assigned"
           ></ui-data-table>
         </div>
 
@@ -219,20 +219,26 @@
   }
 </div>
 
-<!-- Templates for Contacts Table -->
-<ng-template #contactBillingTemplate let-row>
-  <ui-badge [variant]="row.isBilling ? 'success' : 'danger'">
-    {{ row.isBilling ? 'Yes' : 'No' }}
+<!-- Templates for Users Table -->
+<ng-template #userRoleTemplate let-row>
+  <ui-badge variant="info">
+    {{ row.role }}
   </ui-badge>
 </ng-template>
 
-<ng-template #contactActionsTemplate let-row>
+<ng-template #userStatusTemplate let-row>
+  <ui-badge [variant]="row.isActive ? 'success' : 'danger'">
+    {{ row.isActive ? 'Active' : 'Inactive' }}
+  </ui-badge>
+</ng-template>
+
+<ng-template #userActionsTemplate let-row>
   <ui-table-actions-dropdown
     [isOpen]="openDropdownId() === row.id"
     [row]="row"
-    [actions]="contactActions"
+    [actions]="userActions"
     (toggle)="toggleDropdown(row.id)"
-    (actionClick)="onContactActionClick($event)"
+    (actionClick)="onUserActionClick($event)"
     (close)="closeDropdown()"
   ></ui-table-actions-dropdown>
 </ng-template>
@@ -300,3 +306,49 @@
   (closeModal)="closeAddressModal()"
   (saveAddress)="onAddressSave($event)"
 ></app-address-modal>
+
+<!-- User Assignment Modal -->
+<ui-modal
+  [isOpen]="isUserModalOpen()"
+  (isOpenChange)="isUserModalOpen.set($event)"
+  title="Add users"
+  size="md"
+>
+  <div class="user-modal">
+    <div class="user-modal__toolbar">
+      <div class="user-modal__search">
+        <ui-icon name="search" size="sm"></ui-icon>
+        <input
+          type="text"
+          placeholder="Search users..."
+          [value]="userSearchQuery()"
+          (input)="onUserSearchChange($event)"
+        >
+      </div>
+      <button class="btn btn--outline" (click)="navigateToCreateUser()">
+        <span>Create new</span>
+        <ui-icon name="plus" size="sm"></ui-icon>
+      </button>
+    </div>
+
+    @if (isLoadingUnassignedUsers()) {
+      <div class="user-modal__loading">Loading users...</div>
+    } @else if (filteredUnassignedUsers().length === 0) {
+      <div class="user-modal__empty">No unassigned users found</div>
+    } @else {
+      <div class="user-modal__list">
+        @for (user of filteredUnassignedUsers(); track user.id) {
+          <div class="user-modal__item">
+            <div class="user-modal__item-info">
+              <span class="user-modal__item-name">{{ user.fullName }}</span>
+              <span class="user-modal__item-email">{{ user.email }}</span>
+            </div>
+            <button class="btn btn--outline btn--sm" (click)="assignUserToClient(user)">
+              Assign
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</ui-modal>

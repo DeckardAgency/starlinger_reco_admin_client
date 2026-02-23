@@ -19,7 +19,7 @@ export class NotFoundComponent {
 
   goToDashboard(): void {
     // Navigate to appropriate dashboard based on user role
-    if (this.authService.hasRole(USER_ROLES.SUPER_ADMIN)) {
+    if (this.authService.hasRole(USER_ROLES.ADMIN)) {
       this.router.navigate(['/admin/dashboard']);
     } else if (this.authService.hasRole(USER_ROLES.CLIENT_ADMIN)) {
       this.router.navigate(['/customer-admin/orders']);

@@ -5,10 +5,12 @@
 // =============================================================================
 :host {
   @include admin.admin-host;
+  height: 100%;
 }
 
 .shop-order-detail {
   @include admin.detail-page;
+  min-height: 0;
 }
 
 .page-content {
@@ -56,8 +58,8 @@
 }
 
 .card {
-  @include admin.form-card;
   flex: 1;
+  @include admin.form-card;
 
   &__toggle {
     display: flex;

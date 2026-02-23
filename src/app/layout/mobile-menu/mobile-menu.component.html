@@ -136,9 +136,9 @@
                 }
 
                 <!-- ============================================== -->
-                <!-- SUPER ADMIN NAVIGATION -->
+                <!-- ADMIN NAVIGATION -->
                 <!-- ============================================== -->
-                @if (isSuperAdmin) {
+                @if (isAdmin) {
                 <li class="mobile-menu__item">
                     <a routerLink="/admin/dashboard" routerLinkActive="mobile-menu__link--active" class="mobile-menu__link" (click)="closeMenu()">
                         <span class="mobile-menu__icon">
@@ -152,23 +152,13 @@
                     <h2 class="mobile-menu__section-title">Customer hub</h2>
                     <ul class="mobile-menu__sub-list">
                         <li class="mobile-menu__item">
-                            <a routerLink="/admin/accounts" [class.mobile-menu__link--active]="isRouteActive('accounts')" class="mobile-menu__link" (click)="closeMenu()">
+                            <a routerLink="/admin/clients" [class.mobile-menu__link--active]="isRouteActive('clients')" class="mobile-menu__link" (click)="closeMenu()">
                                 <span class="mobile-menu__icon">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
                                         <path d="M12.6668 14V12.6667C12.6668 11.9594 12.3859 11.2811 11.8858 10.781C11.3857 10.281 10.7074 10 10.0002 10H6.00016C5.29292 10 4.61464 10.281 4.11454 10.781C3.61445 11.2811 3.3335 11.9594 3.3335 12.6667V14M10.6668 4.66667C10.6668 6.13943 9.47292 7.33333 8.00016 7.33333C6.5274 7.33333 5.3335 6.13943 5.3335 4.66667C5.3335 3.19391 6.5274 2 8.00016 2C9.47292 2 10.6668 3.19391 10.6668 4.66667Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
                                 </span>
-                                <span class="mobile-menu__link-text">Accounts</span>
-                            </a>
-                        </li>
-                        <li class="mobile-menu__item">
-                            <a routerLink="/admin/contacts" [class.mobile-menu__link--active]="isRouteActive('contacts')" class="mobile-menu__link" (click)="closeMenu()">
-                                <span class="mobile-menu__icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                        <path d="M10.6667 12.0002C10.6667 11.2929 10.3857 10.6146 9.88562 10.1145C9.38552 9.61445 8.70724 9.3335 8 9.3335M8 9.3335C7.29276 9.3335 6.61448 9.61445 6.11438 10.1145C5.61428 10.6146 5.33333 11.2929 5.33333 12.0002M8 9.3335C9.10457 9.3335 10 8.43807 10 7.3335C10 6.22893 9.10457 5.3335 8 5.3335C6.89543 5.3335 6 6.22893 6 7.3335C6 8.43807 6.89543 9.3335 8 9.3335ZM5.33333 1.3335V2.66683M10.6667 1.3335V2.66683M3.33333 2.66683H12.6667C13.403 2.66683 14 3.26378 14 4.00016V13.3335C14 14.0699 13.403 14.6668 12.6667 14.6668H3.33333C2.59695 14.6668 2 14.0699 2 13.3335V4.00016C2 3.26378 2.59695 2.66683 3.33333 2.66683Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                </span>
-                                <span class="mobile-menu__link-text">Contacts</span>
+                                <span class="mobile-menu__link-text">Clients</span>
                             </a>
                         </li>
                     </ul>

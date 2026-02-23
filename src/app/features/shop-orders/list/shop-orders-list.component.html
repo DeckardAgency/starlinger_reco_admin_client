@@ -19,6 +19,11 @@
       [searchQuery]="searchQuery()"
       (searchQueryChange)="onSearchChange($event)"
     >
+      <app-column-selector
+        [columns]="columnDefs"
+        [storageKey]="COLUMN_STORAGE_KEY"
+        (columnsChange)="onColumnsChange($event)">
+      </app-column-selector>
       <button class="btn btn--icon" (click)="onExport()" type="button">
         <ui-icon name="download" size="sm"></ui-icon>
       </button>

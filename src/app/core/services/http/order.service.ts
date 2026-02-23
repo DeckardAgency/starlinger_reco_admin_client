@@ -145,7 +145,7 @@ export class OrderService {
         });
 
         return this.http.get(
-            `${this.apiUrl}/export/excel`,
+            `${environment.apiBaseUrl}/api/orders/export/excel`,
             {
                 headers: new HttpHeaders({
                     'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'

@@ -3,13 +3,13 @@
     variant="page-header"
     separator="chevron"
     [items]="[
-      { label: 'Account groups', route: '/admin/account-groups' },
+      { label: 'Client groups', route: '/admin/client-groups' },
       { label: isEditMode() ? 'Edit' : 'Add' }
     ]"
   ></ui-breadcrumbs>
 
   <ui-detail-header
-    [title]="isEditMode() ? 'Edit account group' : 'New account group'"
+    [title]="isEditMode() ? 'Edit client group' : 'New client group'"
     [isEditMode]="isEditMode()"
     [showSaveAndContinue]="true"
     [showDiscard]="false"

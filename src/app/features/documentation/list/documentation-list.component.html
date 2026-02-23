@@ -1,0 +1,149 @@
+<div class="doc-list">
+  <ui-breadcrumbs [items]="breadcrumbs"></ui-breadcrumbs>
+
+  <div class="doc-list__header">
+    <div class="doc-list__title-container">
+      <h1 class="doc-list__title">Documentation <span class="doc-list__count">{{ totalItems() }}</span></h1>
+    </div>
+    <div class="doc-list__actions">
+      <app-column-selector
+        [columns]="columnDefs"
+        [storageKey]="COLUMN_STORAGE_KEY"
+        (columnsChange)="onColumnsChange($event)">
+      </app-column-selector>
+      <div class="doc-list__search">
+        <input type="text" placeholder="Search by title..." class="doc-list__search-input"
+          [ngModel]="searchTerm()" (input)="onSearchInput($any($event.target).value)" #searchInput>
+        @if (searchTerm()) {
+          <button class="doc-list__clear-search-button" (click)="clearSearch(); searchInput.focus()">&times;</button>
+        }
+      </div>
+      <button class="doc-list__delete-button" (click)="deleteSelected()" [disabled]="selectedIds().size === 0">
+        Delete selected
+      </button>
+      <button class="doc-list__add-button" (click)="addDocumentation()">Add documentation</button>
+    </div>
+  </div>
+
+  <div class="doc-list__body">
+    @if (searchTerm() && !isLoading() && !error()) {
+      <div class="doc-list__search-info">
+        <span>Search results for: <strong>"{{ searchTerm() }}"</strong></span>
+        <button class="doc-list__clear-search-link" (click)="clearSearch()">Clear search</button>
+      </div>
+    }
+
+    @if (isLoading()) {
+      <div class="doc-list__loading">
+        <div class="doc-list__spinner"></div>
+        <p>Loading documentation...</p>
+      </div>
+    }
+
+    @if (error()) {
+      <div class="doc-list__error">
+        <p>{{ error() }}</p>
+        <button class="doc-list__retry-button" (click)="loadDocs()">Retry</button>
+      </div>
+    }
+
+    @if (!isLoading() && !error() && docs().length > 0) {
+      <div class="doc-list__table-container">
+        <table class="doc-list__table">
+          <thead class="doc-list__table-head">
+            <tr>
+              <th class="doc-list__table-header doc-list__table-header--select">
+                <input type="checkbox" [checked]="allSelected()" (change)="toggleSelectAll($event)">
+              </th>
+              @if (isColumnVisible('title')) {
+                <th class="doc-list__table-header doc-list__table-header--sortable" (click)="sortBy('title')">
+                  Title <span class="doc-list__sort-icon">{{ getSortIcon('title') }}</span>
+                </th>
+              }
+              @if (isColumnVisible('slug')) {
+                <th class="doc-list__table-header">Slug</th>
+              }
+              @if (isColumnVisible('category')) {
+                <th class="doc-list__table-header">Category</th>
+              }
+              @if (isColumnVisible('sortOrder')) {
+                <th class="doc-list__table-header doc-list__table-header--sortable" (click)="sortBy('sortOrder')">
+                  Order <span class="doc-list__sort-icon">{{ getSortIcon('sortOrder') }}</span>
+                </th>
+              }
+              @if (isColumnVisible('status')) {
+                <th class="doc-list__table-header">Status</th>
+              }
+              @if (isColumnVisible('updatedAt')) {
+                <th class="doc-list__table-header doc-list__table-header--sortable" (click)="sortBy('updatedAt')">
+                  Updated <span class="doc-list__sort-icon">{{ getSortIcon('updatedAt') }}</span>
+                </th>
+              }
+              <th class="doc-list__table-header doc-list__table-header--actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (doc of docs(); track doc.id) {
+              <tr class="doc-list__table-row" [class.doc-list__table-row--selected]="isDocSelected(doc.id)">
+                <td class="doc-list__table-cell doc-list__table-cell--select" (click)="$event.stopPropagation()">
+                  <input type="checkbox" [checked]="isDocSelected(doc.id)" (change)="toggleSelectDoc($event, doc.id)">
+                </td>
+                @if (isColumnVisible('title')) {
+                  <td class="doc-list__table-cell doc-list__table-cell--title" (click)="editDocumentation(doc.id)">{{ doc.title }}</td>
+                }
+                @if (isColumnVisible('slug')) {
+                  <td class="doc-list__table-cell">{{ doc.slug }}</td>
+                }
+                @if (isColumnVisible('category')) {
+                  <td class="doc-list__table-cell">{{ doc.category || '-' }}</td>
+                }
+                @if (isColumnVisible('sortOrder')) {
+                  <td class="doc-list__table-cell">{{ doc.sortOrder }}</td>
+                }
+                @if (isColumnVisible('status')) {
+                  <td class="doc-list__table-cell">
+                    <span class="doc-list__status" [ngClass]="getStatusClass(doc.isPublished)">{{ getStatusText(doc.isPublished) }}</span>
+                  </td>
+                }
+                @if (isColumnVisible('updatedAt')) {
+                  <td class="doc-list__table-cell">{{ formatDate(doc.updatedAt) }}</td>
+                }
+                <td class="doc-list__table-cell doc-list__table-cell--actions" (click)="$event.stopPropagation()">
+                  <button class="doc-list__action-btn" (click)="editDocumentation(doc.id)">Edit</button>
+                  <button class="doc-list__action-btn doc-list__action-btn--danger" (click)="deleteDocumentation(doc.id)">Delete</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (!isLoading() && !error() && docs().length === 0) {
+      <div class="doc-list__empty">
+        @if (searchTerm()) {
+          <p>No documentation found matching "{{ searchTerm() }}".</p>
+          <button class="doc-list__retry-button" (click)="clearSearch()">Clear search</button>
+        } @else {
+          <p>No documentation found.</p>
+          <button class="doc-list__add-button" (click)="addDocumentation()">Add your first documentation</button>
+        }
+      </div>
+    }
+  </div>
+
+  @if (!isLoading() && !error() && docs().length > 0) {
+    <div class="doc-list__footer">
+      <span class="doc-list__results">{{ getResultsText() }}</span>
+      <div class="doc-list__pagination">
+        <button class="doc-list__page-button" [disabled]="currentPage() === 1" (click)="goToFirstPage()">&laquo;</button>
+        <button class="doc-list__page-button" [disabled]="currentPage() === 1" (click)="goToPreviousPage()">&lsaquo;</button>
+        @for (page of pagesArray(); track page) {
+          <button class="doc-list__page-button" [class.doc-list__page-button--active]="currentPage() === page" (click)="changePage(page)">{{ page }}</button>
+        }
+        <button class="doc-list__page-button" [disabled]="currentPage() >= totalPages()" (click)="goToNextPage()">&rsaquo;</button>
+        <button class="doc-list__page-button" [disabled]="currentPage() >= totalPages()" (click)="goToLastPage()">&raquo;</button>
+      </div>
+    </div>
+  }
+</div>

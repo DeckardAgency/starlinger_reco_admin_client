@@ -1,0 +1,169 @@
+<div class="tickets">
+  <ui-breadcrumbs [items]="breadcrumbs"></ui-breadcrumbs>
+
+  <div class="tickets__header">
+    <div class="tickets__title-container">
+      <h1 class="tickets__title">Support Tickets <span class="tickets__count">{{ totalTickets() }}</span></h1>
+    </div>
+    <div class="tickets__actions">
+      <app-column-selector
+        [columns]="columnDefs"
+        [storageKey]="COLUMN_STORAGE_KEY"
+        (columnsChange)="onColumnsChange($event)">
+      </app-column-selector>
+      <div class="tickets__search">
+        <input
+          type="text"
+          placeholder="Search by subject..."
+          class="tickets__search-input"
+          [ngModel]="searchTerm()"
+          (input)="onSearchInput($any($event.target).value)"
+          #searchInput
+        >
+        @if (searchTerm()) {
+          <button class="tickets__clear-search-button" (click)="clearSearch(); searchInput.focus()" title="Clear search">
+            &times;
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="tickets__body">
+    @if (searchTerm() && !isLoading() && !error()) {
+      <div class="tickets__search-info">
+        <span>Search results for: <strong>"{{ searchTerm() }}"</strong></span>
+        <button class="tickets__clear-search-link" (click)="clearSearch()">Clear search</button>
+      </div>
+    }
+
+    <div class="tickets__tabs">
+      <button class="tickets__tab" [class.tickets__tab--active]="activeTab() === 'all'" (click)="switchTab('all')">All</button>
+      <button class="tickets__tab" [class.tickets__tab--active]="activeTab() === 'open'" (click)="switchTab('open')">Open</button>
+      <button class="tickets__tab" [class.tickets__tab--active]="activeTab() === 'in_progress'" (click)="switchTab('in_progress')">In Progress</button>
+      <button class="tickets__tab" [class.tickets__tab--active]="activeTab() === 'resolved'" (click)="switchTab('resolved')">Resolved</button>
+      <button class="tickets__tab" [class.tickets__tab--active]="activeTab() === 'closed'" (click)="switchTab('closed')">Closed</button>
+    </div>
+
+    @if (isLoading()) {
+      <div class="tickets__loading">
+        <div class="tickets__spinner"></div>
+        <p>Loading support tickets...</p>
+      </div>
+    }
+
+    @if (error()) {
+      <div class="tickets__error">
+        <p>{{ error() }}</p>
+        <button class="tickets__retry-button" (click)="loadTickets()">Retry</button>
+      </div>
+    }
+
+    @if (!isLoading() && !error() && tickets().length === 0) {
+      <div class="tickets__empty">
+        @if (searchTerm()) {
+          <p>No tickets found matching "{{ searchTerm() }}".</p>
+          <button class="tickets__retry-button" (click)="clearSearch()">Clear search</button>
+        } @else {
+          <p>No support tickets found.</p>
+        }
+      </div>
+    }
+
+    @if (!isLoading() && !error() && tickets().length > 0) {
+      <div class="tickets__table-container">
+        <table class="tickets__table">
+          <thead class="tickets__table-head">
+            <tr>
+              @if (isColumnVisible('id')) {
+                <th class="tickets__table-header">Ticket ID</th>
+              }
+              @if (isColumnVisible('subject')) {
+                <th class="tickets__table-header tickets__table-header--sortable" (click)="onSort('subject')">
+                  Subject <span class="tickets__sort-icon">{{ getSortIcon('subject') }}</span>
+                </th>
+              }
+              @if (isColumnVisible('createdAt')) {
+                <th class="tickets__table-header tickets__table-header--sortable" (click)="onSort('createdAt')">
+                  Date Created <span class="tickets__sort-icon">{{ getSortIcon('createdAt') }}</span>
+                </th>
+              }
+              @if (isColumnVisible('customer')) {
+                <th class="tickets__table-header">Customer</th>
+              }
+              @if (isColumnVisible('urgency')) {
+                <th class="tickets__table-header">Urgency</th>
+              }
+              @if (isColumnVisible('status')) {
+                <th class="tickets__table-header">Status</th>
+              }
+              <th class="tickets__table-header tickets__table-header--actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="tickets__table-body">
+            @for (ticket of tickets(); track ticket.id) {
+              <tr class="tickets__table-row" (click)="viewTicket(ticket.id)">
+                @if (isColumnVisible('id')) {
+                  <td class="tickets__table-cell">#{{ ticket.id }}</td>
+                }
+                @if (isColumnVisible('subject')) {
+                  <td class="tickets__table-cell tickets__table-cell--subject">
+                    <div class="tickets__subject">
+                      <span class="tickets__subject-text">{{ ticket.subject }}</span>
+                    </div>
+                  </td>
+                }
+                @if (isColumnVisible('createdAt')) {
+                  <td class="tickets__table-cell">{{ formatDate(ticket.createdAt) }}</td>
+                }
+                @if (isColumnVisible('customer')) {
+                  <td class="tickets__table-cell">
+                    <div class="tickets__customer">
+                      <div class="tickets__customer-avatar">{{ ticket.user?.firstName?.[0] || 'U' }}{{ ticket.user?.lastName?.[0] || '' }}</div>
+                      <span class="tickets__customer-name">{{ getUserFullName(ticket) }}</span>
+                    </div>
+                  </td>
+                }
+                @if (isColumnVisible('urgency')) {
+                  <td class="tickets__table-cell">
+                    <span class="tickets__urgency" [style.color]="getUrgencyColor(ticket.urgency)">
+                      {{ urgencyDisplayMap[ticket.urgency]?.label || ticket.urgency }}
+                    </span>
+                  </td>
+                }
+                @if (isColumnVisible('status')) {
+                  <td class="tickets__table-cell">
+                    <span class="tickets__status" [ngClass]="'tickets__status--' + ticket.status">
+                      {{ statusDisplayMap[ticket.status] || ticket.status }}
+                    </span>
+                  </td>
+                }
+                <td class="tickets__table-cell tickets__table-cell--actions" (click)="$event.stopPropagation()">
+                  <select class="tickets__status-select" [value]="ticket.status" (change)="updateStatus(ticket.id, $any($event.target).value)">
+                    <option value="open">Open</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tickets__footer">
+        <span class="tickets__results">
+          Showing {{ (currentPage() - 1) * 30 + 1 }} - {{ Math.min(currentPage() * 30, totalTickets()) }} of {{ totalTickets() }} tickets
+        </span>
+        <div class="tickets__pagination">
+          <button class="tickets__page-button" [disabled]="currentPage() === 1" (click)="previousPage()">&lsaquo;</button>
+          @for (page of pagesArray(); track page) {
+            <button class="tickets__page-button" [class.tickets__page-button--active]="currentPage() === page" (click)="goToPage(page)">{{ page }}</button>
+          }
+          <button class="tickets__page-button" [disabled]="currentPage() === totalPages()" (click)="nextPage()">&rsaquo;</button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

@@ -105,7 +105,7 @@ export class AccountGroupsEditComponent implements OnInit, OnDestroy {
   }
 
   onBack(): void {
-    this.router.navigate(['/admin/account-groups/list']);
+    this.router.navigate(['/admin/client-groups/list']);
   }
 
   markAllTouched(): void {
@@ -160,9 +160,9 @@ export class AccountGroupsEditComponent implements OnInit, OnDestroy {
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
-          this.router.navigate(['/admin/account-groups/list']);
+          this.router.navigate(['/admin/client-groups/list']);
         } else if (isCreating && result?.id) {
-          this.router.navigate(['/admin/account-groups', result.id, 'edit']);
+          this.router.navigate(['/admin/client-groups', result.id, 'edit']);
         }
       },
       error: (error) => {

@@ -1,0 +1,106 @@
+@use '../../../ui-kit/admin-shared' as admin;
+
+:host {
+  @include admin.admin-host;
+  height: 100%;
+}
+
+.ticket-view {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem;
+
+  &__loading, &__error {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 48px; text-align: center;
+  }
+  &__spinner {
+    width: 40px; height: 40px; border: 3px solid #f3f3f3; border-top: 3px solid #0074d9;
+    border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;
+  }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+  &__retry-button, &__back-button {
+    margin-top: 16px; padding: 10px 20px; background: #0074d9; color: white;
+    border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;
+    &:hover { background: #005bb5; }
+  }
+  &__back-button { margin-left: 8px; background: #666; &:hover { background: #444; } }
+
+  &__container { margin: 0 auto; }
+
+  &__header {
+    display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px;
+    @media (max-width: 768px) { flex-direction: column; }
+  }
+  &__header-left { flex: 1; }
+  &__back-btn {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    background: none; border: 1px solid #e5e7eb; border-radius: 4px;
+    cursor: pointer; font-size: 0.875rem; color: #666; margin-bottom: 16px;
+    &:hover { background: #f9fafb; color: #232323; }
+  }
+  &__title { font-size: 1.5rem; font-weight: 500; margin: 0; color: #232323; }
+  &__header-actions { display: flex; gap: 8px; }
+  &__status-select {
+    padding: 10px 16px; border: 1px solid #e5e7eb; border-radius: 4px;
+    font-size: 0.875rem; cursor: pointer; background: white; min-width: 150px;
+    &:focus { outline: none; border-color: #0074d9; }
+  }
+
+  &__content {
+    display: grid; grid-template-columns: 1fr 320px; gap: 24px;
+    @media (max-width: 968px) { grid-template-columns: 1fr; }
+  }
+  &__main { display: flex; flex-direction: column; gap: 24px; }
+  &__sidebar { display: flex; flex-direction: column; gap: 24px; }
+
+  &__card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+  &__card-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; }
+  &__card-title { font-size: 1rem; font-weight: 500; margin: 0; color: #232323; }
+  &__card-body { padding: 20px; }
+
+  &__message { margin: 0; line-height: 1.6; color: #374151; white-space: pre-wrap; }
+
+  &__attachment {
+    display: flex; align-items: center; gap: 12px; padding: 12px;
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+  }
+  &__attachment-info { flex: 1; min-width: 0; }
+  &__attachment-name { font-size: 0.875rem; font-weight: 500; color: #232323; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &__attachment-meta { font-size: 0.75rem; color: #666; margin-top: 2px; }
+  &__download-btn {
+    padding: 8px 16px; background: #0074d9; color: white; border: none; border-radius: 4px;
+    cursor: pointer; font-size: 0.875rem; flex-shrink: 0;
+    &:hover { background: #005bb5; }
+  }
+
+  &__detail-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid #e5e7eb;
+    &:last-child { border-bottom: none; padding-bottom: 0; }
+    &:first-child { padding-top: 0; }
+  }
+  &__detail-label { font-size: 0.875rem; color: #666; font-weight: 500; }
+  &__detail-value { font-size: 0.875rem; color: #232323; text-align: right; }
+
+  &__status {
+    display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 500;
+    &--open { background: #dbeafe; color: #1e40af; }
+    &--in_progress { background: #fef3c7; color: #92400e; }
+    &--resolved { background: #d1fae5; color: #065f46; }
+    &--closed { background: #e5e7eb; color: #374151; }
+  }
+  &__urgency { font-weight: 500; font-size: 0.875rem; }
+
+  &__customer { display: flex; align-items: center; gap: 12px; }
+  &__customer-avatar {
+    width: 48px; height: 48px; border-radius: 50%; background: #e5e7eb;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 500; color: #666; flex-shrink: 0;
+  }
+  &__customer-info { flex: 1; min-width: 0; }
+  &__customer-name { font-size: 0.875rem; font-weight: 500; color: #232323; margin-bottom: 4px; }
+  &__customer-email { font-size: 0.75rem; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}

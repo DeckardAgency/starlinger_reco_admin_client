@@ -1,10 +1,134 @@
-<div class="admin-dashboard">
-    <!-- Performance Overview Section -->
-    <app-performance-overview></app-performance-overview>
+<div class="dashboard">
+    <div class="dashboard__content">
+        <!-- Performance Overview -->
+        <app-performance-overview></app-performance-overview>
 
-    <!-- Active Orders & Inquiries Section -->
-    <app-active-orders></app-active-orders>
+        <!-- Quick Actions -->
+        <div class="dashboard__section dashboard__section--quick-actions">
+            <h2 class="dashboard__section-title">
+                <ui-icon name="zap" size="sm"></ui-icon>
+                Quick Actions
+            </h2>
+            <div class="dashboard__quick-actions">
+                @for (action of quickActions; track action.route) {
+                    <button
+                        class="dashboard__quick-action"
+                        (click)="navigateTo(action.route)"
+                    >
+                        <div class="dashboard__quick-action-icon" [style.background-color]="action.color + '15'" [style.color]="action.color">
+                            <ui-icon [name]="action.icon" size="sm"></ui-icon>
+                        </div>
+                        <div class="dashboard__quick-action-text">
+                            <span class="dashboard__quick-action-label">{{ action.label }}</span>
+                            <span class="dashboard__quick-action-desc">{{ action.description }}</span>
+                        </div>
+                    </button>
+                }
+            </div>
+        </div>
 
-    <!-- History Section -->
-    <app-history></app-history>
+        <!-- Orders Row -->
+        <div class="dashboard__grid">
+            <!-- Recent Orders -->
+            <div class="dashboard__column">
+                <div class="dashboard__section">
+                    <div class="dashboard__section-header">
+                        <h2 class="dashboard__section-title">
+                            <ui-icon name="cart" size="sm"></ui-icon>
+                            Recent Orders
+                        </h2>
+                        <button class="dashboard__view-all" (click)="navigateTo('/admin/shop-orders/list')">
+                            View All
+                            <ui-icon name="chevron-right" size="xs"></ui-icon>
+                        </button>
+                    </div>
+
+                    @if (isLoadingOrders) {
+                        <div class="dashboard__loading">
+                            <div class="dashboard__spinner"></div>
+                            <span>Loading orders...</span>
+                        </div>
+                    } @else if (recentOrders.length === 0) {
+                        <div class="dashboard__empty">
+                            <ui-icon name="cart" size="xl"></ui-icon>
+                            <span>No orders yet</span>
+                        </div>
+                    } @else {
+                        <div class="dashboard__list">
+                            @for (order of recentOrders; track order.id) {
+                                <div class="dashboard__list-item" (click)="viewOrder(order)">
+                                    <div class="dashboard__list-item-avatar dashboard__list-item-avatar--order">
+                                        {{ getInitials(order) }}
+                                    </div>
+                                    <div class="dashboard__list-item-content">
+                                        <div class="dashboard__list-item-header">
+                                            <span class="dashboard__list-item-title">{{ order.orderNumber || order.id }}</span>
+                                            <span class="dashboard__list-item-amount">{{ formatCurrency(order.totalAmount || 0) }}</span>
+                                        </div>
+                                        <div class="dashboard__list-item-meta">
+                                            <span class="dashboard__list-item-status dashboard__list-item-status--inline" [ngClass]="getStatusClass(order.status)">
+                                                {{ getStatusLabel(order.status) }}
+                                            </span>
+                                            <span class="dashboard__list-item-separator">&bull;</span>
+                                            <span>{{ formatDate(order.createdAt) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Order Status Distribution -->
+            <div class="dashboard__column dashboard__column--sidebar">
+                <div class="dashboard__section">
+                    <h2 class="dashboard__section-title">
+                        <ui-icon name="chart-line" size="sm"></ui-icon>
+                        Order Status Distribution
+                    </h2>
+
+                    @if (isLoadingDistribution) {
+                        <div class="dashboard__loading">
+                            <div class="dashboard__spinner"></div>
+                            <span>Loading...</span>
+                        </div>
+                    } @else if (orderDistribution.length === 0) {
+                        <div class="dashboard__empty">
+                            <span>No data available</span>
+                        </div>
+                    } @else {
+                        <div class="dashboard__distribution">
+                            <div class="dashboard__distribution-total">
+                                <span class="dashboard__distribution-total-value">{{ totalOrders }}</span>
+                                <span class="dashboard__distribution-total-label">Total Orders</span>
+                            </div>
+
+                            <div class="dashboard__distribution-bar">
+                                @for (item of orderDistribution; track item.status) {
+                                    <div
+                                        class="dashboard__distribution-segment"
+                                        [style.width.%]="getDistributionPercentage(item.count)"
+                                        [style.background-color]="getStatusColor(item.status)"
+                                        [title]="item.label + ': ' + item.count + ' (' + getDistributionPercentage(item.count) + '%)'"
+                                    ></div>
+                                }
+                            </div>
+
+                            <div class="dashboard__distribution-legend">
+                                @for (item of orderDistribution; track item.status) {
+                                    <div class="dashboard__distribution-legend-item">
+                                        <span class="dashboard__distribution-legend-color" [style.background-color]="getStatusColor(item.status)"></span>
+                                        <span class="dashboard__distribution-legend-label">{{ item.label }}</span>
+                                        <span class="dashboard__distribution-legend-value">{{ item.count }}</span>
+                                        <span class="dashboard__distribution-legend-percent">({{ getDistributionPercentage(item.count) }}%)</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

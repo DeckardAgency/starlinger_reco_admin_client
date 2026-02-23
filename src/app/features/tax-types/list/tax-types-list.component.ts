@@ -18,6 +18,8 @@ import { TaxType } from '@core/models/tax-type.model';
 import { TaxTypeService } from '@core/services/http/tax-type.service';
 import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
+import { ColumnSettingsService } from '@core/services/column-settings.service';
 
 @Component({
   selector: 'app-tax-types-list',
@@ -32,7 +34,8 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
     TableFooterComponent,
     TableActionsDropdownComponent,
     TableCheckboxSelectionComponent,
-    MobileFooterComponent
+    MobileFooterComponent,
+    ColumnSelectorComponent
   ],
   templateUrl: './tax-types-list.component.html',
   styleUrls: ['./tax-types-list.component.scss'],
@@ -44,6 +47,7 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
   private taxTypeService = inject(TaxTypeService);
   private alertService = inject(AlertService);
   private destroyRef = inject(DestroyRef);
+  private columnSettingsService = inject(ColumnSettingsService);
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -81,6 +85,11 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
   // Pagination display
   showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
   showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
+
+  // Column selector
+  readonly COLUMN_STORAGE_KEY = 'tax-types';
+  columnDefs: ColumnDefinition[] = [];
+  private allColumns: TableColumn[] = [];
 
   // Table columns
   columns: TableColumn[] = [];
@@ -152,12 +161,35 @@ export class TaxTypesListComponent implements OnInit, AfterViewInit {
   }
 
   private initColumns(): void {
-    this.columns = [
+    const defaultColumnDefs: ColumnDefinition[] = [
+      { key: 'name', label: 'Name', visible: true, locked: true },
+      { key: 'percent', label: 'Percent', visible: true }
+    ];
+
+    this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
+
+    this.allColumns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
       { key: 'name', label: 'Name', sortable: true },
       { key: 'percent', label: 'Percent', sortable: true, width: '192px', template: this.percentTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
+
+    this.applyColumnVisibility();
+  }
+
+  onColumnsChange(columns: ColumnDefinition[]): void {
+    this.columnDefs = columns;
+    this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.applyColumnVisibility();
+    this.cdr.markForCheck();
+  }
+
+  private applyColumnVisibility(): void {
+    const visibleKeys = new Set(this.columnDefs.filter(c => c.visible).map(c => c.key));
+    this.columns = this.allColumns.filter(col =>
+      col.key === 'actions' || col.key === 'checkbox' || visibleKeys.has(col.key)
+    );
   }
 
   onSearchChange(query: string): void {

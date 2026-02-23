@@ -11,8 +11,9 @@ import { Account } from '@core/models/account.model';
 import { ClientService } from '@core/services/http/client.service';
 import { Client } from '@core/models/client.model';
 import { AlertService } from '@services/alert.service';
+import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
+import { ColumnSettingsService } from '@core/services/column-settings.service';
 
-// Consolidated components
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { ListHeaderComponent } from '@app/ui-kit/molecules/list-header/list-header.component';
 import { TableActionsDropdownComponent, TableAction } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
@@ -32,7 +33,8 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
     ListHeaderComponent,
     TableActionsDropdownComponent,
     TableFooterComponent,
-    MobileFooterComponent
+    MobileFooterComponent,
+    ColumnSelectorComponent
   ],
   templateUrl: './accounts-list.component.html',
   styleUrls: ['./accounts-list.component.scss'],
@@ -44,6 +46,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   private clientService = inject(ClientService);
   private alertService = inject(AlertService);
   private destroyRef = inject(DestroyRef);
+  private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
 
@@ -58,26 +61,25 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   sortDirection = signal<'asc' | 'desc' | null>(null);
   openDropdownId: string | null = null;
 
-  // Table columns - will be set after view init to use templates
+  // Column selector
+  readonly COLUMN_STORAGE_KEY = 'clients';
+  columnDefs: ColumnDefinition[] = [];
+  private allColumns: TableColumn[] = [];
   columns: TableColumn[] = [];
 
-  // Table actions
   tableActions: TableAction[] = [
     { id: 'edit', label: 'Edit', icon: 'pencil' },
     { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
   ];
 
-  // Pagination
   currentPage = signal(1);
   itemsPerPage = signal(30);
   totalItems = signal(0);
 
-  // Computed pagination display
   showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1);
   showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
 
-  // Data from API
-  accounts = signal<Account[]>([]);
+  clients = signal<Account[]>([]);
 
   constructor() {
     this.searchSubject.pipe(
@@ -87,12 +89,12 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     ).subscribe(query => {
       this.searchQuery.set(query);
       this.currentPage.set(1);
-      this.loadAccounts();
+      this.loadClients();
     });
   }
 
   ngOnInit(): void {
-    this.loadAccounts();
+    this.loadClients();
   }
 
   ngAfterViewInit(): void {
@@ -100,7 +102,50 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     this.cdr.detectChanges();
   }
 
-  private loadAccounts(): void {
+  private initColumns(): void {
+    const defaultColumnDefs: ColumnDefinition[] = [
+      { key: 'id', label: 'Id', visible: true, locked: true },
+      { key: 'code', label: 'Code', visible: true },
+      { key: 'oib', label: 'OIB', visible: true },
+      { key: 'name', label: 'Name', visible: true, locked: true },
+      { key: 'email', label: 'Email', visible: true },
+      { key: 'status', label: 'Status', visible: true },
+      { key: 'purchaseLimit', label: 'Purchase limit', visible: true },
+      { key: 'amountSpent', label: 'Amount spent', visible: true }
+    ];
+
+    this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
+
+    this.allColumns = [
+      { key: 'id', label: 'Id', sortable: true, width: '80px' },
+      { key: 'code', label: 'Code', sortable: true, width: '80px' },
+      { key: 'oib', label: 'OIB', sortable: true, width: '120px' },
+      { key: 'name', label: 'Name', sortable: true },
+      { key: 'email', label: 'Email', sortable: true, width: '180px' },
+      { key: 'status', label: 'Status', sortable: true, width: '100px', template: this.statusTemplate },
+      { key: 'purchaseLimit', label: 'Purchase limit', sortable: true, width: '130px', template: this.purchaseLimitTemplate },
+      { key: 'amountSpent', label: 'Amount spent', sortable: true, width: '130px', template: this.amountSpentTemplate },
+      { key: 'actions', label: '', sortable: false, width: '56px', template: this.actionsTemplate }
+    ];
+
+    this.applyColumnVisibility();
+  }
+
+  onColumnsChange(columns: ColumnDefinition[]): void {
+    this.columnDefs = columns;
+    this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.applyColumnVisibility();
+    this.cdr.markForCheck();
+  }
+
+  private applyColumnVisibility(): void {
+    const visibleKeys = new Set(this.columnDefs.filter(c => c.visible).map(c => c.key));
+    this.columns = this.allColumns.filter(col =>
+      col.key === 'actions' || visibleKeys.has(col.key)
+    );
+  }
+
+  private loadClients(): void {
     this.isLoading.set(true);
 
     const params: Record<string, string | number | boolean> = {
@@ -121,15 +166,15 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
 
     this.clientService.getClients(params).subscribe({
       next: (response) => {
-        const accounts = response.clients.map(client => this.mapClientToAccount(client));
-        this.accounts.set(accounts);
+        const clients = response.clients.map(client => this.mapClientToAccount(client));
+        this.clients.set(clients);
         this.totalItems.set(response.totalClients || 0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Failed to load accounts:', error);
-        this.accounts.set([]);
+        console.error('Failed to load clients:', error);
+        this.clients.set([]);
         this.totalItems.set(0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
@@ -152,20 +197,6 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     };
   }
 
-  private initColumns(): void {
-    this.columns = [
-      { key: 'id', label: 'Id', sortable: true, width: '80px' },
-      { key: 'code', label: 'Code', sortable: true, width: '80px' },
-      { key: 'oib', label: 'OIB', sortable: true, width: '120px' },
-      { key: 'name', label: 'Name', sortable: true },
-      { key: 'email', label: 'Email', sortable: true, width: '180px' },
-      { key: 'status', label: 'Status', sortable: true, width: '100px', template: this.statusTemplate },
-      { key: 'purchaseLimit', label: 'Purchase limit', sortable: true, width: '130px', template: this.purchaseLimitTemplate },
-      { key: 'amountSpent', label: 'Amount spent', sortable: true, width: '130px', template: this.amountSpentTemplate },
-      { key: 'actions', label: '', sortable: false, width: '56px', template: this.actionsTemplate }
-    ];
-  }
-
   onSearchQueryChange(query: string): void {
     this.searchSubject.next(query);
   }
@@ -174,7 +205,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     this.sortColumn.set(event.column);
     this.sortDirection.set(event.direction);
     this.currentPage.set(1);
-    this.loadAccounts();
+    this.loadClients();
   }
 
   stringifyId(id: string | number): string {
@@ -182,15 +213,29 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   }
 
   onRefresh(): void {
-    this.loadAccounts();
+    this.loadClients();
   }
 
   onExport(): void {
-    console.log('Export accounts');
+    this.clientService.exportToExcel(
+      this.sortColumn() || undefined,
+      this.sortDirection() || undefined,
+      this.searchQuery() || undefined
+    ).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `clients-${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => console.error('Export failed:', err)
+    });
   }
 
   onAddAccount(): void {
-    this.router.navigate(['/admin/accounts/new']);
+    this.router.navigate(['/admin/clients/new']);
   }
 
   toggleDropdown(accountId: number | string): void {
@@ -206,23 +251,23 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   onActionClick(event: { action: TableAction; row: unknown }): void {
     const account = event.row as Account;
     if (event.action.id === 'edit') {
-      this.router.navigate(['/admin/accounts', account.id, 'edit']);
+      this.router.navigate(['/admin/clients', account.id, 'edit']);
     } else if (event.action.id === 'delete') {
-      this.deleteAccount(account);
+      this.deleteClient(account);
     }
     this.closeDropdown();
   }
 
-  private async deleteAccount(account: Account): Promise<void> {
+  private async deleteClient(account: Account): Promise<void> {
     const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${account.name}"?`, 'Delete');
     if (!confirmed) {
       return;
     }
     this.clientService.deleteClient(String(account.id)).subscribe({
       next: () => {
-        this.loadAccounts();
+        this.loadClients();
       },
-      error: (error) => console.error('Error deleting account:', error)
+      error: (error) => console.error('Error deleting client:', error)
     });
   }
 
@@ -233,6 +278,6 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
-    this.loadAccounts();
+    this.loadClients();
   }
 }

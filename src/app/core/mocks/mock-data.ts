@@ -18,7 +18,7 @@ export const mockUsers = {
   superAdmin: {
     id: 'usr-001',
     email: 'super@test.com',
-    roles: ['ROLE_USER', 'ROLE_SUPER_ADMIN'],
+    roles: ['ROLE_USER', 'ROLE_ADMIN'],
     firstName: 'Max',
     lastName: 'Starlinger',
     phoneNumber: '+43 1 234 5678',

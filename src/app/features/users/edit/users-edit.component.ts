@@ -130,9 +130,8 @@ export class UsersEditComponent implements OnInit {
 
   private mapRolesToAdminRole(roles: string[]): AdminUserRoleType | null {
     if (!roles || roles.length === 0) return null;
-    if (roles.includes('ROLE_SUPER_ADMIN') || roles.includes('ROLE_ADMIN')) return 'admin';
+    if (roles.includes('ROLE_ADMIN')) return 'admin';
     if (roles.includes('ROLE_CLIENT_ADMIN')) return 'admin';
-    if (roles.includes('ROLE_VIEWER')) return 'viewer';
     if (roles.includes('ROLE_CLIENT')) return 'editor';
     return 'editor';
   }

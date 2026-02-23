@@ -1,12 +1,12 @@
-<div class="accounts-page">
-  <ui-breadcrumbs variant="page-header" separator="line" [items]="[{ label: 'Accounts' }]"></ui-breadcrumbs>
+<div class="clients-page">
+  <ui-breadcrumbs variant="page-header" separator="line" [items]="[{ label: 'Clients' }]"></ui-breadcrumbs>
 
   <main class="page-content">
     <ui-list-header
-      title="All accounts"
+      title="All clients"
       [searchQuery]="searchQuery()"
       (searchQueryChange)="onSearchQueryChange($event)"
-      addButtonLabel="Add account"
+      addButtonLabel="Add client"
       (add)="onAddAccount()"
       [showRefreshButton]="true"
       [isRefreshLoading]="isLoading()"
@@ -14,17 +14,23 @@
       [showExportButton]="true"
       (export)="onExport()"
       [hideAddButtonOnMobile]="true"
-    ></ui-list-header>
+    >
+      <app-column-selector
+        [columns]="columnDefs"
+        [storageKey]="COLUMN_STORAGE_KEY"
+        (columnsChange)="onColumnsChange($event)">
+      </app-column-selector>
+    </ui-list-header>
 
     <div class="table-container">
       @if (isLoading()) {
-        <p>Loading accounts...</p>
-      } @else if (accounts().length === 0) {
-        <p class="empty-state">No accounts found</p>
+        <p>Loading clients...</p>
+      } @else if (clients().length === 0) {
+        <p class="empty-state">No clients found</p>
       } @else {
         <ui-data-table
           [columns]="columns"
-          [data]="accounts()"
+          [data]="clients()"
           [sortColumn]="sortColumn()"
           [sortDirection]="sortDirection()"
           (sort)="onSort($event)">
@@ -75,7 +81,7 @@
 
 <!-- Mobile Footer -->
 <ui-mobile-footer
-  primaryLabel="Add account"
+  primaryLabel="Add client"
   primaryIcon="plus"
   [showSecondary]="false"
   (primaryClick)="onAddAccount()"

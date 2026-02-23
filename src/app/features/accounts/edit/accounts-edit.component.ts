@@ -18,13 +18,14 @@ import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@a
 import { DataTableComponent, TableColumn } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
+import { ModalComponent } from '@app/ui-kit/organisms/modal/modal.component';
 import { AddressModalComponent, AddressFormData } from '../../../shared/components/modals/address-modal/address-modal.component';
-import { Account, AccountContact } from '@core/models/account.model';
+import { Account } from '@core/models/account.model';
 import { ClientService } from '@core/services/http/client.service';
-import { ContactService } from '@core/services/http/contact.service';
 import { OrderService } from '@core/services/http/order.service';
 import { AddressService } from '@core/services/http/address.service';
-import { ClientDetail, ClientAddress } from '@core/models/client.model';
+import { UserService } from '@core/services/http/user.service';
+import { ClientDetail, ClientAddress, ClientUser } from '@core/models/client.model';
 import { Order } from '@core/models/order.model';
 import { AccountGroupService } from '@core/services/http/account-group.service';
 
@@ -92,6 +93,7 @@ const EMPTY_ACCOUNT: Account = {
     TableActionsDropdownComponent,
     DataTableComponent,
     MobileFooterComponent,
+    ModalComponent,
     AddressModalComponent
   ],
   templateUrl: './accounts-edit.component.html',
@@ -103,7 +105,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private clientService = inject(ClientService);
-  private contactService = inject(ContactService);
+  private userService = inject(UserService);
   private orderService = inject(OrderService);
   private addressService = inject(AddressService);
   private accountGroupService = inject(AccountGroupService);
@@ -114,8 +116,9 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   loadError = signal<string | null>(null);
 
   // Template refs for custom cell rendering
-  @ViewChild('contactBillingTemplate') contactBillingTemplate!: TemplateRef<any>;
-  @ViewChild('contactActionsTemplate') contactActionsTemplate!: TemplateRef<any>;
+  @ViewChild('userRoleTemplate') userRoleTemplate!: TemplateRef<any>;
+  @ViewChild('userStatusTemplate') userStatusTemplate!: TemplateRef<any>;
+  @ViewChild('userActionsTemplate') userActionsTemplate!: TemplateRef<any>;
   @ViewChild('addressBillingTemplate') addressBillingTemplate!: TemplateRef<any>;
   @ViewChild('addressDeliveryTemplate') addressDeliveryTemplate!: TemplateRef<any>;
   @ViewChild('addressActionsTemplate') addressActionsTemplate!: TemplateRef<any>;
@@ -124,7 +127,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('orderStatusTemplate') orderStatusTemplate!: TemplateRef<any>;
   @ViewChild('orderActionsTemplate') orderActionsTemplate!: TemplateRef<any>;
   // Table column configs
-  contactsColumns: TableColumn[] = [];
+  usersColumns: TableColumn[] = [];
   addressesColumns: TableColumn[] = [];
   shopOrdersColumns: TableColumn[] = [];
   manualEntriesColumns: TableColumn[] = [];
@@ -136,8 +139,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Account data - starts empty
   account = signal<Account>({ ...EMPTY_ACCOUNT });
 
-  // Contacts data - starts empty, loaded in edit mode
-  contacts = signal<AccountContact[]>([]);
+  // Users data - starts empty, loaded in edit mode
+  clientUsers = signal<{ id: number; fullName: string; email: string; role: string; isActive: boolean }[]>([]);
 
   // Addresses data - starts empty, loaded in edit mode
   addresses = signal<Address[]>([]);
@@ -150,12 +153,12 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Tabs configuration
   tabs: TabItem[] = [
-    { id: 'contacts', label: 'Contacts' },
+    { id: 'users', label: 'Users' },
     { id: 'addresses', label: 'Addresses' },
     { id: 'shop-orders', label: 'Shop orders' }
   ];
 
-  activeTab = signal('contacts');
+  activeTab = signal('users');
 
   // Dropdown state
   openDropdownId = signal<number | string | null>(null);
@@ -168,6 +171,13 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   isAddressModalOpen = signal(false);
   selectedAddress = signal<Address | null>(null);
   isAddressSaving = signal(false);
+
+  // User assignment modal state
+  isUserModalOpen = signal(false);
+  unassignedUsers = signal<{ id: number; fullName: string; email: string; role: string }[]>([]);
+  filteredUnassignedUsers = signal<{ id: number; fullName: string; email: string; role: string }[]>([]);
+  userSearchQuery = signal('');
+  isLoadingUnassignedUsers = signal(false);
 
   // Validation state
   touched = signal<Record<string, boolean>>({});
@@ -216,9 +226,9 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // Table actions
-  contactActions: TableAction[] = [
+  userActions: TableAction[] = [
     { id: 'edit', label: 'Edit', icon: 'pencil' },
-    { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
+    { id: 'remove', label: 'Remove from client', icon: 'trash', variant: 'danger' }
   ];
 
   addressActions: TableAction[] = [
@@ -259,14 +269,14 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private initColumns(): void {
-    // Contacts columns
-    this.contactsColumns = [
+    // Users columns
+    this.usersColumns = [
       { key: 'id', label: 'Id', sortable: true, width: '88px' },
-      { key: 'fullName', label: 'Full name', sortable: true },
+      { key: 'fullName', label: 'Name', sortable: true },
       { key: 'email', label: 'Email', sortable: true },
-      { key: 'phone', label: 'Phone', width: '160px' },
-      { key: 'isBilling', label: 'Billing', sortable: true, width: '104px', template: this.contactBillingTemplate },
-      { key: 'actions', label: '', width: '64px', template: this.contactActionsTemplate }
+      { key: 'role', label: 'Role', width: '140px', template: this.userRoleTemplate },
+      { key: 'isActive', label: 'Status', sortable: true, width: '104px', template: this.userStatusTemplate },
+      { key: 'actions', label: '', width: '64px', template: this.userActionsTemplate }
     ];
 
     // Addresses columns
@@ -313,13 +323,13 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private resetForm(): void {
     this.account.set({ ...EMPTY_ACCOUNT });
-    this.contacts.set([]);
+    this.clientUsers.set([]);
     this.addresses.set([]);
     this.shopOrders.set([]);
     this.manualEntries.set([]);
     this.isActive.set(true);
     this.isLegalEntity.set(false);
-    this.activeTab.set('contacts');
+    this.activeTab.set('users');
     this.touched.set({});
     this.cdr.markForCheck();
   }
@@ -349,8 +359,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.isLoading.set(false);
         this.cdr.markForCheck();
 
-        // Load contacts for this account
-        this.loadAccountContacts(id);
+        // Load users for this client
+        this.loadClientUsers(id);
 
         // Load addresses for this client
         this.loadClientAddresses(id);
@@ -361,7 +371,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       },
       error: (err) => {
-        this.loadError.set(err?.message || 'Account not found');
+        this.loadError.set(err?.message || 'Client not found');
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -381,22 +391,23 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  private loadAccountContacts(accountId: string): void {
-    this.contactService.getContactsByAccount(accountId).subscribe({
+  private loadClientUsers(clientId: string): void {
+    this.userService.getUsers({ 'client.id': clientId, itemsPerPage: 100 }).subscribe({
       next: (response) => {
-        const contacts = response.contacts.map(c => ({
-          id: c.id,
-          fullName: c.fullName || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || '–',
-          email: c.email ?? '',
-          phone: c.phone ?? '',
-          isBilling: false
+        const users = (response.member || []).map((u: any) => ({
+          id: u.id,
+          fullName: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email || '–',
+          email: u.email ?? '',
+          role: (u.roles || []).includes('ROLE_ADMIN') ? 'Admin' :
+                (u.roles || []).includes('ROLE_CLIENT_ADMIN') ? 'Client Admin' : 'User',
+          isActive: u.isActive ?? true
         }));
-        this.contacts.set(contacts);
+        this.clientUsers.set(users);
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error loading contacts:', err);
-        this.contacts.set([]);
+        console.error('Error loading users:', err);
+        this.clientUsers.set([]);
       }
     });
   }
@@ -482,14 +493,14 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
 
   // Computed values
-  totalContacts = computed(() => this.contacts().length);
+  totalUsers = computed(() => this.clientUsers().length);
   totalAddresses = computed(() => this.addresses().length);
   totalShopOrders = computed(() => this.shopOrders().length);
   totalManualEntries = computed(() => this.manualEntries().length);
   // Get current tab count
   currentTabCount = computed(() => {
     switch (this.activeTab()) {
-      case 'contacts': return this.totalContacts();
+      case 'users': return this.totalUsers();
       case 'addresses': return this.totalAddresses();
       case 'shop-orders': return this.totalShopOrders();
       case 'manual-entries': return this.totalManualEntries();
@@ -500,7 +511,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Get add button text based on active tab
   addButtonText = computed(() => {
     switch (this.activeTab()) {
-      case 'contacts': return 'Add contact';
+      case 'users': return 'Add user';
       case 'addresses': return 'Add address';
       case 'shop-orders': return 'Add order';
       case 'manual-entries': return 'Add entry';
@@ -574,16 +585,29 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.openDropdownId.set(null);
   }
 
-  onContactActionClick(event: ActionClickEvent): void {
-    const contact = event.row as AccountContact;
+  onUserActionClick(event: ActionClickEvent): void {
+    const user = event.row as { id: number; fullName: string; email: string };
     switch (event.actionId) {
       case 'edit':
-        this.onEdit(contact);
+        this.router.navigate(['/admin/users', user.id, 'edit']);
+        this.closeDropdown();
         break;
-      case 'delete':
-        this.onDelete(contact);
+      case 'remove':
+        this.removeUserFromClient(user);
+        this.closeDropdown();
         break;
     }
+  }
+
+  private removeUserFromClient(user: { id: number }): void {
+    this.userService.updateUser(String(user.id), { client: null } as any).subscribe({
+      next: () => {
+        this.clientUsers.update(users => users.filter(u => u.id !== user.id));
+        this.toastService.success('User removed from client');
+        this.cdr.markForCheck();
+      },
+      error: (err) => console.error('Error removing user:', err)
+    });
   }
 
   onAddressActionClick(event: ActionClickEvent): void {
@@ -611,15 +635,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  onEdit(contact: AccountContact): void {
-    this.closeDropdown();
-    this.router.navigate(['/admin/contacts', contact.id, 'edit']);
-  }
-
-  onDelete(contact: AccountContact): void {
-    console.log('Delete contact:', contact);
-    this.closeDropdown();
-  }
 
   onSave(): void {
     this.saveAccount(false);
@@ -661,10 +676,10 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
-          this.router.navigate(['/admin/accounts/list']);
+          this.router.navigate(['/admin/clients/list']);
         } else if (isCreating && result?.id) {
-          // After creating, navigate to edit page for the new account
-          this.router.navigate(['/admin/accounts', result.id, 'edit']);
+          // After creating, navigate to edit page for the new client
+          this.router.navigate(['/admin/clients', result.id, 'edit']);
         }
         // If editing and not navigating, just stay on page (data already saved)
       },
@@ -675,16 +690,97 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  onAddContact(): void {
+  onAddTabItem(): void {
     if (this.activeTab() === 'addresses') {
       this.openAddressModal();
-    } else {
-      // Navigate to create contact page with pre-selected account
-      const account = this.account();
-      this.router.navigate(['/admin/contacts/new'], {
-        queryParams: { accountId: account.id, accountName: account.name }
-      });
+    } else if (this.activeTab() === 'users') {
+      this.openUserModal();
     }
+  }
+
+  // User assignment modal methods
+  openUserModal(): void {
+    this.isUserModalOpen.set(true);
+    this.userSearchQuery.set('');
+    this.loadUnassignedUsers();
+  }
+
+  closeUserModal(): void {
+    this.isUserModalOpen.set(false);
+    this.unassignedUsers.set([]);
+    this.filteredUnassignedUsers.set([]);
+    this.userSearchQuery.set('');
+  }
+
+  private loadUnassignedUsers(): void {
+    this.isLoadingUnassignedUsers.set(true);
+    this.userService.getUsers({ hasClient: false, itemsPerPage: 200 }).subscribe({
+      next: (response) => {
+        const assignedIds = new Set(this.clientUsers().map(u => u.id));
+        const users = (response.member || [])
+          .filter((u: any) => !assignedIds.has(u.id))
+          .map((u: any) => ({
+            id: u.id,
+            fullName: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email || '–',
+            email: u.email ?? '',
+            role: (u.roles || []).includes('ROLE_ADMIN') ? 'Admin' :
+                  (u.roles || []).includes('ROLE_CLIENT_ADMIN') ? 'Client Admin' : 'User'
+          }));
+        this.unassignedUsers.set(users);
+        this.filteredUnassignedUsers.set(users);
+        this.isLoadingUnassignedUsers.set(false);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error loading unassigned users:', err);
+        this.isLoadingUnassignedUsers.set(false);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  onUserSearchChange(event: Event): void {
+    const query = (event.target as HTMLInputElement).value.toLowerCase().trim();
+    this.userSearchQuery.set(query);
+    if (!query) {
+      this.filteredUnassignedUsers.set(this.unassignedUsers());
+    } else {
+      this.filteredUnassignedUsers.set(
+        this.unassignedUsers().filter(u =>
+          u.fullName.toLowerCase().includes(query) ||
+          u.email.toLowerCase().includes(query)
+        )
+      );
+    }
+  }
+
+  assignUserToClient(user: { id: number; fullName: string; email: string; role: string }): void {
+    const clientId = this.accountId();
+    if (!clientId) return;
+
+    this.userService.updateUser(String(user.id), { client: `/api/v1/clients/${clientId}` } as any).subscribe({
+      next: () => {
+        // Add to client users list
+        this.clientUsers.update(users => [...users, { ...user, isActive: true }]);
+        // Remove from unassigned list
+        this.unassignedUsers.update(users => users.filter(u => u.id !== user.id));
+        this.filteredUnassignedUsers.update(users => users.filter(u => u.id !== user.id));
+        this.toastService.success(`${user.fullName} assigned to client`);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error assigning user:', err);
+        this.toastService.error('Failed to assign user');
+      }
+    });
+  }
+
+  navigateToCreateUser(): void {
+    const account = this.account();
+    this.closeUserModal();
+    this.router.navigate(['/admin/users/new'], {
+      queryParams: { clientId: account.id, clientName: account.name }
+    });
   }
 
   // Address modal methods

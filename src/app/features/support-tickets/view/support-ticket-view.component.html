@@ -1,0 +1,128 @@
+<div class="ticket-view">
+  <ui-breadcrumbs [items]="breadcrumbs()"></ui-breadcrumbs>
+
+  @if (loading()) {
+    <div class="ticket-view__loading">
+      <div class="ticket-view__spinner"></div>
+      <p>Loading ticket details...</p>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="ticket-view__error">
+      <p>{{ error() }}</p>
+      <button class="ticket-view__retry-button" (click)="loadTicket(route.snapshot.params['id'])">Retry</button>
+      <button class="ticket-view__back-button" (click)="goBack()">Go Back</button>
+    </div>
+  }
+
+  @if (!loading() && !error() && ticket()) {
+    <div class="ticket-view__container">
+      <div class="ticket-view__header">
+        <div class="ticket-view__header-left">
+          <button class="ticket-view__back-btn" (click)="goBack()">
+            &lsaquo; Back to tickets
+          </button>
+          <h1 class="ticket-view__title">{{ ticket()!.subject }}</h1>
+        </div>
+        <div class="ticket-view__header-actions">
+          <select class="ticket-view__status-select" [value]="ticket()!.status" (change)="updateStatus($any($event.target).value)">
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ticket-view__content">
+        <div class="ticket-view__main">
+          <div class="ticket-view__card">
+            <div class="ticket-view__card-header">
+              <h2 class="ticket-view__card-title">Message</h2>
+            </div>
+            <div class="ticket-view__card-body">
+              <p class="ticket-view__message">{{ ticket()!.message }}</p>
+            </div>
+          </div>
+
+          @if (ticket()!.attachment) {
+            <div class="ticket-view__card">
+              <div class="ticket-view__card-header">
+                <h2 class="ticket-view__card-title">Attachment</h2>
+              </div>
+              <div class="ticket-view__card-body">
+                <div class="ticket-view__attachment">
+                  <div class="ticket-view__attachment-info">
+                    <div class="ticket-view__attachment-name">{{ ticket()!.attachment!.filename }}</div>
+                    <div class="ticket-view__attachment-meta">{{ ticket()!.attachment!.mimeType }}</div>
+                  </div>
+                  <button class="ticket-view__download-btn" (click)="downloadAttachment()">Download</button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="ticket-view__sidebar">
+          <div class="ticket-view__card">
+            <div class="ticket-view__card-header">
+              <h2 class="ticket-view__card-title">Details</h2>
+            </div>
+            <div class="ticket-view__card-body">
+              <div class="ticket-view__detail-row">
+                <span class="ticket-view__detail-label">Ticket ID</span>
+                <span class="ticket-view__detail-value">#{{ ticket()!.id }}</span>
+              </div>
+              <div class="ticket-view__detail-row">
+                <span class="ticket-view__detail-label">Status</span>
+                <span class="ticket-view__status" [ngClass]="'ticket-view__status--' + ticket()!.status">
+                  {{ statusDisplayMap[ticket()!.status] || ticket()!.status }}
+                </span>
+              </div>
+              <div class="ticket-view__detail-row">
+                <span class="ticket-view__detail-label">Urgency</span>
+                <span class="ticket-view__urgency" [style.color]="getUrgencyColor()">
+                  {{ urgencyDisplayMap[ticket()!.urgency]?.label || ticket()!.urgency }}
+                </span>
+              </div>
+              <div class="ticket-view__detail-row">
+                <span class="ticket-view__detail-label">Created</span>
+                <span class="ticket-view__detail-value">{{ formatDate(ticket()!.createdAt) }}</span>
+              </div>
+              <div class="ticket-view__detail-row">
+                <span class="ticket-view__detail-label">Updated</span>
+                <span class="ticket-view__detail-value">{{ formatDate(ticket()!.updatedAt) }}</span>
+              </div>
+              @if (ticket()!.orderId) {
+                <div class="ticket-view__detail-row">
+                  <span class="ticket-view__detail-label">Order ID</span>
+                  <span class="ticket-view__detail-value">{{ ticket()!.orderId }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          @if (ticket()!.user) {
+            <div class="ticket-view__card">
+              <div class="ticket-view__card-header">
+                <h2 class="ticket-view__card-title">Customer</h2>
+              </div>
+              <div class="ticket-view__card-body">
+                <div class="ticket-view__customer">
+                  <div class="ticket-view__customer-avatar">
+                    {{ ticket()!.user!.firstName[0] }}{{ ticket()!.user!.lastName[0] }}
+                  </div>
+                  <div class="ticket-view__customer-info">
+                    <div class="ticket-view__customer-name">{{ getUserFullName() }}</div>
+                    <div class="ticket-view__customer-email">{{ ticket()!.user!.email }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -29,7 +29,7 @@ export const routes: Routes = [
   {
     path: 'admin',
     canActivate: [AuthGuard, RoleGuard],
-    data: { roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN] },
+    data: { roles: [USER_ROLES.ADMIN] },
     children: [
       {
         path: '',
@@ -42,58 +42,40 @@ export const routes: Routes = [
         title: 'Admin | Dashboard'
       },
 
-      // Accounts
-      { path: 'accounts', redirectTo: 'accounts/list', pathMatch: 'full' },
+      // Clients
+      { path: 'clients', redirectTo: 'clients/list', pathMatch: 'full' },
       {
-        path: 'accounts/list',
+        path: 'clients/list',
         loadComponent: () => import('@features/accounts/list/accounts-list.component').then(m => m.AccountsListComponent),
-        title: 'Admin | Accounts'
+        title: 'Admin | Clients'
       },
       {
-        path: 'accounts/new',
+        path: 'clients/new',
         loadComponent: () => import('@features/accounts/edit/accounts-edit.component').then(m => m.AccountsEditComponent),
-        title: 'Admin | New Account'
+        title: 'Admin | New Client'
       },
       {
-        path: 'accounts/:id/edit',
+        path: 'clients/:id/edit',
         loadComponent: () => import('@features/accounts/edit/accounts-edit.component').then(m => m.AccountsEditComponent),
-        title: 'Admin | Account Detail'
+        title: 'Admin | Client Detail'
       },
 
-      // Account Groups
-      { path: 'account-groups', redirectTo: 'account-groups/list', pathMatch: 'full' },
+      // Client Groups
+      { path: 'client-groups', redirectTo: 'client-groups/list', pathMatch: 'full' },
       {
-        path: 'account-groups/list',
+        path: 'client-groups/list',
         loadComponent: () => import('@features/account-groups/list/account-groups-list.component').then(m => m.AccountGroupsListComponent),
-        title: 'Admin | Account Groups'
+        title: 'Admin | Client Groups'
       },
       {
-        path: 'account-groups/new',
+        path: 'client-groups/new',
         loadComponent: () => import('@features/account-groups/edit/account-groups-edit.component').then(m => m.AccountGroupsEditComponent),
-        title: 'Admin | New Account Group'
+        title: 'Admin | New Client Group'
       },
       {
-        path: 'account-groups/:id/edit',
+        path: 'client-groups/:id/edit',
         loadComponent: () => import('@features/account-groups/edit/account-groups-edit.component').then(m => m.AccountGroupsEditComponent),
-        title: 'Admin | Account Group Detail'
-      },
-
-      // Contacts
-      { path: 'contacts', redirectTo: 'contacts/list', pathMatch: 'full' },
-      {
-        path: 'contacts/list',
-        loadComponent: () => import('@features/contacts/list/contacts-list.component').then(m => m.ContactsListComponent),
-        title: 'Admin | Contacts'
-      },
-      {
-        path: 'contacts/new',
-        loadComponent: () => import('@features/contacts/edit/contacts-edit.component').then(m => m.ContactsEditComponent),
-        title: 'Admin | New Contact'
-      },
-      {
-        path: 'contacts/:id/edit',
-        loadComponent: () => import('@features/contacts/edit/contacts-edit.component').then(m => m.ContactsEditComponent),
-        title: 'Admin | Contact Detail'
+        title: 'Admin | Client Group Detail'
       },
 
       // Shop Orders
@@ -310,6 +292,37 @@ export const routes: Routes = [
         path: 'fuel-surcharges/:id/edit',
         loadComponent: () => import('@features/fuel-surcharges/edit/fuel-surcharges-edit.component').then(m => m.FuelSurchargesEditComponent),
         title: 'Admin | Fuel Surcharge Detail'
+      },
+
+      // Support Tickets
+      { path: 'support-tickets', redirectTo: 'support-tickets/list', pathMatch: 'full' },
+      {
+        path: 'support-tickets/list',
+        loadComponent: () => import('@features/support-tickets/list/support-tickets-list.component').then(m => m.SupportTicketsListComponent),
+        title: 'Admin | Support Tickets'
+      },
+      {
+        path: 'support-tickets/:id/view',
+        loadComponent: () => import('@features/support-tickets/view/support-ticket-view.component').then(m => m.SupportTicketViewComponent),
+        title: 'Admin | Ticket Details'
+      },
+
+      // Documentation
+      { path: 'documentation', redirectTo: 'documentation/list', pathMatch: 'full' },
+      {
+        path: 'documentation/list',
+        loadComponent: () => import('@features/documentation/list/documentation-list.component').then(m => m.DocumentationListComponent),
+        title: 'Admin | Documentation'
+      },
+      {
+        path: 'documentation/new',
+        loadComponent: () => import('@features/documentation/edit/documentation-edit.component').then(m => m.DocumentationEditComponent),
+        title: 'Admin | New Documentation'
+      },
+      {
+        path: 'documentation/:id/edit',
+        loadComponent: () => import('@features/documentation/edit/documentation-edit.component').then(m => m.DocumentationEditComponent),
+        title: 'Admin | Edit Documentation'
       },
 
       // Packaging Prices

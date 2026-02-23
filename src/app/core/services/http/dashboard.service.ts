@@ -81,10 +81,12 @@ export class DashboardService {
         const statusLabels: Record<string, string> = {
             'draft': 'Draft',
             'submitted': 'Submitted',
+            'in_review': 'In Review',
+            'more_info': 'More Info',
+            'information_provided': 'Info Provided',
+            'in_progress': 'In Progress',
             'completed': 'Completed',
-            'canceled': 'Canceled',
-            'confirmed': 'Confirmed',
-            'dispatched': 'Dispatched'
+            'canceled': 'Canceled'
         };
         return statusLabels[status] || status;
     }
@@ -96,10 +98,12 @@ export class DashboardService {
         const statusClasses: Record<string, string> = {
             'draft': 'status--draft',
             'submitted': 'status--submitted',
+            'in_review': 'status--in-review',
+            'more_info': 'status--more-info',
+            'information_provided': 'status--info-provided',
+            'in_progress': 'status--in-progress',
             'completed': 'status--completed',
-            'canceled': 'status--canceled',
-            'confirmed': 'status--confirmed',
-            'dispatched': 'status--dispatched'
+            'canceled': 'status--canceled'
         };
         return statusClasses[status] || 'status--default';
     }

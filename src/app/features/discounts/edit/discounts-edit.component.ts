@@ -5,7 +5,6 @@ import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
@@ -58,7 +57,6 @@ const EMPTY_DISCOUNT: DiscountDetail = {
     CommonModule,
     FormsModule,
     RouterModule,
-    BadgeComponent,
     ToggleComponent,
     IconComponent,
     FormFieldComponent,

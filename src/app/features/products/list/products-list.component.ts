@@ -16,6 +16,8 @@ import { ProductService } from '@core/services/http/product.service';
 import { AlertService } from '@services/alert.service';
 import { Product as ApiProduct } from '@core/models';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
+import { ColumnSettingsService } from '@core/services/column-settings.service';
 
 interface Product {
   id: number;
@@ -41,7 +43,8 @@ interface Product {
     TableFooterComponent,
     TableCheckboxSelectionComponent,
     TableActionsDropdownComponent,
-    MobileFooterComponent
+    MobileFooterComponent,
+    ColumnSelectorComponent
   ],
   templateUrl: './products-list.component.html',
   styleUrls: ['./products-list.component.scss'],
@@ -53,6 +56,7 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   private productService = inject(ProductService);
   private alertService = inject(AlertService);
   private destroyRef = inject(DestroyRef);
+  private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
 
@@ -85,7 +89,9 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   // Computed: has any selected
   hasSelected = computed(() => this.selectedCount() > 0);
 
-  // Table columns
+  readonly COLUMN_STORAGE_KEY = 'products';
+  columnDefs: ColumnDefinition[] = [];
+  private allColumns: TableColumn[] = [];
   columns: TableColumn[] = [];
 
   // Table actions
@@ -178,7 +184,18 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   }
 
   private initColumns(): void {
-    this.columns = [
+    const defaultColumnDefs: ColumnDefinition[] = [
+      { key: 'id', label: 'Product ID', visible: true, locked: true },
+      { key: 'code', label: 'Code', visible: true },
+      { key: 'name', label: 'Name', visible: true, locked: true },
+      { key: 'shortDescription', label: 'Short description', visible: true },
+      { key: 'qty', label: 'Qty', visible: true },
+      { key: 'qtyStep', label: 'Qty step', visible: true }
+    ];
+
+    this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
+
+    this.allColumns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
       { key: 'id', label: 'Product ID', sortable: true, width: '112px' },
       { key: 'code', label: 'Code', sortable: true, width: '128px' },
@@ -188,6 +205,22 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
       { key: 'qtyStep', label: 'Qty step', sortable: true, width: '96px' },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
+
+    this.applyColumnVisibility();
+  }
+
+  onColumnsChange(columns: ColumnDefinition[]): void {
+    this.columnDefs = columns;
+    this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.applyColumnVisibility();
+    this.cdr.markForCheck();
+  }
+
+  private applyColumnVisibility(): void {
+    const visibleKeys = new Set(this.columnDefs.filter(c => c.visible).map(c => c.key));
+    this.columns = this.allColumns.filter(col =>
+      ['checkbox', 'actions'].includes(col.key) || visibleKeys.has(col.key)
+    );
   }
 
   onSearchChange(query: string): void {
@@ -202,7 +235,21 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   }
 
   onExport(): void {
-    console.log('Exporting data...');
+    this.productService.exportToExcel(
+      this.sortColumn() || undefined,
+      this.sortDirection() || undefined,
+      this.searchQuery() || undefined
+    ).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `products-${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => console.error('Export failed:', err)
+    });
   }
 
   onAddProduct(): void {

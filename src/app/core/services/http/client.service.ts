@@ -247,6 +247,35 @@ export class ClientService {
     }
 
     /**
+     * Export clients to Excel
+     */
+    exportToExcel(
+        sortField?: string,
+        sortDirection?: 'asc' | 'desc',
+        searchQuery?: string
+    ): Observable<Blob> {
+        let params = new HttpParams();
+
+        if (sortField && sortDirection) {
+            params = params.set(`order[${sortField}]`, sortDirection);
+        }
+        if (searchQuery) {
+            params = params.set('name', searchQuery);
+        }
+
+        return this.http.get(
+            `${environment.apiBaseUrl}/api/clients/export/excel`,
+            {
+                headers: new HttpHeaders({
+                    'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                }),
+                params,
+                responseType: 'blob'
+            }
+        );
+    }
+
+    /**
      * Handle API errors and extract user-friendly messages
      */
     handleError(error: any): string {

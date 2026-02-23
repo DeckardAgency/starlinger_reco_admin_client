@@ -20,7 +20,13 @@
       (add)="onAddUser()"
       (export)="onExport()"
       [hideAddButtonOnMobile]="true"
-    ></ui-list-header>
+    >
+      <app-column-selector
+        [columns]="columnDefs"
+        [storageKey]="COLUMN_STORAGE_KEY"
+        (columnsChange)="onColumnsChange($event)">
+      </app-column-selector>
+    </ui-list-header>
 
     <!-- Filters Row -->
     <div class="filters-row">

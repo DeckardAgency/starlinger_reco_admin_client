@@ -3,7 +3,7 @@ import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SidebarComponent } from './layout/sidebar/sidebar.component';
 import { TopBarComponent } from './layout/topbar/top-bar.component';
-import { AsyncPipe, NgIf } from '@angular/common';
+import { NgIf } from '@angular/common';
 import { filter } from 'rxjs/operators';
 import { SidebarService } from '@services/sidebar.service';
 import { AuthService } from '@core/auth/auth.service';
@@ -17,7 +17,6 @@ import { AlertComponent } from './shared/components/alert/alert.component';
       RouterOutlet,
       SidebarComponent,
       TopBarComponent,
-      AsyncPipe,
       NgIf,
       MobileMenuComponent,
       ToastContainerComponent,

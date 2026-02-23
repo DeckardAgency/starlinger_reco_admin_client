@@ -1,53 +1,132 @@
-<div class="ui-select" [class.ui-select--disabled]="_disabled()" [class.ui-select--pill]="variant() === 'pill'">
+<div class="ui-select" [class.ui-select--disabled]="_disabled()">
   <!-- Label -->
-  <label *ngIf="label()" class="ui-select__label" [attr.for]="name()">
-    {{ label() }}
-    <span *ngIf="required()" class="ui-select__required">*</span>
-  </label>
+  @if (label()) {
+    <label class="ui-select__label" [attr.for]="name()">
+      {{ label() }}
+      @if (required()) {
+        <span class="ui-select__required">*</span>
+      }
+    </label>
+  }
 
-  <!-- Select wrapper -->
-  <div class="ui-select__wrapper">
-    <!-- Pill variant: show placeholder or pill -->
+  <!-- Trigger -->
+  <div
+    [ngClass]="fieldClasses()"
+    (click)="toggleDropdown()"
+    (keydown)="onKeyDown($event)"
+    tabindex="0"
+    role="combobox"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-required]="required()"
+    [attr.aria-disabled]="_disabled()">
+
+    <!-- Pill variant: show pills for selected values -->
     @if (variant() === 'pill') {
-      <span class="ui-select__placeholder" *ngIf="!_value()">{{ placeholder() }}</span>
-      <div class="ui-select__pill" *ngIf="_value()">
-        <button type="button" class="ui-select__pill-remove" (click)="onClear($event)">
-          <ui-icon name="close" size="xs" color="#fafafa"></ui-icon>
-        </button>
-        <span>{{ selectedLabel() }}</span>
-      </div>
+      @if (multiple()) {
+        @if (_multiValues().length > 0) {
+          <div class="ui-select__pills">
+            @for (label of selectedLabels(); track label; let i = $index) {
+              <div class="ui-select__pill">
+                <button type="button" class="ui-select__pill-remove" (click)="removeMultiValue(_multiValues()[i], $event)">
+                  <ui-icon name="close" size="xs" color="#fafafa"></ui-icon>
+                </button>
+                <span>{{ label }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <span class="ui-select__placeholder-text">{{ placeholder() }}</span>
+        }
+      } @else {
+        @if (hasValue()) {
+          <div class="ui-select__pill">
+            <button type="button" class="ui-select__pill-remove" (click)="onClear($event)">
+              <ui-icon name="close" size="xs" color="#fafafa"></ui-icon>
+            </button>
+            <span>{{ selectedLabel() }}</span>
+          </div>
+        } @else {
+          <span class="ui-select__placeholder-text">{{ placeholder() }}</span>
+        }
+      }
+    } @else {
+      <!-- Default variant -->
+      @if (hasValue() && !multiple()) {
+        <span class="ui-select__value">{{ selectedLabel() }}</span>
+      } @else if (multiple() && _multiValues().length > 0) {
+        <span class="ui-select__value">{{ selectedLabels().join(', ') }}</span>
+      } @else {
+        <span class="ui-select__placeholder-text">{{ placeholder() }}</span>
+      }
     }
 
-    <select
-      [ngClass]="selectClasses()"
-      [value]="_value()"
-      [disabled]="_disabled()"
-      [required]="required()"
-      [name]="name()"
-      [attr.id]="name()"
-      (change)="onSelectChange($event)"
-      (focus)="onFocus()"
-      (blur)="onBlur()"
-    >
-      <option value="" disabled [selected]="!_value()">{{ placeholder() }}</option>
-      <option
-        *ngFor="let option of options()"
-        [value]="option.value"
-        [disabled]="option.disabled"
-      >
-        {{ option.label }}
-      </option>
-    </select>
-
-    <!-- Chevron icon -->
-    <span class="ui-select__icon">
-      <ui-icon name="chevron-down" size="sm" color="#71717A"></ui-icon>
-    </span>
+    <!-- Actions -->
+    <div class="ui-select__actions">
+      @if (clearable() && hasValue() && !_disabled() && variant() !== 'pill') {
+        <button type="button" class="ui-select__clear" (click)="onClear($event)" tabindex="-1" aria-label="Clear selection">
+          <ui-icon name="close" size="xs" color="#71717A"></ui-icon>
+        </button>
+      }
+      <span class="ui-select__chevron" [class.ui-select__chevron--open]="isOpen()">
+        <ui-icon name="chevron-down" size="sm" color="#71717A"></ui-icon>
+      </span>
+    </div>
   </div>
 
-  <!-- Hint text -->
-  <span *ngIf="hint() && !error()" class="ui-select__hint">{{ hint() }}</span>
+  <!-- Dropdown -->
+  @if (isOpen()) {
+    <div class="ui-select__dropdown" @dropdownAnimation>
+      @if (searchable()) {
+        <div class="ui-select__search">
+          <input
+            type="text"
+            class="ui-select__search-input"
+            placeholder="Search..."
+            [value]="searchText()"
+            (input)="onSearch($event)"
+            (click)="$event.stopPropagation()"
+            (keydown.escape)="$event.stopPropagation()"
+            aria-label="Search options">
+        </div>
+      }
 
-  <!-- Error text -->
-  <span *ngIf="error()" class="ui-select__error">{{ error() }}</span>
+      @if (filteredOptions().length === 0) {
+        <div class="ui-select__no-results">No results found</div>
+      }
+
+      <div class="ui-select__options" role="listbox">
+        @for (option of filteredOptions(); track option.value) {
+          <div
+            class="ui-select__option"
+            [class.ui-select__option--selected]="isSelected(option)"
+            [class.ui-select__option--disabled]="option.disabled"
+            (click)="selectOption(option); $event.stopPropagation()"
+            role="option"
+            [attr.aria-selected]="isSelected(option)">
+            @if (multiple()) {
+              <div class="ui-select__checkbox" [class.ui-select__checkbox--checked]="isSelected(option)">
+                @if (isSelected(option)) {
+                  <ui-icon name="check" size="xs" color="#fff"></ui-icon>
+                }
+              </div>
+            }
+            <span>{{ option.label }}</span>
+            @if (!multiple() && isSelected(option)) {
+              <ui-icon class="ui-select__check-icon" name="check" size="sm" color="#DC1B30"></ui-icon>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Hint -->
+  @if (hint() && !error()) {
+    <span class="ui-select__hint">{{ hint() }}</span>
+  }
+
+  <!-- Error -->
+  @if (error()) {
+    <span class="ui-select__error">{{ error() }}</span>
+  }
 </div>

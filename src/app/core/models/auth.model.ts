@@ -104,14 +104,13 @@ export interface UserMember {
  * - ROLE_USER: Base role (all authenticated users)
  * - ROLE_CLIENT: Customer role (shop, orders, search)
  * - ROLE_CLIENT_ADMIN: Customer Admin role (manages client users)
- * - ROLE_SUPER_ADMIN: Starlinger Admin role (full system access)
+ * - ROLE_ADMIN: Starlinger Admin role (full system access)
  */
 export const USER_ROLES = {
   USER: 'ROLE_USER',
   CLIENT: 'ROLE_CLIENT',
   CLIENT_ADMIN: 'ROLE_CLIENT_ADMIN',
-  ADMIN: 'ROLE_ADMIN',
-  SUPER_ADMIN: 'ROLE_SUPER_ADMIN'
+  ADMIN: 'ROLE_ADMIN'
 } as const;
 
 export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES];
@@ -122,7 +121,7 @@ export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES];
 export const ROLE_ARRAYS = {
   CLIENT: ['ROLE_USER', 'ROLE_CLIENT'],
   CLIENT_ADMIN: ['ROLE_USER', 'ROLE_CLIENT_ADMIN'],
-  SUPER_ADMIN: ['ROLE_USER', 'ROLE_SUPER_ADMIN']
+  ADMIN: ['ROLE_USER', 'ROLE_ADMIN']
 } as const;
 
 /**
@@ -133,7 +132,7 @@ export function getRoleDisplayName(role: string): string {
     'ROLE_USER': 'User',
     'ROLE_CLIENT': 'Customer',
     'ROLE_CLIENT_ADMIN': 'Customer Admin',
-    'ROLE_SUPER_ADMIN': 'Super Admin'
+    'ROLE_ADMIN': 'Admin'
   };
   return roleMap[role] || role;
 }
@@ -161,8 +160,8 @@ export function isCustomerAdmin(user: User | null): boolean {
 }
 
 /**
- * Check if user is a Super Admin (ROLE_SUPER_ADMIN)
+ * Check if user is an Admin (ROLE_ADMIN)
  */
-export function isSuperAdmin(user: User | null): boolean {
-  return hasRole(user, USER_ROLES.SUPER_ADMIN);
+export function isAdmin(user: User | null): boolean {
+  return hasRole(user, USER_ROLES.ADMIN);
 }

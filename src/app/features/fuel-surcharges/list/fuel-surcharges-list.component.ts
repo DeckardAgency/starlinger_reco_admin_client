@@ -19,6 +19,8 @@ import { FuelSurchargeService } from '@core/services/http/fuel-surcharge.service
 import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
 import { AlertService } from '@services/alert.service';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
+import { ColumnSettingsService } from '@core/services/column-settings.service';
 
 @Component({
   selector: 'app-fuel-surcharges-list',
@@ -33,7 +35,8 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
     TableFooterComponent,
     TableActionsDropdownComponent,
     TableCheckboxSelectionComponent,
-    MobileFooterComponent
+    MobileFooterComponent,
+    ColumnSelectorComponent
   ],
   templateUrl: './fuel-surcharges-list.component.html',
   styleUrls: ['./fuel-surcharges-list.component.scss'],
@@ -46,6 +49,7 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   private deliveryTypeService = inject(DeliveryTypeService);
   private alertService = inject(AlertService);
   private destroyRef = inject(DestroyRef);
+  private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
 
@@ -77,6 +81,11 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
 
   selectedCount = computed(() => this.fuelSurcharges().filter(fs => fs.selected).length);
   hasSelected = computed(() => this.selectedCount() > 0);
+
+  // Column selector
+  readonly COLUMN_STORAGE_KEY = 'fuel-surcharges';
+  columnDefs: ColumnDefinition[] = [];
+  private allColumns: TableColumn[] = [];
 
   // Table columns
   columns: TableColumn[] = [];
@@ -172,13 +181,37 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   }
 
   private initColumns(): void {
-    this.columns = [
+    const defaultColumnDefs: ColumnDefinition[] = [
+      { key: 'date', label: 'Date', visible: true, locked: true },
+      { key: 'fuelSurcharge', label: 'Surcharge', visible: true },
+      { key: 'deliveryType', label: 'Delivery type', visible: true }
+    ];
+
+    this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
+
+    this.allColumns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
       { key: 'date', label: 'Date', sortable: true, template: this.dateTemplate },
       { key: 'fuelSurcharge', label: 'Surcharge', sortable: true, template: this.fuelSurchargeTemplate },
       { key: 'deliveryType', label: 'Delivery type', sortable: false, template: this.deliveryTypeTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
+
+    this.applyColumnVisibility();
+  }
+
+  onColumnsChange(columns: ColumnDefinition[]): void {
+    this.columnDefs = columns;
+    this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.applyColumnVisibility();
+    this.cdr.markForCheck();
+  }
+
+  private applyColumnVisibility(): void {
+    const visibleKeys = new Set(this.columnDefs.filter(c => c.visible).map(c => c.key));
+    this.columns = this.allColumns.filter(col =>
+      col.key === 'actions' || col.key === 'checkbox' || visibleKeys.has(col.key)
+    );
   }
 
   onSearchChange(query: string): void {

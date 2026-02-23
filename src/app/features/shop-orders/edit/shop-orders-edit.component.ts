@@ -171,11 +171,14 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
 
   // Order status options
   orderStatusOptions: SelectOption[] = [
-    { value: 'pending', label: 'Pending' },
-    { value: 'processing', label: 'Processing' },
-    { value: 'dispatched', label: 'Dispatched' },
+    { value: 'draft', label: 'Draft' },
+    { value: 'submitted', label: 'Submitted' },
+    { value: 'in_review', label: 'In Review' },
+    { value: 'more_info', label: 'More Info Needed' },
+    { value: 'information_provided', label: 'Info Provided' },
+    { value: 'in_progress', label: 'In Progress' },
     { value: 'completed', label: 'Completed' },
-    { value: 'cancelled', label: 'Cancelled' }
+    { value: 'canceled', label: 'Canceled' }
   ];
 
   get statusOptions(): SelectOption[] {
@@ -699,11 +702,23 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   onExport(): void {
-    console.log('Export order...');
+    const orderId = this.order().id;
+    if (!orderId) return;
+    this.orderService.exportOrderPdf(String(orderId)).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `order-${this.order().internalRef || orderId}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => console.error('Export failed:', err)
+    });
   }
 
   onPrint(): void {
-    console.log('Print order...');
+    window.print();
   }
 
   onSave(): void {
@@ -746,13 +761,17 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   getStatusBadgeVariant(status: string): 'success' | 'warning' | 'danger' | 'info' | 'secondary' {
-    switch (status.toLowerCase()) {
-      case 'new': return 'success';
-      case 'completed': return 'success';
-      case 'in-progress': return 'warning';
-      case 'cancelled': return 'danger';
-      default: return 'secondary';
-    }
+    const variants: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'secondary'> = {
+      'draft': 'secondary',
+      'submitted': 'info',
+      'in_review': 'info',
+      'more_info': 'warning',
+      'information_provided': 'info',
+      'in_progress': 'warning',
+      'completed': 'success',
+      'canceled': 'danger'
+    };
+    return variants[status.toLowerCase()] || 'secondary';
   }
 
   formatCurrency(value: number): string {

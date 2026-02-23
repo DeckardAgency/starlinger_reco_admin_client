@@ -2,10 +2,12 @@
 
 :host {
   @include admin.admin-host;
+  height: 100%;
 }
 
 .delivery-price-detail-page {
   @include admin.detail-page;
+  min-height: 0;
 }
 
 .detail-content {

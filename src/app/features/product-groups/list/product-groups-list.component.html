@@ -16,7 +16,13 @@
       (add)="onAddProductGroup()"
       (bulkDelete)="onBulkDelete()"
       [hideAddButtonOnMobile]="true"
-    ></ui-list-header>
+    >
+      <app-column-selector
+        [columns]="columnDefs"
+        [storageKey]="COLUMN_STORAGE_KEY"
+        (columnsChange)="onColumnsChange($event)">
+      </app-column-selector>
+    </ui-list-header>
 
     <div class="table-container">
       @if (isLoading()) {

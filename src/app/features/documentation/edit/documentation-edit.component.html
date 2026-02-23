@@ -1,0 +1,612 @@
+<div class="documentation-edit">
+  <ui-breadcrumbs [items]="breadcrumbs"></ui-breadcrumbs>
+
+  <div class="documentation-edit__header">
+    <div class="documentation-edit__title-container">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+      </svg>
+      <h1 class="documentation-edit__title">{{ isEditMode ? 'Edit Documentation' : 'New Documentation' }}</h1>
+    </div>
+
+    <div class="documentation-edit__actions">
+      @if (isEditMode) {
+        <button
+          class="documentation-edit__btn documentation-edit__btn--secondary"
+          (click)="toggleMediaPanel()"
+          type="button"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          Images
+        </button>
+        <button
+          class="documentation-edit__btn documentation-edit__btn--secondary"
+          [class.documentation-edit__btn--active]="showRevisions"
+          (click)="toggleRevisions()"
+          type="button"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          History
+          @if (revisions.length > 0) {
+            <span class="documentation-edit__badge">{{ revisions.length }}</span>
+          }
+        </button>
+      }
+      <button
+        class="documentation-edit__btn documentation-edit__btn--secondary"
+        (click)="togglePreview()"
+        type="button"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        {{ showPreview ? 'Edit' : 'Preview' }}
+      </button>
+      <button
+        class="documentation-edit__btn documentation-edit__btn--secondary"
+        (click)="cancel()"
+        [disabled]="isSaving"
+        type="button"
+      >
+        Cancel
+      </button>
+      <button
+        class="documentation-edit__btn documentation-edit__btn--secondary"
+        (click)="saveDocumentation(true)"
+        [disabled]="isSaving"
+        type="button"
+      >
+        {{ isSaving ? 'Saving...' : 'Save & Continue' }}
+      </button>
+      <button
+        class="documentation-edit__btn documentation-edit__btn--primary"
+        (click)="saveDocumentation(false)"
+        [disabled]="isSaving"
+        type="button"
+      >
+        {{ isSaving ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading) {
+    <div class="documentation-edit__loading">
+      <div class="documentation-edit__shimmer documentation-edit__shimmer--title"></div>
+      <div class="documentation-edit__shimmer documentation-edit__shimmer--input"></div>
+      <div class="documentation-edit__shimmer documentation-edit__shimmer--textarea"></div>
+    </div>
+  }
+
+  <!-- Form -->
+  @if (dataLoaded && !isLoading) {
+    <form [formGroup]="documentationForm" class="documentation-edit__form">
+      <div class="documentation-edit__main-content" [class.documentation-edit__main-content--with-sidebar]="showRevisions || showMediaPanel">
+        <!-- Editor Section -->
+        <div class="documentation-edit__editor-section">
+          <!-- Basic Info -->
+          <div class="documentation-edit__section">
+            <div class="documentation-edit__row">
+              <div class="documentation-edit__field documentation-edit__field--full">
+                <label class="documentation-edit__label" for="title">Title *</label>
+                <input
+                  type="text"
+                  id="title"
+                  formControlName="title"
+                  class="documentation-edit__input"
+                  [class.documentation-edit__input--error]="isFieldInvalid('title')"
+                  placeholder="Enter documentation title"
+                >
+                @if (isFieldInvalid('title')) {
+                  <span class="documentation-edit__error">{{ getFieldError('title') }}</span>
+                }
+              </div>
+            </div>
+
+            <div class="documentation-edit__row">
+              <div class="documentation-edit__field">
+                <label class="documentation-edit__label" for="category">Category</label>
+                <input
+                  type="text"
+                  id="category"
+                  formControlName="category"
+                  class="documentation-edit__input"
+                  placeholder="e.g., User Guide, FAQ"
+                >
+              </div>
+              <div class="documentation-edit__field documentation-edit__field--small">
+                <label class="documentation-edit__label" for="sortOrder">Sort Order *</label>
+                <input
+                  type="number"
+                  id="sortOrder"
+                  formControlName="sortOrder"
+                  class="documentation-edit__input"
+                  [class.documentation-edit__input--error]="isFieldInvalid('sortOrder')"
+                  min="0"
+                >
+                @if (isFieldInvalid('sortOrder')) {
+                  <span class="documentation-edit__error">{{ getFieldError('sortOrder') }}</span>
+                }
+              </div>
+              <div class="documentation-edit__field documentation-edit__field--small">
+                <label class="documentation-edit__label">Status</label>
+                <div class="documentation-edit__toggle">
+                  <label class="documentation-edit__toggle-switch">
+                    <input type="checkbox" formControlName="isPublished">
+                    <span class="documentation-edit__toggle-slider"></span>
+                  </label>
+                  <span class="documentation-edit__toggle-label">
+                    {{ documentationForm.get('isPublished')?.value ? 'Published' : 'Draft' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Content Section -->
+          <div class="documentation-edit__section">
+            <label class="documentation-edit__label">Content (Markdown) *</label>
+
+            <!-- Editor View -->
+            @if (!showPreview) {
+              <div class="documentation-edit__content-editor">
+                <div class="documentation-edit__editor-toolbar">
+                  <span class="documentation-edit__toolbar-hint">Supports Markdown formatting</span>
+                </div>
+                <textarea
+                  #contentTextarea
+                  formControlName="content"
+                  class="documentation-edit__textarea"
+                  [class.documentation-edit__textarea--error]="isFieldInvalid('content')"
+                  placeholder="# Heading&#10;&#10;Write your documentation content here using **Markdown** syntax...&#10;&#10;- List item 1&#10;- List item 2&#10;&#10;```code&#10;// Code block&#10;```"
+                  rows="20"
+                  (input)="onTextareaInput($event)"
+                  (click)="onTextareaSelect($event)"
+                  (keyup)="onTextareaSelect($event)"
+                ></textarea>
+                @if (isFieldInvalid('content')) {
+                  <span class="documentation-edit__error">{{ getFieldError('content') }}</span>
+                }
+              </div>
+            }
+
+            <!-- Preview View -->
+            @if (showPreview) {
+              <div class="documentation-edit__content-preview">
+                <div class="documentation-edit__preview-header">
+                  <span>Preview</span>
+                </div>
+                <div class="documentation-edit__preview-content">
+                  <pre class="documentation-edit__markdown-preview">{{ documentationForm.get('content')?.value }}</pre>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Revisions Sidebar -->
+        @if (showRevisions) {
+          <div class="documentation-edit__revisions-sidebar">
+            <div class="documentation-edit__revisions-header">
+              <h3>Revision History</h3>
+              <button class="documentation-edit__close-btn" (click)="toggleRevisions()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            @if (loadingRevisions) {
+              <div class="documentation-edit__revisions-loading">
+                <div class="documentation-edit__spinner"></div>
+                <span>Loading revisions...</span>
+              </div>
+            }
+
+            @if (!loadingRevisions && revisions.length === 0) {
+              <div class="documentation-edit__revisions-empty">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span>No revisions yet</span>
+                <p>Changes will be tracked when you edit and save this document.</p>
+              </div>
+            }
+
+            <!-- Revision List View -->
+            @if (!loadingRevisions && revisions.length > 0) {
+              <div class="documentation-edit__revisions-list">
+                <div class="documentation-edit__revisions-info">
+                  <span>{{ revisions.length }} revision{{ revisions.length !== 1 ? 's' : '' }}</span>
+                </div>
+                @for (revision of revisions; track revision.id; let i = $index) {
+                  <div
+                    class="documentation-edit__revision-item"
+                    [class.documentation-edit__revision-item--selected]="selectedRevision?.id === revision.id"
+                    [class.documentation-edit__revision-item--current]="i === 0"
+                  >
+                    <div class="documentation-edit__revision-main" (click)="selectRevision(revision)">
+                      <div class="documentation-edit__revision-icon">
+                        @if (i === 0) {
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                        } @else {
+                          <span>{{ revision.revisionNumber }}</span>
+                        }
+                      </div>
+                      <div class="documentation-edit__revision-content">
+                        <div class="documentation-edit__revision-header">
+                          <span class="documentation-edit__revision-number">
+                            Version {{ revision.revisionNumber }}
+                            @if (i === 0) {
+                              <span class="documentation-edit__revision-current-badge">Current</span>
+                            }
+                          </span>
+                          <span class="documentation-edit__revision-date">{{ formatDate(revision.editedAt) }}</span>
+                        </div>
+                        <div class="documentation-edit__revision-meta">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                          </svg>
+                          <span class="documentation-edit__revision-author">{{ getEditorName(revision.editedBy) }}</span>
+                        </div>
+                        @if (revision.changeNote) {
+                          <div class="documentation-edit__revision-note">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            {{ revision.changeNote }}
+                          </div>
+                        }
+                      </div>
+                    </div>
+
+                    <!-- Expanded actions when selected -->
+                    @if (selectedRevision?.id === revision.id) {
+                      <div class="documentation-edit__revision-actions">
+                        <button
+                          class="documentation-edit__revision-action"
+                          (click)="previewRevision(revision); $event.stopPropagation()"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                          </svg>
+                          Preview
+                        </button>
+                        <button
+                          class="documentation-edit__revision-action"
+                          (click)="compareWithCurrent(revision); $event.stopPropagation()"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="20" x2="18" y2="10"></line>
+                            <line x1="12" y1="20" x2="12" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="14"></line>
+                          </svg>
+                          Compare
+                        </button>
+                        @if (i !== 0) {
+                          <button
+                            class="documentation-edit__revision-action documentation-edit__revision-action--primary"
+                            (click)="restoreRevision(revision); $event.stopPropagation()"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <polyline points="1 4 1 10 7 10"></polyline>
+                              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                            </svg>
+                            Restore
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Media/Images Sidebar -->
+        @if (showMediaPanel) {
+          <div class="documentation-edit__media-sidebar">
+            <div class="documentation-edit__media-header">
+              <h3>Images</h3>
+              <button class="documentation-edit__close-btn" (click)="toggleMediaPanel()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Upload Area -->
+            <div
+              class="documentation-edit__upload-area"
+              [class.documentation-edit__upload-area--drag-over]="dragOver"
+              [class.documentation-edit__upload-area--uploading]="uploadingMedia"
+              (dragover)="onDragOver($event)"
+              (dragleave)="onDragLeave($event)"
+              (drop)="onDrop($event)"
+            >
+              <input
+                type="file"
+                id="mediaUpload"
+                class="documentation-edit__upload-input"
+                accept="image/*"
+                (change)="onFileSelected($event)"
+                [disabled]="uploadingMedia"
+              >
+              <label for="mediaUpload" class="documentation-edit__upload-label">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                @if (!uploadingMedia) {
+                  <span>Drop image here or click to upload</span>
+                } @else {
+                  <span>Uploading...</span>
+                }
+              </label>
+            </div>
+
+            <div class="documentation-edit__media-hint">
+              Use <code ngNonBindable>{{media:filename.png}}</code> in markdown to embed images.
+            </div>
+
+            @if (loadingMedia) {
+              <div class="documentation-edit__media-loading">
+                <div class="documentation-edit__spinner"></div>
+                <span>Loading images...</span>
+              </div>
+            }
+
+            @if (!loadingMedia && mediaItems.length === 0) {
+              <div class="documentation-edit__media-empty">
+                No images uploaded yet.
+              </div>
+            }
+
+            @if (!loadingMedia && mediaItems.length > 0) {
+              <div class="documentation-edit__media-list">
+                @for (media of mediaItems; track media.id) {
+                  <div class="documentation-edit__media-item">
+                    <div class="documentation-edit__media-preview">
+                      <img [src]="getMediaUrl(media.filePath)" [alt]="media.filename">
+                    </div>
+                    <div class="documentation-edit__media-info">
+                      <span class="documentation-edit__media-filename" [title]="media.filename">{{ media.filename }}</span>
+                      <div class="documentation-edit__media-actions">
+                        <button
+                          class="documentation-edit__media-action"
+                          title="Copy placeholder"
+                          (click)="copyImagePlaceholder(media)"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                          </svg>
+                        </button>
+                        <button
+                          class="documentation-edit__media-action"
+                          title="Insert into content"
+                          (click)="insertImageAtCursor(media)"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                          </svg>
+                        </button>
+                        <button
+                          class="documentation-edit__media-action documentation-edit__media-action--delete"
+                          title="Delete image"
+                          (click)="deleteMedia(media)"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </form>
+  }
+
+  <!-- Mobile Actions -->
+  @if (dataLoaded && !isLoading) {
+    <div class="documentation-edit__mobile-actions">
+      <button
+        class="documentation-edit__btn documentation-edit__btn--secondary documentation-edit__btn--mobile"
+        (click)="cancel()"
+        [disabled]="isSaving"
+        type="button"
+      >
+        Cancel
+      </button>
+      <button
+        class="documentation-edit__btn documentation-edit__btn--primary documentation-edit__btn--mobile"
+        (click)="saveDocumentation(false)"
+        [disabled]="isSaving"
+        type="button"
+      >
+        {{ isSaving ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+  }
+
+  <!-- Preview Modal -->
+  @if (revisionViewMode === 'preview' && selectedRevision) {
+    <div class="revision-modal">
+      <div class="revision-modal__backdrop" (click)="backToRevisionList()"></div>
+      <div class="revision-modal__container revision-modal__container--preview">
+        <div class="revision-modal__header">
+          <h2 class="revision-modal__title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            Preview Version {{ selectedRevision.revisionNumber }}
+          </h2>
+          <button class="revision-modal__close" (click)="backToRevisionList()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="revision-modal__meta">
+          <div class="revision-modal__meta-grid">
+            <div class="revision-modal__meta-item">
+              <span class="revision-modal__meta-label">Title</span>
+              <span class="revision-modal__meta-value">{{ selectedRevision.title }}</span>
+            </div>
+            <div class="revision-modal__meta-item">
+              <span class="revision-modal__meta-label">Version</span>
+              <span class="revision-modal__meta-value">{{ selectedRevision.revisionNumber }}</span>
+            </div>
+            <div class="revision-modal__meta-item">
+              <span class="revision-modal__meta-label">Date</span>
+              <span class="revision-modal__meta-value">{{ formatDate(selectedRevision.editedAt) }}</span>
+            </div>
+            <div class="revision-modal__meta-item">
+              <span class="revision-modal__meta-label">Author</span>
+              <span class="revision-modal__meta-value">{{ getEditorName(selectedRevision.editedBy) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="revision-modal__body">
+          <label class="revision-modal__content-label">Content</label>
+          <pre class="revision-modal__content-text">{{ selectedRevision.content }}</pre>
+        </div>
+
+        <div class="revision-modal__footer">
+          <button
+            class="documentation-edit__btn documentation-edit__btn--secondary"
+            (click)="backToRevisionList()"
+          >
+            Close
+          </button>
+          <button
+            class="documentation-edit__btn documentation-edit__btn--secondary"
+            (click)="applyRevisionContent(selectedRevision)"
+          >
+            Apply to Editor
+          </button>
+          <button
+            class="documentation-edit__btn documentation-edit__btn--primary"
+            (click)="restoreRevision(selectedRevision)"
+          >
+            Restore This Version
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Compare Modal -->
+  @if (revisionViewMode === 'compare' && compareRevision) {
+    <div class="revision-modal">
+      <div class="revision-modal__backdrop" (click)="backToRevisionList()"></div>
+      <div class="revision-modal__container revision-modal__container--compare">
+        <div class="revision-modal__header">
+          <h2 class="revision-modal__title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            Compare Changes
+          </h2>
+          <button class="revision-modal__close" (click)="backToRevisionList()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="revision-modal__compare-header">
+          <div class="revision-modal__compare-column revision-modal__compare-column--old">
+            <span class="revision-modal__compare-label">Version {{ compareRevision.revisionNumber }}</span>
+            <span class="revision-modal__compare-date">{{ formatDate(compareRevision.editedAt) }}</span>
+          </div>
+          <div class="revision-modal__compare-column revision-modal__compare-column--new">
+            <span class="revision-modal__compare-label">Current Version</span>
+            <span class="revision-modal__compare-date">Now</span>
+          </div>
+        </div>
+
+        @if (compareRevision.title !== documentationForm.get('title')?.value) {
+          <div class="revision-modal__title-diff">
+            <div class="revision-modal__diff-label">Title changed:</div>
+            <div class="revision-modal__diff-row">
+              <span class="revision-modal__diff revision-modal__diff--removed">{{ compareRevision.title }}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+              <span class="revision-modal__diff revision-modal__diff--added">{{ documentationForm.get('title')?.value }}</span>
+            </div>
+          </div>
+        }
+
+        <div class="revision-modal__body revision-modal__body--compare">
+          <div class="revision-modal__compare-side revision-modal__compare-side--old">
+            <div class="revision-modal__compare-side-header">Old Content</div>
+            <pre class="revision-modal__compare-content">{{ compareRevision.content }}</pre>
+          </div>
+          <div class="revision-modal__compare-side revision-modal__compare-side--new">
+            <div class="revision-modal__compare-side-header">Current Content</div>
+            <pre class="revision-modal__compare-content">{{ documentationForm.get('content')?.value }}</pre>
+          </div>
+        </div>
+
+        <div class="revision-modal__footer">
+          <button
+            class="documentation-edit__btn documentation-edit__btn--secondary"
+            (click)="backToRevisionList()"
+          >
+            Close
+          </button>
+          <button
+            class="documentation-edit__btn documentation-edit__btn--secondary"
+            (click)="applyRevisionContent(compareRevision)"
+          >
+            Use Old Version
+          </button>
+          <button
+            class="documentation-edit__btn documentation-edit__btn--primary"
+            (click)="restoreRevision(compareRevision)"
+          >
+            Restore Version {{ compareRevision.revisionNumber }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

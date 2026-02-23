@@ -5,10 +5,12 @@
 // =============================================================================
 :host {
   @include admin.admin-host;
+  height: 100%;
 }
 
 .product-detail-page {
   @include admin.detail-page;
+  min-height: 0;
 }
 
 .page-content {
@@ -100,8 +102,8 @@
 }
 
 .card {
-  @include admin.form-card;
   flex: 1;
+  @include admin.form-card;
 
   &__toggles {
     display: flex;
@@ -139,14 +141,17 @@
 // Tabbed Section
 // =============================================================================
 .tabbed-section {
-  @include admin.tabs-table-container;
+  background: white;
+  border: 1px solid #E4E4E7;
+  border-radius: 8px;
+  flex-shrink: 0;
 
   &__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding-right: 8px;
-    background: transparent;
+    background: white;
     border-bottom: 1px solid #e4e4e7;
 
     @media (max-width: 768px) {
@@ -442,6 +447,14 @@
   .search-input {
     @include admin.search-input-field;
   }
+}
+
+// Available products section (below tabbed area)
+.available-products-section {
+  background: white;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  padding: 20px;
 }
 
 .related-section {

@@ -245,7 +245,7 @@ describe('AuthService', () => {
       localStorage.setItem(USER_KEY, JSON.stringify(user));
       service = createService();
 
-      expect(service.hasRole('ROLE_SUPER_ADMIN')).toBe(false);
+      expect(service.hasRole('ROLE_ADMIN')).toBe(false);
     });
 
     it('should return false when no user is logged in', () => {

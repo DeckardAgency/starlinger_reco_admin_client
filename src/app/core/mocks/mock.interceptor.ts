@@ -276,9 +276,6 @@ export class MockInterceptor implements HttpInterceptor {
         case 'recouser@starlinger.com':
           user = mockUsers.customer;
           break;
-        case 'viewer@starlinger.com':
-          user = { ...mockUsers.customer, email: 'viewer@starlinger.com', roles: ['ROLE_VIEWER'] };
-          break;
         default:
           return { error: 'Invalid credentials', code: 401 };
       }
@@ -362,7 +359,6 @@ export class MockInterceptor implements HttpInterceptor {
           if (payload.email === 'admin@starlinger.com') return { ...mockUsers.superAdmin, email: 'admin@starlinger.com', roles: ['ROLE_ADMIN'] };
           if (payload.email === 'clientadmin@starlinger.com') return mockUsers.customerAdmin;
           if (payload.email === 'recouser@starlinger.com') return mockUsers.customer;
-          if (payload.email === 'viewer@starlinger.com') return { ...mockUsers.customer, email: 'viewer@starlinger.com', roles: ['ROLE_VIEWER'] };
           // Legacy test users
           if (payload.email === 'super@test.com') return mockUsers.superAdmin;
           if (payload.email === 'admin@test.com') return mockUsers.customerAdmin;
@@ -395,9 +391,6 @@ export class MockInterceptor implements HttpInterceptor {
         break;
       case 'recouser@starlinger.com':
         user = mockUsers.customer;
-        break;
-      case 'viewer@starlinger.com':
-        user = { ...mockUsers.customer, email: 'viewer@starlinger.com', roles: ['ROLE_VIEWER'] };
         break;
       // Legacy test users
       case 'super@test.com':

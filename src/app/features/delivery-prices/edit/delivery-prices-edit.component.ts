@@ -9,7 +9,6 @@ import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
-import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { DeliveryPrice, DeliveryPriceDeliveryType } from '@core/models/delivery-price.model';
@@ -60,7 +59,6 @@ interface SelectOption {
     BreadcrumbsComponent,
     DetailHeaderComponent,
     MobileFooterComponent,
-    IconComponent,
     SelectComponent
   ],
   templateUrl: './delivery-prices-edit.component.html',
@@ -220,7 +218,7 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
     // Build explicit payload with only writable fields - never send id
     const payload: Record<string, unknown> = {
       name: data.name || null,
-      deliveryType: data.deliveryType || null,
+      deliveryType: data.deliveryType ? `/api/v1/delivery_types/${data.deliveryType}` : null,
       dhlZone: data.dhlZone !== '' ? parseInt(data.dhlZone, 10) : null,
       sizeFrom: data.sizeFrom || null,
       sizeTo: data.sizeTo || null,

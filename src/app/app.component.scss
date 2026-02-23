@@ -35,7 +35,10 @@
     margin-left: 250px;
     margin-top: 80px; // Account for top-bar height
     transition: margin-left 0.3s ease;
-    min-height: calc(100vh - 80px);
+    height: calc(100vh - 80px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     background-color: #f4f4f5;
 
     @media screen and (max-width: 834px) {

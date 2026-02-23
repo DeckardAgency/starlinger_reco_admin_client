@@ -31,8 +31,7 @@ export class TopBarComponent implements OnInit, OnDestroy {
      * Check if current user is Admin
      */
     get isAdmin(): boolean {
-        return this.authService.hasRole('ROLE_ADMIN') ||
-               this.authService.hasRole('ROLE_SUPER_ADMIN');
+        return this.authService.hasRole('ROLE_ADMIN');
     }
 
     openMobileSearch(): void {

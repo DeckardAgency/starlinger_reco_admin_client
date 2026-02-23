@@ -155,6 +155,11 @@
             <ui-icon name="plus" size="sm"></ui-icon>
           </button>
         </div>
+        <div class="tabbed-section__cta" *ngIf="activeTab() === 'relatedProducts'">
+          <button *ngIf="selectedRelatedProductIds().size > 0" class="btn btn--outline" (click)="removeSelectedRelatedProducts()">
+            <span>Remove selected</span>
+          </button>
+        </div>
       </div>
 
       <!-- Short Description Tab Content -->
@@ -265,12 +270,31 @@
           <p class="empty-state__text">No applied discounts</p>
         </div>
       </div>
+
+      <!-- Related Products Tab Content -->
+      <div class="tab-content tab-content--no-padding" *ngIf="activeTab() === 'relatedProducts'">
+        <div class="related-section related-section--compact">
+          <div class="table-container">
+            <ui-data-table
+              [columns]="relatedProductColumns"
+              [data]="relatedProducts()"
+              [sortColumn]="sortColumn()"
+              [sortDirection]="sortDirection()"
+              (sort)="onSort($event)">
+            </ui-data-table>
+          </div>
+          <div class="empty-state" *ngIf="relatedProducts().length === 0">
+            <p class="empty-state__text">No related products selected</p>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Select Related Products Section -->
+    <!-- Available Products Section (outside tabs) -->
+    <div class="available-products-section">
       <div class="section-title-header">
         <div class="section-title-header__left">
-          <h2 class="section-title-header__title">Select related products</h2>
+          <h2 class="section-title-header__title">Available products</h2>
           <span class="section-title-header__count">{{ totalItems() }}</span>
         </div>
         <div class="section-title-header__right">
@@ -283,54 +307,33 @@
               [value]="searchQuery()"
               (input)="onSearch($any($event.target).value)">
           </div>
-        <button *ngIf="selectedProductIds().size > 0" class="btn btn--secondary" (click)="addSelectedProducts()">
+          <button *ngIf="selectedProductIds().size > 0" class="btn btn--secondary" (click)="addSelectedProducts()">
             <span>Add selected</span>
             <ui-icon name="plus" size="sm"></ui-icon>
           </button>
         </div>
       </div>
 
-    <div class="related-section">
-      <div class="table-container">
-        <ui-data-table
-          [columns]="availableProductColumns"
-          [data]="filteredAvailableProducts()"
-          [sortColumn]="sortColumn()"
-          [sortDirection]="sortDirection()"
-          (sort)="onSort($event)">
-        </ui-data-table>
-      </div>
-
-      <ui-table-footer
-        [currentPage]="currentPage()"
-        [totalItems]="totalItems()"
-        [itemsPerPage]="itemsPerPage"
-        (pageChange)="onPageChange($event)">
-      </ui-table-footer>
-    </div>
-
-    <!-- Related Products Section -->
-    <div class="related-section related-section--compact">
-      <div class="section-title-header">
-        <div class="section-title-header__left">
-          <h2 class="section-title-header__title">Related products</h2>
-          <span class="section-title-header__count">{{ relatedProducts().length }}</span>
+      <div class="related-section">
+        <div class="table-container">
+          <ui-data-table
+            [columns]="availableProductColumns"
+            [data]="filteredAvailableProducts()"
+            [sortColumn]="sortColumn()"
+            [sortDirection]="sortDirection()"
+            (sort)="onSort($event)">
+          </ui-data-table>
         </div>
-        <div class="section-title-header__right" *ngIf="selectedRelatedProductIds().size > 0">
-          <button class="btn btn--secondary" (click)="removeSelectedRelatedProducts()">
-            <span>Remove selected</span>
-          </button>
-        </div>
-      </div>
 
-      <div class="table-container">
-        <ui-data-table
-          [columns]="relatedProductColumns"
-          [data]="relatedProducts()"
-          [sortColumn]="sortColumn()"
-          [sortDirection]="sortDirection()"
-          (sort)="onSort($event)">
-        </ui-data-table>
+        <ui-table-footer
+          [showingFrom]="showingFrom()"
+          [showingTo]="showingTo()"
+          [currentPage]="currentPage()"
+          [totalItems]="totalItems()"
+          [itemsPerPage]="itemsPerPage"
+          [showPagination]="true"
+          (pageChange)="onPageChange($event)">
+        </ui-table-footer>
       </div>
     </div>
   </div>

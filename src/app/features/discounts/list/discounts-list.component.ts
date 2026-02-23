@@ -10,6 +10,8 @@ import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
 import { Discount } from '@core/models/discount.model';
 import { DiscountService } from '@core/services/http/discount.service';
 import { AlertService } from '@services/alert.service';
+import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
+import { ColumnSettingsService } from '@core/services/column-settings.service';
 
 // Consolidated components
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -38,7 +40,8 @@ interface DiscountRow extends Discount {
     TableActionsDropdownComponent,
     TableCheckboxSelectionComponent,
     TableFooterComponent,
-    MobileFooterComponent
+    MobileFooterComponent,
+    ColumnSelectorComponent
   ],
   templateUrl: './discounts-list.component.html',
   styleUrls: ['./discounts-list.component.scss'],
@@ -50,6 +53,7 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
   private discountService = inject(DiscountService);
   private alertService = inject(AlertService);
   private destroyRef = inject(DestroyRef);
+  private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
 
@@ -82,6 +86,11 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
 
   // Computed: has any selected
   hasSelected = computed(() => this.selectedCount() > 0);
+
+  // Column selector
+  readonly COLUMN_STORAGE_KEY = 'discounts';
+  columnDefs: ColumnDefinition[] = [];
+  private allColumns: TableColumn[] = [];
 
   // Table columns
   columns: TableColumn[] = [];
@@ -181,7 +190,18 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
   }
 
   private initColumns(): void {
-    this.columns = [
+    const defaultColumnDefs: ColumnDefinition[] = [
+      { key: 'id', label: 'Id', visible: true },
+      { key: 'name', label: 'Name', visible: true, locked: true },
+      { key: 'status', label: 'Status', visible: true },
+      { key: 'priority', label: 'Priority', visible: true },
+      { key: 'dateValidFrom', label: 'Date valid from', visible: true },
+      { key: 'dateValidTo', label: 'Date valid to', visible: true }
+    ];
+
+    this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
+
+    this.allColumns = [
       { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
       { key: 'id', label: 'Id', sortable: true, width: '68px' },
       { key: 'name', label: 'Name', sortable: true },
@@ -191,6 +211,22 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
       { key: 'dateValidTo', label: 'Date valid to', sortable: true, width: '180px' },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
+
+    this.applyColumnVisibility();
+  }
+
+  onColumnsChange(columns: ColumnDefinition[]): void {
+    this.columnDefs = columns;
+    this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.applyColumnVisibility();
+    this.cdr.markForCheck();
+  }
+
+  private applyColumnVisibility(): void {
+    const visibleKeys = new Set(this.columnDefs.filter(c => c.visible).map(c => c.key));
+    this.columns = this.allColumns.filter(col =>
+      col.key === 'actions' || col.key === 'checkbox' || visibleKeys.has(col.key)
+    );
   }
 
   onSearchQueryChange(query: string): void {

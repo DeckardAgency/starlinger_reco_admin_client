@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpParams } from '@angular/common/http';
+import { HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { User, UserCollectionResponse } from '@core/models';
 import { BaseHttpService } from './base-http.service';
+import { environment } from '@env/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -108,5 +109,34 @@ export class UserService extends BaseHttpService {
   deleteUser(id: string): Observable<void> {
     const url = `${this.usersUrl}/${id}`;
     return this.deleteWithJsonLd<void>(url);
+  }
+
+  /**
+   * Export users to Excel
+   */
+  exportToExcel(
+    sortField?: string,
+    sortDirection?: 'asc' | 'desc',
+    searchQuery?: string
+  ): Observable<Blob> {
+    let params = new HttpParams();
+
+    if (sortField && sortDirection) {
+      params = params.set(`order[${sortField}]`, sortDirection);
+    }
+    if (searchQuery) {
+      params = params.set('email', searchQuery);
+    }
+
+    return this.http.get(
+      `${environment.apiBaseUrl}/api/users/export/excel`,
+      {
+        headers: new HttpHeaders({
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }),
+        params,
+        responseType: 'blob'
+      }
+    );
   }
 }

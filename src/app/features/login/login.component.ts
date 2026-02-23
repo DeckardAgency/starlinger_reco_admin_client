@@ -101,7 +101,7 @@ export class LoginComponent {
   private navigateToHome(): void {
     const user = this.authService.getCurrentUser();
     
-    if (user?.roles?.includes(USER_ROLES.SUPER_ADMIN)) {
+    if (user?.roles?.includes(USER_ROLES.ADMIN)) {
       this.router.navigate(['/admin/dashboard']);
     } else if (user?.roles?.includes(USER_ROLES.CLIENT_ADMIN)) {
       this.router.navigate(['/customer-admin/orders']);

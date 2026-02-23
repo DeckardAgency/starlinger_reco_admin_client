@@ -3,7 +3,7 @@ export const TEST_USERS = {
   superAdmin: {
     email: 'super@starlinger.com',
     password: 'recouser123!',
-    role: 'ROLE_SUPER_ADMIN',
+    role: 'ROLE_ADMIN',
   },
   admin: {
     email: 'admin@starlinger.com',

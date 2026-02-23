@@ -1,12 +1,12 @@
 <div class="account-groups-page" (click)="closeDropdown()">
-  <ui-breadcrumbs variant="page-header" separator="line" [items]="[{ label: 'Account groups' }]"></ui-breadcrumbs>
+  <ui-breadcrumbs variant="page-header" separator="line" [items]="[{ label: 'Client groups' }]"></ui-breadcrumbs>
 
   <main class="page-content">
     <ui-list-header
-      title="Account groups"
+      title="Client groups"
       icon="users"
       [count]="totalItems()"
-      addButtonLabel="Add account group"
+      addButtonLabel="Add client group"
       [showSearch]="true"
       [showBulkDeleteButton]="true"
       [isBulkDeleteDisabled]="!hasSelected()"
@@ -15,7 +15,13 @@
       (add)="onAddAccountGroup()"
       (bulkDelete)="onBulkDelete()"
       [hideAddButtonOnMobile]="true"
-    ></ui-list-header>
+    >
+      <app-column-selector
+        [columns]="columnDefs"
+        [storageKey]="COLUMN_STORAGE_KEY"
+        (columnsChange)="onColumnsChange($event)">
+      </app-column-selector>
+    </ui-list-header>
 
     <div class="table-container">
       <ui-data-table
@@ -73,7 +79,7 @@
 
 <!-- Mobile Footer -->
 <ui-mobile-footer
-  primaryLabel="Add account group"
+  primaryLabel="Add client group"
   primaryIcon="plus"
   [showSecondary]="false"
   (primaryClick)="onAddAccountGroup()"

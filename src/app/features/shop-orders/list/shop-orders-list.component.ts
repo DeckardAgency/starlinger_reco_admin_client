@@ -17,6 +17,10 @@ import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@a
 import { OrderService } from '@core/services/http/order.service';
 import { AlertService } from '@services/alert.service';
 import { Order } from '@core/models/order.model';
+import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
+import { ColumnSettingsService } from '@core/services/column-settings.service';
+
+type OrderStatus = 'draft' | 'submitted' | 'in_review' | 'more_info' | 'information_provided' | 'in_progress' | 'completed' | 'canceled';
 
 interface ShopOrder {
   id: number;
@@ -29,7 +33,7 @@ interface ShopOrder {
     avatar?: string;
   };
   partsOrdered: number;
-  status: 'completed' | 'cancelled' | 'pending';
+  status: OrderStatus;
 }
 
 @Component({
@@ -47,7 +51,8 @@ interface ShopOrder {
     BreadcrumbsComponent,
     ListHeaderComponent,
     TableFooterComponent,
-    TableActionsDropdownComponent
+    TableActionsDropdownComponent,
+    ColumnSelectorComponent
   ],
   templateUrl: './shop-orders-list.component.html',
   styleUrls: ['./shop-orders-list.component.scss'],
@@ -59,6 +64,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   private orderService = inject(OrderService);
   private alertService = inject(AlertService);
   private destroyRef = inject(DestroyRef);
+  private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
 
@@ -90,7 +96,9 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
     { id: 'cancelled', label: 'Cancelled' }
   ];
 
-  // Table columns
+  readonly COLUMN_STORAGE_KEY = 'shop-orders';
+  columnDefs: ColumnDefinition[] = [];
+  private allColumns: TableColumn[] = [];
   columns: TableColumn[] = [];
 
   // Table actions
@@ -211,15 +219,28 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
     return `${day}-${month}-${year}`;
   }
 
-  private mapStatus(status: string): 'completed' | 'cancelled' | 'pending' {
+  private mapStatus(status: string): OrderStatus {
+    const valid: OrderStatus[] = ['draft', 'submitted', 'in_review', 'more_info', 'information_provided', 'in_progress', 'completed', 'canceled'];
     const s = (status || '').toLowerCase();
-    if (['completed', 'delivered'].includes(s)) return 'completed';
-    if (['cancelled', 'canceled', 'rejected'].includes(s)) return 'cancelled';
-    return 'pending';
+    if (valid.includes(s as OrderStatus)) return s as OrderStatus;
+    if (s === 'cancelled') return 'canceled';
+    return 'draft';
   }
 
   private initColumns(): void {
-    this.columns = [
+    const defaultColumnDefs: ColumnDefinition[] = [
+      { key: 'id', label: 'Order ID', visible: true, locked: true },
+      { key: 'type', label: 'Type', visible: true },
+      { key: 'dateCreated', label: 'Date Created', visible: true },
+      { key: 'internalRef', label: 'Internal reference', visible: true },
+      { key: 'customer', label: 'Customer', visible: true },
+      { key: 'partsOrdered', label: 'Parts ordered', visible: true },
+      { key: 'status', label: 'Status', visible: true, locked: true }
+    ];
+
+    this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
+
+    this.allColumns = [
       { key: 'id', label: 'Order ID', sortable: true, width: '112px' },
       { key: 'type', label: 'Type', sortable: false, width: '128px', template: this.typeTemplate },
       { key: 'dateCreated', label: 'Date Created', sortable: true, width: '190px' },
@@ -229,6 +250,22 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
       { key: 'status', label: 'Status', sortable: true, width: '128px', template: this.statusTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
+
+    this.applyColumnVisibility();
+  }
+
+  onColumnsChange(columns: ColumnDefinition[]): void {
+    this.columnDefs = columns;
+    this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.applyColumnVisibility();
+    this.cdr.markForCheck();
+  }
+
+  private applyColumnVisibility(): void {
+    const visibleKeys = new Set(this.columnDefs.filter(c => c.visible).map(c => c.key));
+    this.columns = this.allColumns.filter(col =>
+      col.key === 'actions' || visibleKeys.has(col.key)
+    );
   }
 
   onTabChange(tabId: string): void {
@@ -249,7 +286,30 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   }
 
   onExport(): void {
-    console.log('Exporting data...');
+    const filters: { status?: string[]; isDraft?: boolean } = { isDraft: false };
+    const tab = this.activeTab();
+    if (tab === 'completed') {
+      filters.status = ['completed'];
+    } else if (tab === 'cancelled') {
+      filters.status = ['canceled'];
+    }
+
+    this.orderService.exportOrdersToExcel(
+      this.sortColumn() || undefined,
+      this.sortDirection() || undefined,
+      this.searchQuery() ? { query: this.searchQuery() } : {},
+      filters
+    ).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `orders-${tab}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => console.error('Export failed:', err)
+    });
   }
 
   toggleDropdown(orderId: number): void {
@@ -306,20 +366,30 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   }
 
   getStatusLabel(status: string): string {
-    switch (status) {
-      case 'completed': return 'Completed';
-      case 'cancelled': return 'Cancelled';
-      case 'pending': return 'Pending';
-      default: return status;
-    }
+    const labels: Record<string, string> = {
+      'draft': 'Draft',
+      'submitted': 'Submitted',
+      'in_review': 'In Review',
+      'more_info': 'More Info',
+      'information_provided': 'Info Provided',
+      'in_progress': 'In Progress',
+      'completed': 'Completed',
+      'canceled': 'Canceled'
+    };
+    return labels[status] || status;
   }
 
-  getStatusVariant(status: string): 'success' | 'danger' | 'warning' | 'secondary' {
-    switch (status) {
-      case 'completed': return 'success';
-      case 'cancelled': return 'danger';
-      case 'pending': return 'warning';
-      default: return 'secondary';
-    }
+  getStatusVariant(status: string): 'success' | 'danger' | 'warning' | 'info' | 'secondary' {
+    const variants: Record<string, 'success' | 'danger' | 'warning' | 'info' | 'secondary'> = {
+      'draft': 'secondary',
+      'submitted': 'info',
+      'in_review': 'info',
+      'more_info': 'warning',
+      'information_provided': 'info',
+      'in_progress': 'warning',
+      'completed': 'success',
+      'canceled': 'danger'
+    };
+    return variants[status] || 'secondary';
   }
 }

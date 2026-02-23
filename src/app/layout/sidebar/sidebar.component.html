@@ -3,9 +3,9 @@
     <nav class="sidebar__nav">
       <ul class="sidebar__list">
         <!-- ============================================== -->
-        <!-- SUPER ADMIN NAVIGATION -->
+        <!-- ADMIN NAVIGATION -->
         <!-- ============================================== -->
-        @if (isSuperAdmin) {
+        @if (isAdmin) {
         <!-- Dashboard with collapse toggle -->
         <li class="sidebar__item sidebar__top">
           <a routerLink="/admin/dashboard" routerLinkActive="sidebar__link--active" class="sidebar__link">
@@ -39,33 +39,23 @@
           @if (isSectionExpanded('customer') || isCollapsed()) {
             <ul class="sidebar__sub-list" @expandCollapse>
               <li class="sidebar__item">
-                <a routerLink="/admin/account-groups/list" [class.sidebar__link--active]="isRouteActive('account-groups')" class="sidebar__link">
+                <a routerLink="/admin/client-groups/list" [class.sidebar__link--active]="isRouteActive('client-groups')" class="sidebar__link">
                   <span class="sidebar__icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path d="M10.6668 14V12.6667C10.6668 11.9594 10.3859 11.2811 9.88579 10.781C9.38569 10.281 8.70741 10 8.00016 10H4.00016C3.29292 10 2.61464 10.281 2.11454 10.781C1.61445 11.2811 1.3335 11.9594 1.3335 12.6667V14M14.6668 14V12.6667C14.6664 12.0758 14.4695 11.5019 14.1078 11.0349C13.746 10.5679 13.2399 10.2344 12.6668 10.0867M10.6668 2.08667C11.2415 2.23354 11.7493 2.56714 12.1121 3.03488C12.475 3.50262 12.6722 4.07789 12.6722 4.67C12.6722 5.26211 12.475 5.83738 12.1121 6.30512C11.7493 6.77286 11.2415 7.10646 10.6668 7.25333M8.66683 4.66667C8.66683 6.13943 7.47292 7.33333 6.00016 7.33333C4.5274 7.33333 3.3335 6.13943 3.3335 4.66667C3.3335 3.19391 4.5274 2 6.00016 2C7.47292 2 8.66683 3.19391 8.66683 4.66667Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   </span>
-                  <span class="sidebar__link-text">Account groups</span>
+                  <span class="sidebar__link-text">Client groups</span>
                 </a>
               </li>
               <li class="sidebar__item">
-                <a routerLink="/admin/accounts/list" [class.sidebar__link--active]="isRouteActive('accounts')" class="sidebar__link">
+                <a routerLink="/admin/clients/list" [class.sidebar__link--active]="isRouteActive('clients')" class="sidebar__link">
                   <span class="sidebar__icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <path d="M12.6668 14V12.6667C12.6668 11.9594 12.3859 11.2811 11.8858 10.781C11.3857 10.281 10.7074 10 10.0002 10H6.00016C5.29292 10 4.61464 10.281 4.11454 10.781C3.61445 11.2811 3.3335 11.9594 3.3335 12.6667V14M10.6668 4.66667C10.6668 6.13943 9.47292 7.33333 8.00016 7.33333C6.5274 7.33333 5.3335 6.13943 5.3335 4.66667C5.3335 3.19391 6.5274 2 8.00016 2C9.47292 2 10.6668 3.19391 10.6668 4.66667Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   </span>
-                  <span class="sidebar__link-text">Accounts</span>
-                </a>
-              </li>
-              <li class="sidebar__item">
-                <a routerLink="/admin/contacts/list" [class.sidebar__link--active]="isRouteActive('contacts')" class="sidebar__link">
-                  <span class="sidebar__icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M10.6667 12.0002C10.6667 11.2929 10.3857 10.6146 9.88562 10.1145C9.38552 9.61445 8.70724 9.3335 8 9.3335M8 9.3335C7.29276 9.3335 6.61448 9.61445 6.11438 10.1145C5.61428 10.6146 5.33333 11.2929 5.33333 12.0002M8 9.3335C9.10457 9.3335 10 8.43807 10 7.3335C10 6.22893 9.10457 5.3335 8 5.3335C6.89543 5.3335 6 6.22893 6 7.3335C6 8.43807 6.89543 9.3335 8 9.3335ZM5.33333 1.3335V2.66683M10.6667 1.3335V2.66683M3.33333 2.66683H12.6667C13.403 2.66683 14 3.26378 14 4.00016V13.3335C14 14.0699 13.403 14.6668 12.6667 14.6668H3.33333C2.59695 14.6668 2 14.0699 2 13.3335V4.00016C2 3.26378 2.59695 2.66683 3.33333 2.66683Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                  <span class="sidebar__link-text">Contacts</span>
+                  <span class="sidebar__link-text">Clients</span>
                 </a>
               </li>
             </ul>

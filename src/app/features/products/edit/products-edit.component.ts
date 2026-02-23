@@ -13,7 +13,6 @@ import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.
 import { SelectComponent, SelectOption } from '@app/ui-kit/atoms/select/select.component';
 import { TabsComponent, TabItem } from '@app/ui-kit/molecules/tabs/tabs.component';
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
-import { PaginationComponent } from '@app/ui-kit/molecules/pagination/pagination.component';
 import { ModalComponent } from '@app/ui-kit/organisms/modal/modal.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-footer.component';
@@ -125,7 +124,6 @@ const EMPTY_PRODUCT: ProductDetail = {
     SelectComponent,
     TabsComponent,
     DataTableComponent,
-    PaginationComponent,
     ModalComponent,
     IconComponent,
     TableFooterComponent,
@@ -255,7 +253,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     { id: 'shortDescription', label: 'Short description' },
     { id: 'gallery', label: 'Gallery' },
     { id: 'documents', label: 'Product documents' },
-    { id: 'discounts', label: 'Applied discounts' }
+    { id: 'discounts', label: 'Applied discounts' },
+    { id: 'relatedProducts', label: 'Related products' }
   ];
 
   // Table columns
@@ -957,6 +956,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   private saveProduct(navigateToList: boolean): void {
     this.markAllTouched();
     if (!this.isValid()) {
+      console.warn('[ProductSave] Validation failed:', this.errors());
+      this.toastService.error('Please fix validation errors before saving');
       this.cdr.markForCheck();
       return;
     }
@@ -971,19 +972,19 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       slug: product.url || undefined,
       isActive: product.active,
       readyForShop: product.readyForShop,
-      qty: product.quantity || null,
-      qtyStep: product.quantityStep || null,
-      quoteItemLimit: product.quoteItemLimit || null,
-      fixedQty: product.fixedQuantity || null,
+      qty: product.quantity ?? null,
+      qtyStep: product.quantityStep ?? null,
+      quoteItemLimit: product.quoteItemLimit ?? null,
+      fixedQty: product.fixedQuantity ?? null,
       weight: product.weight || null,
-      productGroupId: product.productGroup || null,
+      productGroupId: product.productGroup ? parseInt(product.productGroup, 10) : null,
       catalogCode: product.catalogCode || null,
-      price: product.basePrice,
-      retailPrice: product.retailPrice || null,
-      taxTypeId: product.taxPercent || null,
+      price: product.basePrice ?? 0,
+      retailPrice: product.retailPrice ?? null,
+      taxTypeId: product.taxPercent ? parseInt(product.taxPercent, 10) : null,
       currency: product.currency || null,
-      discountPercent: product.discountPercent || null,
-      discountPrice: product.discountPrice || null,
+      discountPercent: product.discountPercent ?? null,
+      discountPrice: product.discountPrice ?? null,
       shortDescription: product.shortDescription || null,
       imageGallery: this.galleryImages().map(img => mediaIriPrefix + img.id),
       documents: this.productDocuments().map(doc => mediaIriPrefix + doc.id),
@@ -991,6 +992,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     };
 
     const isCreating = !this.isEditMode() || !product.id;
+    console.log('[ProductSave]', isCreating ? 'Creating' : `Updating id=${product.id}`, data);
+
     const operation = isCreating
       ? this.productService.createProduct(data)
       : this.productService.updateProduct(String(product.id), data);
@@ -1003,13 +1006,13 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         } else if (isCreating && result?.id) {
           this.router.navigate(['/admin/products', result.id, 'edit']);
         } else if (!isCreating && product.id) {
-          // Reload product data to confirm persistence
           this.loadProduct(String(product.id));
         }
       },
       error: (error) => {
-        console.error('Error saving product:', error);
-        this.toastService.error('Failed to save product');
+        console.error('[ProductSave] Error:', error);
+        const detail = error?.error?.detail || error?.error?.message || error?.message || 'Unknown error';
+        this.toastService.error(`Failed to save: ${detail}`);
       }
     });
   }

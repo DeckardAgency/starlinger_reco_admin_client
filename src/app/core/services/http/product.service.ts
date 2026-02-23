@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
+import { HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Product, ProductsCollection } from '@core/models';
 import { BaseHttpService } from './base-http.service';
+import { environment } from '@env/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -61,5 +63,34 @@ export class ProductService extends BaseHttpService {
    */
   deleteProduct(id: string): Observable<void> {
     return this.deleteWithJsonLd<void>(`${this.endpoint}/${id}`);
+  }
+
+  /**
+   * Export products to Excel
+   */
+  exportToExcel(
+    sortField?: string,
+    sortDirection?: 'asc' | 'desc',
+    searchQuery?: string
+  ): Observable<Blob> {
+    let params = new HttpParams();
+
+    if (sortField && sortDirection) {
+      params = params.set(`order[${sortField}]`, sortDirection);
+    }
+    if (searchQuery) {
+      params = params.set('name', searchQuery);
+    }
+
+    return this.http.get(
+      `${environment.apiBaseUrl}/api/products/export/excel`,
+      {
+        headers: new HttpHeaders({
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }),
+        params,
+        responseType: 'blob'
+      }
+    );
   }
 }
