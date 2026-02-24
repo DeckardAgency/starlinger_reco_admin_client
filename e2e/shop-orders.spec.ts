@@ -11,8 +11,14 @@ test.describe('Shop Orders (Read-Only)', () => {
 
   test.beforeEach(async ({ page }) => {
     basePage = new BasePage(page);
+    // Wait for API response to avoid race conditions
+    const responsePromise = page.waitForResponse(
+      (resp) => resp.url().includes('/orders') && resp.request().method() === 'GET',
+      { timeout: 15000 }
+    );
     await page.goto('/admin/shop-orders/list');
-    await basePage.waitForPageLoad();
+    await responsePromise;
+    await page.waitForLoadState('networkidle');
   });
 
   test('1. should display shop orders list', async ({ page }) => {

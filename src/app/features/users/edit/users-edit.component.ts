@@ -214,9 +214,9 @@ export class UsersEditComponent implements OnInit {
       email: user.email
     };
 
-    // Include password only if set (for create or password change)
+    // Include plainPassword only if set (for create or password change)
     if (this.password()) {
-      data['password'] = this.password();
+      data['plainPassword'] = this.password();
     }
 
     const operation = this.isEditMode() && this.userId()
@@ -250,7 +250,7 @@ export class UsersEditComponent implements OnInit {
     };
 
     if (this.password()) {
-      data['password'] = this.password();
+      data['plainPassword'] = this.password();
     }
 
     const operation = this.isEditMode() && this.userId()

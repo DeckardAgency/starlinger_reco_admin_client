@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -24,6 +24,7 @@ export class DocumentationEditComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private documentationService = inject(DocumentationService);
   private toastService = inject(ToastService);
+  private cdr = inject(ChangeDetectorRef);
 
   breadcrumbs = [
     { label: 'Documentation', route: '/admin/documentation/list' },
@@ -87,9 +88,11 @@ export class DocumentationEditComponent implements OnInit, OnDestroy {
           if (data.media?.length) this.mediaItems = data.media;
         }
         this.dataLoaded = true;
+        this.cdr.markForCheck();
       },
       error: () => {
         this.isLoading = false;
+        this.cdr.markForCheck();
         this.toastService.show({ message: 'Failed to load documentation', type: 'error' });
       }
     });

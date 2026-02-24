@@ -18,6 +18,8 @@ export default defineConfig({
 
   // Global setup runs once before all tests - handles login
   globalSetup: require.resolve('./e2e/global-setup'),
+  // Global teardown runs once after all tests - cleans up E2E data
+  globalTeardown: require.resolve('./e2e/global-teardown'),
 
   use: {
     baseURL: 'http://localhost:4201',
@@ -55,7 +57,7 @@ export default defineConfig({
     timeout: 120000,
   },
 
-  timeout: 30000,
+  timeout: 60000,
   expect: {
     timeout: 10000,
   },

@@ -1,14 +1,19 @@
 // Test credentials
 export const TEST_USERS = {
-  superAdmin: {
-    email: 'super@starlinger.com',
-    password: 'recouser123!',
-    role: 'ROLE_ADMIN',
-  },
   admin: {
     email: 'admin@starlinger.com',
     password: 'recouser123!',
     role: 'ROLE_ADMIN',
+  },
+  clientAdmin: {
+    email: 'clientadmin@starlinger.com',
+    password: 'recouser123!',
+    role: 'ROLE_CLIENT_ADMIN',
+  },
+  client: {
+    email: 'recouser@starlinger.com',
+    password: 'recouser123!',
+    role: 'ROLE_CLIENT',
   },
 };
 

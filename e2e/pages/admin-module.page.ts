@@ -10,6 +10,8 @@ export interface ModuleConfig {
   formFields: FormFieldConfig[];
   /** Set to false for modules that only have "Save" (no "Save and continue"). Defaults to true. */
   hasSaveAndContinue?: boolean;
+  /** Set to false when primaryField isn't displayed in list table (skips verifyRowExists). */
+  verifyInList?: boolean;
 }
 
 export interface FormFieldConfig {
@@ -131,8 +133,9 @@ export class AdminModulePage extends BasePage {
 
   async search(query: string) {
     await this.searchInput.fill(query);
-    // Search is client-side — just wait for Angular to re-render
-    await this.page.waitForTimeout(300);
+    // Search may be client-side (filters current page) or server-side (triggers API call).
+    // Wait for potential API response, then allow Angular to re-render.
+    await this.page.waitForTimeout(500);
   }
 
   async getRowCount(): Promise<number> {
@@ -156,11 +159,32 @@ export class AdminModulePage extends BasePage {
     return -1;
   }
 
-  /** Assert that a row containing the given text exists in the table (auto-retrying). */
+  /** Assert that a row containing the given text exists in the table.
+   *  Uses server-side search to find the record (handles pagination). */
   async verifyRowExists(text: string) {
+    // Small stability wait for list to settle after navigation
+    await this.page.waitForTimeout(300);
+
+    // Match ONLY the search-triggered GET (URL must contain our search text as a query param)
+    const searchFragment = text.substring(0, 10);
+    const responsePromise = this.page.waitForResponse(
+      (resp) =>
+        resp.url().includes(this.config.apiEndpoint) &&
+        resp.request().method() === 'GET' &&
+        resp.url().includes(searchFragment),
+      { timeout: 15000 }
+    );
+    await this.searchInput.fill(text);
+    await responsePromise;
+    await this.page.waitForLoadState('networkidle');
+
     await expect(
       this.page.locator('ui-data-table tbody tr, table tbody tr').filter({ hasText: text }).first()
     ).toBeVisible({ timeout: 10000 });
+
+    // Clear search to restore full list for subsequent tests
+    await this.searchInput.fill('');
+    await this.page.waitForTimeout(500);
   }
 
   /** Assert that NO row contains the given text (auto-retrying). */
@@ -198,8 +222,78 @@ export class AdminModulePage extends BasePage {
     return this.page.locator(`textarea[placeholder="${placeholder}"]`);
   }
 
-  getSelect(): Locator {
-    return this.page.locator('select.ui-select__field').first();
+  getSelect(index: number = 0): Locator {
+    return this.page.locator('ui-select').nth(index);
+  }
+
+  /**
+   * Select the first available option from a custom ui-select dropdown.
+   * Clicks the trigger to open, then clicks the first non-disabled option.
+   * Waits for the dropdown to actually close before returning.
+   */
+  async selectFirstUiOption(index: number = 0) {
+    const select = this.page.locator('ui-select').nth(index);
+    const trigger = select.locator('.ui-select__trigger');
+    await expect(trigger).toBeVisible({ timeout: 5000 });
+    await trigger.click();
+    const dropdown = select.locator('.ui-select__dropdown');
+    await expect(dropdown).toBeVisible({ timeout: 3000 });
+    const option = select.locator('.ui-select__option').first();
+    await option.click();
+    // Wait for dropdown to actually close (option click sets isOpen=false)
+    await dropdown.waitFor({ state: 'hidden', timeout: 3000 }).catch(async () => {
+      // Fallback: press Escape to force close
+      await this.page.keyboard.press('Escape');
+      await dropdown.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {});
+    });
+    await this.page.waitForTimeout(150);
+  }
+
+  /**
+   * Select the first option for ALL visible ui-selects on the current form.
+   * Handles dropdown close reliably by waiting for each to close.
+   */
+  async selectAllUiSelects() {
+    // Wait for async-loaded dropdown options (e.g. delivery types loaded from API)
+    await this.page.waitForLoadState('networkidle');
+
+    const selects = this.page.locator('ui-select');
+    const selectCount = await selects.count();
+    for (let i = 0; i < selectCount; i++) {
+      const sel = selects.nth(i);
+      const trigger = sel.locator('.ui-select__trigger');
+      if (await trigger.isVisible().catch(() => false)) {
+        // Dispatch click directly on trigger via JS — guaranteed to fire Angular's handler
+        // regardless of any overlapping elements from a previous dropdown animation
+        await trigger.dispatchEvent('click');
+        await this.page.waitForTimeout(200);
+
+        const dropdown = sel.locator('.ui-select__dropdown');
+        const dropdownVisible = await dropdown.isVisible({ timeout: 3000 }).catch(() => false);
+        if (!dropdownVisible) {
+          // Retry once — dropdown might not have opened due to timing
+          await trigger.dispatchEvent('click');
+          const retryVisible = await dropdown.isVisible({ timeout: 3000 }).catch(() => false);
+          if (!retryVisible) continue;
+        }
+
+        const option = sel.locator('.ui-select__option').first();
+        // Wait up to 5s for options (async-loaded options like delivery types need time)
+        if (await option.isVisible({ timeout: 5000 }).catch(() => false)) {
+          await option.click();
+          // Wait for dropdown to actually close
+          await dropdown.waitFor({ state: 'hidden', timeout: 3000 }).catch(async () => {
+            await this.page.keyboard.press('Escape');
+            await dropdown.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {});
+          });
+          await this.page.waitForTimeout(200);
+        } else {
+          // No options available — close dropdown and continue
+          await this.page.keyboard.press('Escape');
+          await dropdown.waitFor({ state: 'hidden', timeout: 1000 }).catch(() => {});
+        }
+      }
+    }
   }
 
   async waitForFormData() {
@@ -232,9 +326,7 @@ export class AdminModulePage extends BasePage {
   }
 
   async selectFirstOption(index: number = 0) {
-    const select = this.page.locator('select.ui-select__field').nth(index);
-    await expect(select).toBeVisible({ timeout: 5000 });
-    await select.selectOption({ index: 1 });
+    await this.selectFirstUiOption(index);
   }
 
   async fillForm(data: Record<string, string>) {
@@ -270,8 +362,8 @@ export class AdminModulePage extends BasePage {
       { timeout: 15000 }
     );
 
-    // Small delay to let Angular process any pending form value changes
-    await this.page.waitForTimeout(100);
+    // Let Angular process pending form value changes (OnPush needs time for signal updates)
+    await this.page.waitForTimeout(300);
 
     if (this.config.hasSaveAndContinue !== false) {
       // "Save and continue" navigates to list automatically
@@ -412,11 +504,14 @@ export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
     listPath: 'fuel-surcharges',
     apiEndpoint: '/fuel_surcharges',
     primaryField: 'name',
+    // "Save" goes to list; "Save and continue" stays on edit (reversed convention)
     hasSaveAndContinue: false,
+    // Table shows Date/Surcharge/Delivery Type — name not displayed
+    verifyInList: false,
     formFields: [
-      { name: 'name', placeholder: 'Enter name' },
-      { name: 'sizeTo', placeholder: '0.0000', type: 'number', fieldIndex: 0 },
-      { name: 'priceBase', placeholder: '0.0000', type: 'number', fieldIndex: 1 },
+      { name: 'surcharge', placeholder: '0.0000', type: 'number', fieldIndex: 0 },
+      { name: 'date', placeholder: '', label: 'Date', required: true },
+      { name: 'name', placeholder: 'Optional name' },
     ],
   },
   users: {
@@ -447,7 +542,7 @@ export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
   },
   accounts: {
     name: 'Accounts',
-    listPath: 'accounts',
+    listPath: 'clients',
     apiEndpoint: '/clients',
     primaryField: 'name',
     hasSaveAndContinue: false,
@@ -456,6 +551,15 @@ export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
       { name: 'code', placeholder: 'Code' },
       { name: 'email', placeholder: 'Email' },
       { name: 'phone', placeholder: 'Phone' },
+    ],
+  },
+  clientGroups: {
+    name: 'Client Groups',
+    listPath: 'client-groups',
+    apiEndpoint: '/account_groups',
+    primaryField: 'name',
+    formFields: [
+      { name: 'name', placeholder: 'Enter name', required: true },
     ],
   },
   products: {

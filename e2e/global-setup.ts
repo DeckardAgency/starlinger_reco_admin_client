@@ -48,8 +48,8 @@ async function globalSetup(config: FullConfig) {
   const passwordInput = page.locator('input[type="password"]').first();
   const submitButton = page.locator('button[type="submit"]').first();
 
-  await emailInput.fill(TEST_USERS.superAdmin.email);
-  await passwordInput.fill(TEST_USERS.superAdmin.password);
+  await emailInput.fill(TEST_USERS.admin.email);
+  await passwordInput.fill(TEST_USERS.admin.password);
 
   // Submit and wait for login
   await Promise.all([

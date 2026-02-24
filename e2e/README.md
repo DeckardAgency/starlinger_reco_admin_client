@@ -187,7 +187,7 @@ Tests use a global setup to authenticate once and reuse the session:
 ### Test Credentials
 
 ```
-Email: super@starlinger.com
+Email: admin@starlinger.com
 Password: recouser123!
 ```
 

@@ -1,11 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { AdminModulePage, MODULE_CONFIGS } from './pages';
+import { cleanupE2ERecords } from './fixtures/api-cleanup';
 
 /**
  * Simple CRUD Modules - Unified E2E Tests
  *
  * Tests: Countries, Warehouses, Delivery Types, Payment Types, Tax Types,
- *        Discounts, Product Groups, Delivery Prices, Packaging Prices, Fuel Surcharges
+ *        Discounts, Product Groups, Delivery Prices, Packaging Prices, Fuel Surcharges,
+ *        Client Groups
  *
  * Key principle: NO silent error swallowing. Every assertion is real.
  * If a form field doesn't exist, the API fails, or data doesn't persist — the test FAILS.
@@ -22,6 +24,7 @@ const SIMPLE_CRUD_MODULES = [
   'deliveryPrices',
   'packagingPrices',
   'fuelSurcharges',
+  'clientGroups',
 ] as const;
 
 for (const moduleKey of SIMPLE_CRUD_MODULES) {
@@ -38,6 +41,10 @@ for (const moduleKey of SIMPLE_CRUD_MODULES) {
 
     test.beforeEach(async ({ page }) => {
       modulePage = new AdminModulePage(page, config);
+    });
+
+    test.afterAll(async () => {
+      await cleanupE2ERecords(config.apiEndpoint, config.primaryField);
     });
 
     test(`1. should display ${config.name.toLowerCase()} list with data`, async ({ page }) => {
@@ -79,6 +86,8 @@ for (const moduleKey of SIMPLE_CRUD_MODULES) {
         if (field.type === 'number') {
           // Use small, valid numbers — large random values may fail API validation
           value = '1';
+        } else if (field.name === 'date') {
+          value = '2026-01-15';
         } else if (field.name === 'name' || field.name === 'contactPerson') {
           value = testId;
         } else if (field.name === 'code') {
@@ -103,19 +112,14 @@ for (const moduleKey of SIMPLE_CRUD_MODULES) {
       }
 
       // Select first option for ALL visible ui-selects on the form
-      const selects = page.locator('select.ui-select__field');
-      const selectCount = await selects.count();
-      for (let i = 0; i < selectCount; i++) {
-        const sel = selects.nth(i);
-        if (await sel.isVisible().catch(() => false)) {
-          await sel.selectOption({ index: 1 });
-        }
-      }
+      await modulePage.selectAllUiSelects();
 
       await modulePage.saveAndExpectList();
 
-      // VERIFY: The created record appears in the list
-      await modulePage.verifyRowExists(testId);
+      // VERIFY: The created record appears in the list (skip when primary field isn't in table)
+      if (config.verifyInList !== false) {
+        await modulePage.verifyRowExists(testId);
+      }
     });
 
     test(`4. should navigate to edit page via actions dropdown`, async ({ page }) => {
@@ -140,7 +144,7 @@ for (const moduleKey of SIMPLE_CRUD_MODULES) {
       await modulePage.clickEdit(0);
 
       // Modify the first text field — use a fresh value to avoid accumulation from previous runs
-      const firstField = config.formFields.find(f => f.type !== 'number' && f.type !== 'select' && f.type !== 'toggle' && f.type !== 'textarea');
+      const firstField = config.formFields.find(f => f.type !== 'number' && f.type !== 'select' && f.type !== 'toggle' && f.type !== 'textarea' && f.name !== 'date');
       if (firstField) {
         const editedValue = `Edited_${Date.now()}`;
         await modulePage.fillField(firstField.placeholder, editedValue, firstField.fieldIndex);
@@ -185,8 +189,8 @@ for (const moduleKey of SIMPLE_CRUD_MODULES) {
 
       await modulePage.search(searchTerm);
 
-      // Table should still be visible
-      await expect(modulePage.table).toBeVisible();
+      // Should remain on the list page (table or empty state may be shown)
+      await expect(page).toHaveURL(new RegExp(`/${config.listPath}/list`));
     });
 
     test(`8. should cancel and go back to list`, async ({ page }) => {

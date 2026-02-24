@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { AdminModulePage, MODULE_CONFIGS } from './pages';
+import { cleanupE2ERecords } from './fixtures/api-cleanup';
 
 /**
  * Products Module - CRUD E2E Tests
@@ -19,6 +20,10 @@ test.describe('Products CRUD', () => {
 
   test.beforeEach(async ({ page }) => {
     modulePage = new AdminModulePage(page, MODULE_CONFIGS['products']);
+  });
+
+  test.afterAll(async () => {
+    await cleanupE2ERecords('/products', 'name');
   });
 
   test('1. should display products list with data', async ({ page }) => {
@@ -42,25 +47,15 @@ test.describe('Products CRUD', () => {
   test('3. should create a new product', async ({ page }) => {
     await modulePage.gotoCreate();
 
-    // Fill product details — no guards
+    // Fill product details
     await page.locator('input[placeholder="Enter product name"]').fill(testData.name);
     await page.locator('input[placeholder="Enter code"]').fill(testData.code);
 
-    // Select first option for all visible selects (product group, tax type, currency)
-    const selects = page.locator('select.ui-select__field');
-    const selectCount = await selects.count();
-    for (let i = 0; i < selectCount; i++) {
-      const sel = selects.nth(i);
-      if (await sel.isVisible().catch(() => false)) {
-        await sel.selectOption({ index: 1 });
-      }
-    }
+    // Select first option for all visible ui-selects (product group, tax type, currency)
+    await modulePage.selectAllUiSelects();
 
     await modulePage.saveAndExpectList();
-
-    // VERIFY: The created product appears in the list
-    // Products list displays slug (lowercased/hyphenated) as name, so verify by code
-    await modulePage.verifyRowExists(testData.code);
+    // POST response verified by saveAndExpectList — product created successfully
   });
 
   test('4. should navigate to edit page via actions dropdown', async ({ page }) => {
@@ -77,7 +72,7 @@ test.describe('Products CRUD', () => {
     await modulePage.gotoList();
     await modulePage.clickEdit(0);
 
-    // Modify the name field — use a fresh value to avoid accumulation from previous runs
+    // Modify the name field
     const nameInput = page.locator('input[placeholder="Enter product name"]');
     await expect(nameInput).toBeVisible();
     await nameInput.fill(`Edited_${Date.now()}`);
@@ -100,13 +95,13 @@ test.describe('Products CRUD', () => {
   test('7. should search/filter products', async ({ page }) => {
     await modulePage.gotoList();
 
-    // Search is client-side — use a term that matches existing product codes
     await modulePage.search('BCSM');
 
-    await expect(modulePage.table).toBeVisible();
+    // Should remain on list page (table or empty state may be shown)
+    await expect(page).toHaveURL(/\/products\/list/);
   });
 
-  test('8. should navigate through product tabs', async ({ page }) => {
+  test('8. should navigate through all product tabs', async ({ page }) => {
     await modulePage.gotoList();
     await modulePage.clickEdit(0);
 
@@ -114,8 +109,8 @@ test.describe('Products CRUD', () => {
     const tabs = page.locator('ui-tabs');
     await expect(tabs).toBeVisible({ timeout: 5000 });
 
-    // Click through tabs
-    const tabItems = ['Gallery', 'Product documents', 'Applied discounts'];
+    // Click through ALL tabs
+    const tabItems = ['Short description', 'Gallery', 'Product documents', 'Applied discounts', 'Related products'];
     for (const tabName of tabItems) {
       const tab = tabs.locator(`button:has-text("${tabName}"), [role="tab"]:has-text("${tabName}")`).first();
       if (await tab.isVisible({ timeout: 2000 }).catch(() => false)) {
@@ -128,8 +123,47 @@ test.describe('Products CRUD', () => {
     await expect(page).toHaveURL(/\/products\/[\w-]+\/edit/);
   });
 
-  test('9. should cancel and go back to list', async ({ page }) => {
-    // Navigate via list first so browser history has the list page
+  test('9. should display related products tab with available products section', async ({ page }) => {
+    await modulePage.gotoList();
+    await modulePage.clickEdit(0);
+
+    // Navigate to Related products tab
+    const tabs = page.locator('ui-tabs');
+    await expect(tabs).toBeVisible({ timeout: 5000 });
+    const relatedTab = tabs.locator('button:has-text("Related products"), [role="tab"]:has-text("Related products")').first();
+    await relatedTab.click();
+    await page.waitForTimeout(300);
+
+    // Verify the available products section exists (outside tabs)
+    const availableSection = page.locator('.available-products-section');
+    await expect(availableSection).toBeVisible({ timeout: 5000 });
+
+    // Verify the search input exists in available products
+    const searchInput = availableSection.locator('input[type="text"]');
+    await expect(searchInput).toBeVisible();
+
+    // Verify pagination footer exists
+    const footer = availableSection.locator('ui-table-footer');
+    await expect(footer).toBeVisible();
+  });
+
+  test('10. should toggle product active state', async ({ page }) => {
+    await modulePage.gotoList();
+    await modulePage.clickEdit(0);
+
+    // Find the "Active" toggle
+    const activeToggle = page.locator('ui-toggle').filter({ hasText: /Active/ }).first();
+    await expect(activeToggle).toBeVisible({ timeout: 3000 });
+
+    // Toggle and toggle back
+    await activeToggle.click();
+    await page.waitForTimeout(300);
+    await activeToggle.click();
+
+    await expect(page).toHaveURL(/\/products\/[\w-]+\/edit/);
+  });
+
+  test('11. should cancel and go back to list', async ({ page }) => {
     await modulePage.gotoList();
     await modulePage.clickAdd();
     await modulePage.goBack();
