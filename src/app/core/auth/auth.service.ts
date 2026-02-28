@@ -242,7 +242,7 @@ export class AuthService {
         username: tokenData?.email || email,
         email: tokenData?.email || email,
         id: 0,
-        roles: [],
+        roles: tokenData?.roles || [],
         firstName: '',
         lastName: '',
         // Client information will be empty until fetched from the API
