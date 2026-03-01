@@ -92,14 +92,6 @@
   }
 }
 
-.select-with-pill {
-  @include admin.select-with-pill;
-
-  .select-field {
-    @include admin.select-with-pill-field;
-  }
-}
-
 .products-section {
   display: flex;
   flex-direction: column;

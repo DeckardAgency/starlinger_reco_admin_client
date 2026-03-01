@@ -69,8 +69,9 @@ interface ShopOrderDetail {
   totalPrice: number;
   priceTax: number;
   productGroups: ProductGroup[];
+  subtotalBeforeDiscount: number;
+  totalDiscount: number;
   orderTotal: number;
-  amountPaid: number;
   logMessages: LogMessage[];
 }
 
@@ -95,8 +96,9 @@ const EMPTY_ORDER: ShopOrderDetail = {
   totalPrice: 0,
   priceTax: 0,
   productGroups: [],
+  subtotalBeforeDiscount: 0,
+  totalDiscount: 0,
   orderTotal: 0,
-  amountPaid: 0,
   logMessages: []
 };
 
@@ -177,6 +179,8 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     { value: 'more_info', label: 'More Info Needed' },
     { value: 'information_provided', label: 'Info Provided' },
     { value: 'in_progress', label: 'In Progress' },
+    { value: 'confirmed', label: 'Confirmed' },
+    { value: 'dispatched', label: 'Dispatched' },
     { value: 'completed', label: 'Completed' },
     { value: 'canceled', label: 'Canceled' }
   ];
@@ -497,7 +501,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
         weight: item.product?.weight ?? '',
         quantity: item.quantity ?? 0,
         unitPrice: item.unitPrice ?? 0,
-        discount: '0',
+        discount: item.discountPercent ? `${item.discountPercent.toFixed(1)}%` : '0%',
         price: (item.quantity ?? 0) * (item.unitPrice ?? 0)
       }],
       isExpanded: true
@@ -527,14 +531,15 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       billingAddress: o.billingAddress ?? '',
       shippingAddress: o.shippingAddress ?? '',
       date: this.formatDate(o.createdAt),
-      paymentType: '',
-      deliveryType: '',
+      paymentType: o.paymentType && typeof o.paymentType === 'object' ? String(o.paymentType.id) : '',
+      deliveryType: o.deliveryType && typeof o.deliveryType === 'object' ? String(o.deliveryType.id) : '',
       priceWithoutTax: 0,
       totalPrice: o.totalAmount ?? 0,
       priceTax: 0,
       productGroups,
+      subtotalBeforeDiscount: (o.subtotalBeforeDiscount && o.subtotalBeforeDiscount > 0) ? o.subtotalBeforeDiscount : (o.totalAmount ?? 0),
+      totalDiscount: o.totalDiscount ?? 0,
       orderTotal: o.totalAmount ?? 0,
-      amountPaid: 0,
       logMessages
     };
   }
@@ -742,7 +747,9 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       shippingAddress: orderData.shippingAddress,
       isDraft: !orderData.enableSale,
       // User reference - this determines the account (user's client)
-      user: `/api/v1/users/${this.selectedContact}`
+      user: `/api/v1/users/${this.selectedContact}`,
+      paymentType: this.selectedPaymentType ? `/api/v1/payment_types/${this.selectedPaymentType}` : null,
+      deliveryType: this.selectedDeliveryType ? `/api/v1/delivery_types/${this.selectedDeliveryType}` : null,
     };
 
     console.log('[ShopOrdersEdit] Saving order ID:', orderData.id);
@@ -768,6 +775,8 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       'more_info': 'warning',
       'information_provided': 'info',
       'in_progress': 'warning',
+      'confirmed': 'info',
+      'dispatched': 'warning',
       'completed': 'success',
       'canceled': 'danger'
     };

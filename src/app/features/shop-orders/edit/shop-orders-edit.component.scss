@@ -150,6 +150,15 @@
       color: #232323;
     }
 
+    // Discount row - light red, middle position
+    &--discount {
+      background: #fef2f2;
+      border: 1px solid #e4e4e7;
+      border-top: none;
+      border-bottom: none;
+      color: #dc2626;
+    }
+
     // Highlight row - green, rounded bottom
     &--highlight {
       background: #237804;
@@ -183,4 +192,60 @@
   --data-table-background: transparent;
   --data-table-header-background: transparent;
   --data-table-row-background: transparent;
+}
+
+// =============================================================================
+// Print Styles
+// =============================================================================
+@media print {
+  :host {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .shop-order-detail {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .page-content {
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 16px !important;
+  }
+
+  // Hide interactive elements
+  .section-header__actions {
+    display: none !important;
+  }
+
+  .btn--icon {
+    display: none !important;
+  }
+
+  ui-breadcrumbs {
+    display: none !important;
+  }
+
+  // Cards
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #d4d4d8 !important;
+    break-inside: avoid;
+  }
+
+  // Expand all product groups for print
+  .product-group__toggle {
+    display: none !important;
+  }
+
+  .product-group__content {
+    display: block !important;
+  }
+
+  .product-group,
+  .order-summary,
+  .log-section {
+    break-inside: avoid;
+  }
 }

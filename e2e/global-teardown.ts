@@ -68,7 +68,8 @@ async function deleteMatchingRecords(
 
     for (const item of items) {
       const fieldValue = item[matchField] || item.title || item.firstName || '';
-      if (typeof fieldValue === 'string' && fieldValue.toLowerCase().includes('e2e')) {
+      const lower = typeof fieldValue === 'string' ? fieldValue.toLowerCase() : '';
+      if (lower.includes('e2e') || lower.startsWith('edited_')) {
         const deleteResponse = await fetch(`${API_BASE}${endpoint}/${item.id}`, {
           method: 'DELETE',
           headers: {

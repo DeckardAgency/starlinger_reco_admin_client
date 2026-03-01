@@ -9,3 +9,28 @@ body {
   background-color: #f4f4f5;
   margin: 0;
 }
+
+/* Print styles */
+@media print {
+  html, body {
+    background-color: #fff !important;
+  }
+
+  /* Hide navigation elements */
+  app-top-bar,
+  app-sidebar,
+  app-mobile-menu,
+  ui-toast-container,
+  app-alert {
+    display: none !important;
+  }
+
+  /* Reset main content layout */
+  .app__main,
+  .app__main--collapsed {
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+}

@@ -19,9 +19,10 @@
 
     <!-- Loading state with shimmer -->
     <div class="performance-overview__grid" *ngIf="isLoading">
-        <div class="performance-overview__card performance-overview__card--skeleton" *ngFor="let i of [1,2,3,4,5,6,7]">
+        <div class="performance-overview__card performance-overview__card--skeleton" *ngFor="let i of [1,2,3,4,5]">
             <div class="skeleton skeleton--label"></div>
             <div class="skeleton skeleton--value"></div>
+            <div class="skeleton skeleton--sparkline"></div>
             <div class="skeleton skeleton--percentage"></div>
         </div>
     </div>
@@ -43,6 +44,18 @@
             </div>
             <div class="performance-overview__card-value" [ngClass]="{'performance-overview__card-value--currency': metric.value.toString().includes('€')}">
                 {{ metric.value }}
+            </div>
+            <div class="performance-overview__sparkline" *ngIf="metric.sparklineData">
+                <svg viewBox="0 0 80 32" preserveAspectRatio="none">
+                    <path
+                        [attr.d]="getSparklinePath(metric.sparklineData)"
+                        fill="none"
+                        [attr.stroke]="metric.percentage > 0 ? '#10b981' : metric.percentage < 0 ? '#ef4444' : '#9ca3af'"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
+                </svg>
             </div>
             <div class="performance-overview__card-percentage"
                  [ngClass]="{

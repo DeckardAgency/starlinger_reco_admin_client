@@ -49,8 +49,10 @@ ui-form-field .ui-form-field__wrapper {
 
 // Style ui-select component to fill the wrapper
 ui-form-field .ui-form-field__wrapper ui-select {
+  display: block;
   width: 100%;
   flex: 1;
+  min-width: 0;
 }
 
 // Style projected inputs/selects/textareas
@@ -167,6 +169,8 @@ ui-form-field .ui-form-field--horizontal .ui-form-field__label {
 
 ui-form-field .ui-form-field--horizontal .ui-form-field__wrapper {
   position: relative;
+  flex: 1;
+  min-width: 0;
 }
 
 ui-form-field .ui-form-field--horizontal .ui-form-field__messages {

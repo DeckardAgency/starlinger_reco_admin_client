@@ -2,10 +2,11 @@ import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
+import { Subject, forkJoin } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
+import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -19,6 +20,8 @@ import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-contai
 import { DiscountService } from '@core/services/http/discount.service';
 import { AccountGroupService } from '@core/services/http/account-group.service';
 import { ClientService } from '@core/services/http/client.service';
+import { ProductDiscountService } from '@core/services/http/product-discount.service';
+import { ProductService } from '@core/services/http/product.service';
 
 interface DiscountDetail {
   id: number;
@@ -58,6 +61,7 @@ const EMPTY_DISCOUNT: DiscountDetail = {
     FormsModule,
     RouterModule,
     ToggleComponent,
+    SelectComponent,
     IconComponent,
     FormFieldComponent,
     BreadcrumbsComponent,
@@ -120,9 +124,6 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   accountGroupOptions = signal<{ value: string; label: string }[]>([]);
   accountOptions = signal<{ value: string; label: string }[]>([]);
 
-  // Selected values (for select fields)
-  selectedAccountGroup = '';
-  selectedAccount = '';
 
   // Product actions
   productActions: TableAction[] = [
@@ -135,7 +136,9 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     private cdr: ChangeDetectorRef,
     private discountService: DiscountService,
     private accountGroupService: AccountGroupService,
-    private clientService: ClientService
+    private clientService: ClientService,
+    private productDiscountService: ProductDiscountService,
+    private productService: ProductService
   ) {}
 
   ngOnInit(): void {
@@ -180,6 +183,9 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
       next: (discount) => {
         // Map API property names to component's local interface
         const discountAny = discount as any;
+        // Parse IRI arrays to plain IDs (e.g. "/api/account_groups/1" → "1")
+        const parseIris = (arr: any[]): string[] =>
+          (arr || []).map((v: any) => typeof v === 'string' ? v.split('/').pop()! : String(v));
         this.discount.set({
           id: discount.id || Number(id),
           name: discount.name || '',
@@ -188,15 +194,13 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
           dateTo: discount.dateValidTo || '',
           discountPercent: parseFloat(discount.discountPercent || '0') || 0,
           priority: discount.priority || 0,
-          accountGroups: discountAny.accountGroups || [],
-          accounts: discountAny.accounts || []
+          accountGroups: parseIris(discountAny.accountGroups),
+          accounts: parseIris(discountAny.clients)
         });
         this.dateFromDate.set(this.parseDateString(discount.dateValidFrom || ''));
         this.dateToDate.set(this.parseDateString(discount.dateValidTo || ''));
-        // Load products if available
-        if (discountAny.products) {
-          this.products.set(discountAny.products as DiscountProduct[]);
-        }
+        // Load linked products
+        this.loadProducts();
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
@@ -209,7 +213,41 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private loadProducts(): void {
-    // Products are loaded with discount data
+    if (!this.discountId) return;
+
+    this.productDiscountService.getByDiscountId(this.discountId).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        const productDiscounts = response.member || [];
+        const productIds = productDiscounts
+          .map(pd => pd.productId)
+          .filter((id): id is number => id != null);
+
+        if (productIds.length === 0) {
+          this.products.set([]);
+          this.cdr.markForCheck();
+          return;
+        }
+
+        // Fetch each product's details
+        const uniqueIds = [...new Set(productIds)];
+        forkJoin(
+          uniqueIds.map(pid => this.productService.getProductById(String(pid)))
+        ).pipe(takeUntil(this.destroy$)).subscribe({
+          next: (products) => {
+            this.products.set(products.map(p => ({
+              id: String(p.id),
+              code: p.partNo || '',
+              shortDescription: p.shortDescription || p.name || ''
+            })));
+            this.cdr.markForCheck();
+          },
+          error: (err) => console.error('Error loading products:', err)
+        });
+      },
+      error: (err) => console.error('Error loading product discounts:', err)
+    });
   }
 
   private loadDropdownOptions(): void {
@@ -335,46 +373,20 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     this.discount.update(d => ({ ...d, priority: numValue }));
   }
 
-  onAccountGroupChange(): void {
-    if (this.selectedAccountGroup) {
-      this.discount.update(d => ({
-        ...d,
-        accountGroups: [...new Set([...d.accountGroups, this.selectedAccountGroup])]
-      }));
-      this.selectedAccountGroup = '';
-    }
+  onAccountGroupsChange(values: (string | number)[]): void {
+    this.discount.update(d => ({ ...d, accountGroups: values.map(String) }));
   }
 
-  onAccountChange(): void {
-    if (this.selectedAccount) {
-      this.discount.update(d => ({
-        ...d,
-        accounts: [...new Set([...d.accounts, this.selectedAccount])]
-      }));
-      this.selectedAccount = '';
-    }
+  onAccountsChange(values: (string | number)[]): void {
+    this.discount.update(d => ({ ...d, accounts: values.map(String) }));
   }
 
-  removeAccountGroup(value: string): void {
-    this.discount.update(d => ({
-      ...d,
-      accountGroups: d.accountGroups.filter(g => g !== value)
-    }));
+  clearAccountGroups(): void {
+    this.discount.update(d => ({ ...d, accountGroups: [] }));
   }
 
-  removeAccount(value: string): void {
-    this.discount.update(d => ({
-      ...d,
-      accounts: d.accounts.filter(a => a !== value)
-    }));
-  }
-
-  getAccountGroupLabel(value: string): string {
-    return this.accountGroupOptions().find(o => o.value === value)?.label || value;
-  }
-
-  getAccountLabel(value: string): string {
-    return this.accountOptions().find(o => o.value === value)?.label || value;
+  clearAccounts(): void {
+    this.discount.update(d => ({ ...d, accounts: [] }));
   }
 
   // Save actions
@@ -401,7 +413,9 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
       dateValidFrom: data.dateFrom || null,
       dateValidTo: data.dateTo || null,
       discountPercent: data.discountPercent.toString(),
-      priority: data.priority
+      priority: data.priority,
+      accountGroups: data.accountGroups.map(id => `/api/v1/account_groups/${id}`),
+      clients: data.accounts.map(id => `/api/v1/clients/${id}`)
     };
 
     const isCreating = !this.isEditMode();

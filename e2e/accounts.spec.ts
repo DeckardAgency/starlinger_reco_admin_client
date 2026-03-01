@@ -67,7 +67,11 @@ test.describe('Accounts CRUD', () => {
   test('4. should navigate to edit page via actions dropdown', async ({ page }) => {
     await modulePage.gotoList();
 
-    await modulePage.clickEdit(0);
+    // Find the E2E test record — never edit production data
+    const rowIndex = await modulePage.findRowWithText('E2E');
+    test.skip(rowIndex === -1, 'No test account found to edit');
+
+    await modulePage.clickEdit(rowIndex);
 
     await expect(page).toHaveURL(/\/clients\/[\w-]+\/edit/);
     await expect(page.locator('input[placeholder="Company title"]')).toBeVisible({ timeout: 10000 });
@@ -75,7 +79,12 @@ test.describe('Accounts CRUD', () => {
 
   test('5. should edit an existing account', async ({ page }) => {
     await modulePage.gotoList();
-    await modulePage.clickEdit(0);
+
+    // Find the E2E test record — never edit production data
+    const rowIndex = await modulePage.findRowWithText('E2E');
+    test.skip(rowIndex === -1, 'No test account found to edit');
+
+    await modulePage.clickEdit(rowIndex);
 
     // Verify the form loads with existing data
     const nameInput = page.locator('input[placeholder="Company title"]');
@@ -84,7 +93,7 @@ test.describe('Accounts CRUD', () => {
     expect(currentValue.length).toBeGreaterThan(0);
 
     // Modify the title field
-    await nameInput.fill(`Edited_${Date.now()}`);
+    await nameInput.fill(`E2E_Edited_${Date.now()}`);
 
     // Click save and verify it was clicked (Save button exists and is clickable)
     await modulePage.saveButton.click();

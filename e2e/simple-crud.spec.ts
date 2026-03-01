@@ -125,10 +125,11 @@ for (const moduleKey of SIMPLE_CRUD_MODULES) {
     test(`4. should navigate to edit page via actions dropdown`, async ({ page }) => {
       await modulePage.gotoList();
 
-      const hasData = await modulePage.hasData();
-      test.skip(!hasData, `No ${config.name.toLowerCase()} to edit`);
+      // Find the E2E test record — never edit production data
+      const rowIndex = await modulePage.findRowWithText('E2E');
+      test.skip(rowIndex === -1, `No test ${config.name.toLowerCase()} found to edit`);
 
-      await modulePage.clickEdit(0);
+      await modulePage.clickEdit(rowIndex);
 
       await expect(page).toHaveURL(new RegExp(`/${config.listPath}/[\\w-]+/edit`));
       // Verify the save button is present (we're on a form page)
@@ -138,15 +139,16 @@ for (const moduleKey of SIMPLE_CRUD_MODULES) {
     test(`5. should edit an existing ${config.name.toLowerCase().slice(0, -1)}`, async ({ page }) => {
       await modulePage.gotoList();
 
-      const hasData = await modulePage.hasData();
-      test.skip(!hasData, `No ${config.name.toLowerCase()} to edit`);
+      // Find the E2E test record — never edit production data
+      const rowIndex = await modulePage.findRowWithText('E2E');
+      test.skip(rowIndex === -1, `No test ${config.name.toLowerCase()} found to edit`);
 
-      await modulePage.clickEdit(0);
+      await modulePage.clickEdit(rowIndex);
 
       // Modify the first text field — use a fresh value to avoid accumulation from previous runs
       const firstField = config.formFields.find(f => f.type !== 'number' && f.type !== 'select' && f.type !== 'toggle' && f.type !== 'textarea' && f.name !== 'date');
       if (firstField) {
-        const editedValue = `Edited_${Date.now()}`;
+        const editedValue = `E2E_Edited_${Date.now()}`;
         await modulePage.fillField(firstField.placeholder, editedValue, firstField.fieldIndex);
       }
 

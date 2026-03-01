@@ -90,37 +90,26 @@
         </ui-form-field>
 
         <ui-form-field label="Account groups" layout="horizontal">
-          <div class="select-with-pill">
-            <span class="select-placeholder" *ngIf="discount().accountGroups.length === 0">Select</span>
-            <div class="pill" *ngFor="let group of discount().accountGroups">
-              <button class="pill__remove" (click)="removeAccountGroup(group); $event.stopPropagation()">
-                <ui-icon name="close" size="xs"></ui-icon>
-              </button>
-              <span>{{ getAccountGroupLabel(group) }}</span>
-            </div>
-            <select class="select-field" [(ngModel)]="selectedAccountGroup" (change)="onAccountGroupChange()">
-              <option value="" disabled selected>Select</option>
-              <option *ngFor="let opt of accountGroupOptions()" [value]="opt.value">{{ opt.label }}</option>
-            </select>
-            <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
-          </div>
+          <ui-select
+            variant="pill"
+            [multiple]="true"
+            [options]="accountGroupOptions()"
+            [ngModel]="discount().accountGroups"
+            (ngModelChange)="onAccountGroupsChange($event)"
+            placeholder="Select account groups">
+          </ui-select>
         </ui-form-field>
 
         <ui-form-field label="Accounts" layout="horizontal">
-          <div class="select-with-pill">
-            <span class="select-placeholder" *ngIf="discount().accounts.length === 0">Select</span>
-            <div class="pill" *ngFor="let account of discount().accounts">
-              <button class="pill__remove" (click)="removeAccount(account); $event.stopPropagation()">
-                <ui-icon name="close" size="xs"></ui-icon>
-              </button>
-              <span>{{ getAccountLabel(account) }}</span>
-            </div>
-            <select class="select-field" [(ngModel)]="selectedAccount" (change)="onAccountChange()">
-              <option value="" disabled selected>Select</option>
-              <option *ngFor="let opt of accountOptions()" [value]="opt.value">{{ opt.label }}</option>
-            </select>
-            <ui-icon name="chevron-down" size="sm" class="select-chevron"></ui-icon>
-          </div>
+          <ui-select
+            variant="pill"
+            [multiple]="true"
+            [searchable]="true"
+            [options]="accountOptions()"
+            [ngModel]="discount().accounts"
+            (ngModelChange)="onAccountsChange($event)"
+            placeholder="Select accounts">
+          </ui-select>
         </ui-form-field>
       </div>
     </div>

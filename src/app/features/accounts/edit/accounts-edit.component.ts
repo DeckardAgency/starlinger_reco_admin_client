@@ -487,7 +487,12 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       accountType: c.accountType ?? '',
       accountGroupId: c.accountGroup?.id ?? undefined,
       phone: c.phoneNumber,
-      web: (c as { web?: string }).web
+      otherPhone: c.otherPhone ?? '',
+      otherEmail: c.otherEmail ?? '',
+      fax: c.fax ?? '',
+      web: c.web ?? '',
+      purchaseLimit: c.purchaseLimit ? parseFloat(c.purchaseLimit) : 0,
+      amountSpent: c.amountSpent ? parseFloat(c.amountSpent) : 0,
     };
   }
 
@@ -661,6 +666,11 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       email: account.email?.trim() || null,
       vatNumber: account.oib?.trim() || null,
       phoneNumber: account.phone?.trim() || null,
+      otherPhone: account.otherPhone?.trim() || null,
+      otherEmail: account.otherEmail?.trim() || null,
+      fax: account.fax?.trim() || null,
+      web: account.web?.trim() || null,
+      purchaseLimit: account.purchaseLimit?.toString() || null,
       isActive: this.isActive(),
       isLegalEntity: this.isLegalEntity(),
       accountType: account.accountType || null,
@@ -861,6 +871,11 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   goBack(): void {
     window.history.back();
+  }
+
+  updatePurchaseLimit(event: Event): void {
+    const value = parseFloat((event.target as HTMLInputElement).value) || 0;
+    this.account.update(a => ({ ...a, purchaseLimit: value }));
   }
 
   formatCurrency(value: number | undefined): string {

@@ -64,11 +64,14 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     statusColors: Record<string, string> = {
         'draft': '#9ca3af',
+        'pending': '#f59e0b',
         'submitted': '#3b82f6',
+        'processing': '#3b82f6',
         'in_review': '#8b5cf6',
         'more_info': '#f59e0b',
         'information_provided': '#06b6d4',
         'in_progress': '#6366f1',
+        'dispatched': '#10b981',
         'completed': '#10b981',
         'canceled': '#ef4444'
     };

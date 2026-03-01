@@ -14,6 +14,11 @@ export class ProductDiscountService extends BaseHttpService {
     return this.getWithJsonLd<ProductDiscountsCollection>(this.endpoint, params);
   }
 
+  getByDiscountId(discountId: string, page: number = 1, itemsPerPage: number = 100): Observable<ProductDiscountsCollection> {
+    const params = this.buildParams({ discountId, page, itemsPerPage });
+    return this.getWithJsonLd<ProductDiscountsCollection>(this.endpoint, params);
+  }
+
   createProductDiscount(data: Partial<ProductDiscount>): Observable<ProductDiscount> {
     return this.postWithJsonLd<ProductDiscount>(this.endpoint, data);
   }

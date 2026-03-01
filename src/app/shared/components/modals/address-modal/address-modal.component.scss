@@ -102,6 +102,24 @@
   margin-top: 8px;
 }
 
+.toggle-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: #FEF3C7;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 16px;
+  color: #92400E;
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+}
+
 // Button styles
 .btn {
   display: inline-flex;

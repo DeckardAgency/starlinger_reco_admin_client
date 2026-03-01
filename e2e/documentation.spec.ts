@@ -99,7 +99,7 @@ test.describe('Documentation CRUD', () => {
     // Component has delay(200) + Angular rendering time
     await expect(page.locator('input#title')).toBeVisible({ timeout: 15000 });
 
-    await page.locator('input#title').fill(`Edited_${Date.now()}`);
+    await page.locator('input#title').fill(`E2E_Edited_${Date.now()}`);
 
     const responsePromise = page.waitForResponse(
       (resp) => resp.url().includes('/documentations') && ['PATCH', 'PUT'].includes(resp.request().method()),

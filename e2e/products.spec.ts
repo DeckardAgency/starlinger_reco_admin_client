@@ -61,7 +61,11 @@ test.describe('Products CRUD', () => {
   test('4. should navigate to edit page via actions dropdown', async ({ page }) => {
     await modulePage.gotoList();
 
-    await modulePage.clickEdit(0);
+    // Find the E2E test record — never edit production data
+    const rowIndex = await modulePage.findRowWithText('E2E');
+    test.skip(rowIndex === -1, 'No test product found to edit');
+
+    await modulePage.clickEdit(rowIndex);
 
     await expect(page).toHaveURL(/\/products\/[\w-]+\/edit/);
     // Verify form is loaded with toggles
@@ -70,12 +74,17 @@ test.describe('Products CRUD', () => {
 
   test('5. should edit an existing product', async ({ page }) => {
     await modulePage.gotoList();
-    await modulePage.clickEdit(0);
+
+    // Find the E2E test record — never edit production data
+    const rowIndex = await modulePage.findRowWithText('E2E');
+    test.skip(rowIndex === -1, 'No test product found to edit');
+
+    await modulePage.clickEdit(rowIndex);
 
     // Modify the name field
     const nameInput = page.locator('input[placeholder="Enter product name"]');
     await expect(nameInput).toBeVisible();
-    await nameInput.fill(`Edited_${Date.now()}`);
+    await nameInput.fill(`E2E_Edited_${Date.now()}`);
 
     await modulePage.saveAndExpectList();
   });

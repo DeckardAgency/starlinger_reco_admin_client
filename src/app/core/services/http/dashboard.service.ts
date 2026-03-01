@@ -80,11 +80,14 @@ export class DashboardService {
     getStatusLabel(status: string): string {
         const statusLabels: Record<string, string> = {
             'draft': 'Draft',
+            'pending': 'Pending',
             'submitted': 'Submitted',
+            'processing': 'Processing',
             'in_review': 'In Review',
             'more_info': 'More Info',
             'information_provided': 'Info Provided',
             'in_progress': 'In Progress',
+            'dispatched': 'Dispatched',
             'completed': 'Completed',
             'canceled': 'Canceled'
         };
@@ -97,11 +100,14 @@ export class DashboardService {
     getStatusClass(status: string): string {
         const statusClasses: Record<string, string> = {
             'draft': 'status--draft',
+            'pending': 'status--pending',
             'submitted': 'status--submitted',
+            'processing': 'status--processing',
             'in_review': 'status--in-review',
             'more_info': 'status--more-info',
             'information_provided': 'status--info-provided',
             'in_progress': 'status--in-progress',
+            'dispatched': 'status--dispatched',
             'completed': 'status--completed',
             'canceled': 'status--canceled'
         };

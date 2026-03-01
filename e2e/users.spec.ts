@@ -72,7 +72,11 @@ test.describe('Users CRUD', () => {
   test('4. should navigate to edit page via actions dropdown', async ({ page }) => {
     await modulePage.gotoList();
 
-    await modulePage.clickEdit(0);
+    // Find the E2E test record — never edit production data
+    const rowIndex = await modulePage.findRowWithText('E2E');
+    test.skip(rowIndex === -1, 'No test user found to edit');
+
+    await modulePage.clickEdit(rowIndex);
 
     await expect(page).toHaveURL(/\/users\/[\w-]+\/edit/);
     // Verify form fields are visible (edit mode)
@@ -82,14 +86,19 @@ test.describe('Users CRUD', () => {
 
   test('5. should edit an existing user', async ({ page }) => {
     await modulePage.gotoList();
-    await modulePage.clickEdit(0);
+
+    // Find the E2E test record — never edit production data
+    const rowIndex = await modulePage.findRowWithText('E2E');
+    test.skip(rowIndex === -1, 'No test user found to edit');
+
+    await modulePage.clickEdit(rowIndex);
 
     // Verify form is loaded
     const firstNameInput = page.locator('input[placeholder="Enter first name"]');
     await expect(firstNameInput).toBeVisible();
 
     // Modify first name
-    await firstNameInput.fill(`Edited_${Date.now()}`);
+    await firstNameInput.fill(`E2E_Edited_${Date.now()}`);
 
     // Click save (known issue: PATCH may not fire for some modules)
     await modulePage.saveButton.click();

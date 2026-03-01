@@ -93,7 +93,7 @@
           </ui-form-field>
 
           <ui-form-field label="Purchase limit" layout="horizontal">
-            <input type="text" [value]="formatCurrency(account().purchaseLimit)" placeholder="Purchase limit" readonly>
+            <input type="number" [value]="account().purchaseLimit" (input)="updatePurchaseLimit($event)" placeholder="0.00" step="0.01" min="0">
           </ui-form-field>
 
           <ui-form-field label="Amount spent" layout="horizontal">
@@ -302,6 +302,7 @@
 <app-address-modal
   [isOpen]="isAddressModalOpen()"
   [address]="selectedAddress()"
+  [existingAddresses]="addresses()"
   [saving]="isAddressSaving()"
   (closeModal)="closeAddressModal()"
   (saveAddress)="onAddressSave($event)"

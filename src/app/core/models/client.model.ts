@@ -71,6 +71,12 @@ export interface Client {
     isArchived: boolean;
     isLegalEntity?: boolean;
     accountType?: string;
+    purchaseLimit?: string | null;
+    amountSpent?: string | null;
+    otherPhone?: string | null;
+    otherEmail?: string | null;
+    fax?: string | null;
+    web?: string | null;
     accountGroup?: {
         '@id'?: string;
         id: number;
@@ -155,6 +161,11 @@ export interface CreateClientDto {
     phoneNumber?: string;
     email?: string;
     vatNumber?: string;
+    purchaseLimit?: string | null;
+    otherPhone?: string | null;
+    otherEmail?: string | null;
+    fax?: string | null;
+    web?: string | null;
     maxActiveUsers?: number | null;
     isActive?: boolean;
     isArchived?: boolean;
@@ -171,6 +182,11 @@ export interface UpdateClientDto {
     phoneNumber?: string;
     email?: string;
     vatNumber?: string;
+    purchaseLimit?: string | null;
+    otherPhone?: string | null;
+    otherEmail?: string | null;
+    fax?: string | null;
+    web?: string | null;
     maxActiveUsers?: number | null;
     isActive?: boolean;
     isArchived?: boolean;

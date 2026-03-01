@@ -23,6 +23,14 @@ export interface AddressFormData {
   isDelivery: boolean;
 }
 
+export interface ExistingAddress {
+  id: number;
+  street: string;
+  city: string;
+  isBilling: boolean;
+  isDelivery: boolean;
+}
+
 @Component({
   selector: 'app-address-modal',
   standalone: true,
@@ -59,6 +67,7 @@ export interface AddressFormData {
 export class AddressModalComponent implements OnChanges {
   @Input({ transform: booleanAttribute }) isOpen = false;
   @Input() address: AddressFormData | null = null;
+  @Input() existingAddresses: ExistingAddress[] = [];
   @Input({ transform: booleanAttribute }) saving = false;
 
   @Output() closeModal = new EventEmitter<void>();
@@ -131,6 +140,22 @@ export class AddressModalComponent implements OnChanges {
       country: 'Country'
     };
     return labels[field] || field;
+  }
+
+  get billingWarning(): string | null {
+    if (!this.addressForm.get('isBilling')?.value) return null;
+    const currentId = this.address?.id;
+    const existing = this.existingAddresses.find(a => a.isBilling && a.id !== currentId);
+    if (!existing) return null;
+    return `"${existing.street}, ${existing.city}" is currently the billing address and will be overridden.`;
+  }
+
+  get deliveryWarning(): string | null {
+    if (!this.addressForm.get('isDelivery')?.value) return null;
+    const currentId = this.address?.id;
+    const existing = this.existingAddresses.find(a => a.isDelivery && a.id !== currentId);
+    if (!existing) return null;
+    return `"${existing.street}, ${existing.city}" is currently the delivery address and will be overridden.`;
   }
 
   onBillingChange(value: boolean): void {

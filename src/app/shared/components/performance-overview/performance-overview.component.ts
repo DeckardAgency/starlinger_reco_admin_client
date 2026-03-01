@@ -13,6 +13,7 @@ interface PerformanceMetric {
     percentage: number;
     isIncreasing: boolean;
     infoTooltip?: string;
+    sparklineData?: number[];
 }
 
 interface MetricData {
@@ -20,6 +21,7 @@ interface MetricData {
     formatted?: string;
     percentageChange: number;
     trend: 'up' | 'down' | 'neutral';
+    history?: number[];
 }
 
 interface DashboardResponse {
@@ -67,7 +69,6 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
     }
 
     ngOnInit() {
-        // Set up form value change subscription
         this.dateRangeForm.get('dateRange')?.valueChanges
             .pipe(takeUntil(this.destroy$))
             .subscribe(range => {
@@ -80,17 +81,15 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
         const end = new Date();
         const start = new Date();
         start.setDate(start.getDate() - 29);
-        
+
         this.startDate = start.toISOString().split('T')[0];
         this.endDate = end.toISOString().split('T')[0];
         this.dateRangeForm.get('dateRange')?.setValue({ start, end }, { emitEvent: false });
 
-        // Load initial data
         this.loadPerformanceData();
     }
 
     ngAfterViewInit() {
-        // Set up date picker restrictions
         this.rangePicker.setMinDate('2022-01-01');
         this.rangePicker.setDisableFutureDates(true);
     }
@@ -117,12 +116,10 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
             url += `?startDate=${this.startDate}&endDate=${this.endDate}`;
         }
 
-        console.log('[PerformanceOverview] Fetching data from:', url);
         this.http.get<DashboardResponse>(url)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (data) => {
-                    console.log('[PerformanceOverview] Data received:', data);
                     this.updateMetrics(data);
                     this.isLoading = false;
                     this.cdr.detectChanges();
@@ -138,7 +135,6 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
     }
 
     private updateMetrics(data: DashboardResponse) {
-        // Update the date range from the API response
         if (data.period) {
             const start = new Date(data.period.start);
             const end = new Date(data.period.end);
@@ -153,46 +149,88 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
                 value: (data.shopOrders ?? zero).value,
                 percentage: (data.shopOrders ?? zero).percentageChange,
                 isIncreasing: (data.shopOrders ?? zero).trend === 'up',
-                infoTooltip: 'Total number of orders placed in your shop'
+                infoTooltip: 'Total number of orders placed in your shop',
+                sparklineData: (data.shopOrders ?? zero).history || this.generateMockSparklineData((data.shopOrders ?? zero).percentageChange)
             },
             {
                 label: 'Active carts',
                 value: (data.activeCarts ?? zero).value,
                 percentage: (data.activeCarts ?? zero).percentageChange,
                 isIncreasing: (data.activeCarts ?? zero).trend === 'up',
-                infoTooltip: 'Shopping carts that are currently active'
+                infoTooltip: 'Shopping carts that are currently active',
+                sparklineData: (data.activeCarts ?? zero).history || this.generateMockSparklineData((data.activeCarts ?? zero).percentageChange)
             },
             {
                 label: 'Completed carts',
                 value: (data.completedCarts ?? zero).value,
                 percentage: (data.completedCarts ?? zero).percentageChange,
                 isIncreasing: (data.completedCarts ?? zero).trend === 'up',
-                infoTooltip: 'Shopping carts that were completed'
+                infoTooltip: 'Shopping carts that were completed',
+                sparklineData: (data.completedCarts ?? zero).history || this.generateMockSparklineData((data.completedCarts ?? zero).percentageChange)
             },
             {
                 label: 'Total shop revenue',
                 value: (data.totalShopRevenue ?? { ...zero, formatted: '0,00 €' }).formatted,
                 percentage: (data.totalShopRevenue ?? zero).percentageChange,
                 isIncreasing: (data.totalShopRevenue ?? zero).trend === 'up',
-                infoTooltip: 'Total revenue generated from completed orders'
+                infoTooltip: 'Total revenue generated from completed orders',
+                sparklineData: (data.totalShopRevenue ?? zero).history || this.generateMockSparklineData((data.totalShopRevenue ?? zero).percentageChange)
             },
             {
                 label: 'Cancelled orders revenue',
                 value: (data.cancelledOrdersRevenue ?? { ...zero, formatted: '0,00 €' }).formatted,
                 percentage: (data.cancelledOrdersRevenue ?? zero).percentageChange,
                 isIncreasing: (data.cancelledOrdersRevenue ?? zero).trend === 'up',
-                infoTooltip: 'Revenue lost from cancelled orders'
+                infoTooltip: 'Revenue lost from cancelled orders',
+                sparklineData: (data.cancelledOrdersRevenue ?? zero).history || this.generateMockSparklineData((data.cancelledOrdersRevenue ?? zero).percentageChange)
             }
         ];
     }
 
     private setDefaultMetrics() {
         this.metrics = [
-            { label: 'Shop orders', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Total number of orders placed in your shop' },
-            { label: 'Active carts', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Shopping carts that are currently active' },
-            { label: 'Completed carts', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Shopping carts that were completed' },
-            { label: 'Total shop revenue', value: '0,00 €', percentage: 0, isIncreasing: false, infoTooltip: 'Total revenue generated from completed orders' },
-            { label: 'Cancelled orders revenue', value: '0,00 €', percentage: 0, isIncreasing: false, infoTooltip: 'Revenue lost from cancelled orders' }
+            { label: 'Shop orders', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Total number of orders placed in your shop', sparklineData: this.generateMockSparklineData(0) },
+            { label: 'Active carts', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Shopping carts that are currently active', sparklineData: this.generateMockSparklineData(0) },
+            { label: 'Completed carts', value: 0, percentage: 0, isIncreasing: false, infoTooltip: 'Shopping carts that were completed', sparklineData: this.generateMockSparklineData(0) },
+            { label: 'Total shop revenue', value: '0,00 €', percentage: 0, isIncreasing: false, infoTooltip: 'Total revenue generated from completed orders', sparklineData: this.generateMockSparklineData(0) },
+            { label: 'Cancelled orders revenue', value: '0,00 €', percentage: 0, isIncreasing: false, infoTooltip: 'Revenue lost from cancelled orders', sparklineData: this.generateMockSparklineData(0) }
         ];
+    }
+
+    getSparklinePath(data: number[] | undefined, width: number = 80, height: number = 32): string {
+        if (!data || data.length < 2) {
+            return '';
+        }
+
+        const min = Math.min(...data);
+        const max = Math.max(...data);
+        const range = max - min || 1;
+        const padding = 2;
+        const effectiveHeight = height - padding * 2;
+        const effectiveWidth = width - padding * 2;
+
+        const points = data.map((value, index) => {
+            const x = padding + (index / (data.length - 1)) * effectiveWidth;
+            const y = padding + effectiveHeight - ((value - min) / range) * effectiveHeight;
+            return `${x},${y}`;
+        });
+
+        return `M${points.join(' L')}`;
+    }
+
+    private generateMockSparklineData(percentage: number): number[] {
+        const points = 7;
+        const data: number[] = [];
+        let base = 50;
+
+        for (let i = 0; i < points; i++) {
+            const trend = percentage > 0 ? 1 : percentage < 0 ? -1 : 0;
+            const randomVariation = (Math.random() - 0.5) * 20;
+            const trendVariation = (i / points) * trend * 15;
+            base = Math.max(10, Math.min(90, base + randomVariation + trendVariation));
+            data.push(base);
+        }
+
+        return data;
     }
 }

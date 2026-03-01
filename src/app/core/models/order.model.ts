@@ -22,9 +22,25 @@ export interface OrderItem {
     quantity: number;
     unitPrice: number;
     subtotal: number;
+    originalUnitPrice?: number;
+    discountPercent?: number;
     createdAt: string;
     updatedAt: string;
     isCustomPrice?: boolean;
+}
+
+export interface OrderPaymentType {
+    '@id'?: string;
+    '@type'?: string;
+    id: number;
+    name: string;
+}
+
+export interface OrderDeliveryType {
+    '@id'?: string;
+    '@type'?: string;
+    id: number;
+    name: string;
 }
 
 export interface OrderLog {
@@ -46,6 +62,8 @@ export interface Order {
     orderNumber: string;
     status: string;
     totalAmount: number;
+    subtotalBeforeDiscount?: number;
+    totalDiscount?: number;
     notes?: string;
     shippingAddress: string;
     billingAddress: string;
@@ -66,6 +84,8 @@ export interface Order {
     cancellationReason?: string;
     cancelledAt?: string;
     cancelledBy?: User;
+    paymentType?: OrderPaymentType | string | null;
+    deliveryType?: OrderDeliveryType | string | null;
 }
 
 // Tracking carrier options
