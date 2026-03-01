@@ -1,71 +1,101 @@
 <div class="performance-overview">
     <div class="performance-overview__header">
-        <div class="performance-overview__title">
-            <ui-icon name="chart-line" size="md" color="#232323"></ui-icon>
-            <h2>Performance overview</h2>
+        <div class="performance-overview__header-top">
+            <div class="performance-overview__title">
+                <span class="performance-overview__icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <path d="M2.5 2.5V17.5H17.5M15.8333 7.5L11.6667 11.6667L8.33333 8.33333L5.83333 10.8333" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
+                <h2>Performance overview</h2>
+            </div>
+            <div class="performance-overview__date-range">
+                <form [formGroup]="dateRangeForm">
+                    <app-date-picker
+                        formControlName="dateRange"
+                        [isRange]="true"
+                        [dateFormat]="'MMM d, y'"
+                        [rangePlaceholder]="'Select date range'"
+                        [storageKey]="'performance-overview-dates'">
+                    </app-date-picker>
+                </form>
+            </div>
         </div>
-        <div class="performance-overview__date-range">
-            <form [formGroup]="dateRangeForm">
-                <app-date-picker
-                    formControlName="dateRange"
-                    [isRange]="true"
-                    [dateFormat]="'dd-MM-yyyy'"
-                    [rangePlaceholder]="'Select date range'"
-                    [storageKey]="'performance-overview-dates'">
-                </app-date-picker>
-            </form>
+        <div class="performance-overview__presets">
+            <button
+                *ngFor="let preset of datePresets"
+                class="performance-overview__preset-btn"
+                [class.performance-overview__preset-btn--active]="activePreset === preset.label"
+                (click)="applyPreset(preset)"
+            >
+                {{ preset.label }}
+            </button>
         </div>
     </div>
 
     <!-- Loading state with shimmer -->
-    <div class="performance-overview__grid" *ngIf="isLoading">
+    <div class="performance-overview__grid performance-overview__grid--loading" *ngIf="isLoading">
         <div class="performance-overview__card performance-overview__card--skeleton" *ngFor="let i of [1,2,3,4,5]">
-            <div class="skeleton skeleton--label"></div>
-            <div class="skeleton skeleton--value"></div>
-            <div class="skeleton skeleton--sparkline"></div>
-            <div class="skeleton skeleton--percentage"></div>
+            <div class="performance-overview__card-header">
+                <div class="skeleton skeleton--text skeleton--label"></div>
+                <div class="skeleton skeleton--icon"></div>
+            </div>
+            <div class="performance-overview__card-body">
+                <div class="performance-overview__card-data">
+                    <div class="skeleton skeleton--text skeleton--value"></div>
+                    <div class="skeleton skeleton--badge"></div>
+                </div>
+                <div class="skeleton skeleton--sparkline"></div>
+            </div>
         </div>
     </div>
 
     <!-- Error state -->
     <div class="performance-overview__error" *ngIf="error && !isLoading">
         <p>{{ error }}</p>
-        <ui-button variant="primary" size="md" (click)="loadPerformanceData()">Retry</ui-button>
+        <button class="performance-overview__retry-button" (click)="loadPerformanceData()">Retry</button>
     </div>
 
     <!-- Metrics grid -->
     <div class="performance-overview__grid" *ngIf="!isLoading && !error">
         <div class="performance-overview__card" *ngFor="let metric of metrics">
-            <div class="performance-overview__card-label">
-                <span>{{ metric.label }}</span>
-                <span class="performance-overview__help-icon" [title]="metric.infoTooltip">
-                    <ui-icon name="help-circle" size="sm" color="#232323"></ui-icon>
-                </span>
+            <div class="performance-overview__card-header">
+                <span class="performance-overview__card-label">{{ metric.label }}</span>
+                <span class="performance-overview__info-icon" [title]="metric.infoTooltip">ⓘ</span>
             </div>
-            <div class="performance-overview__card-value" [ngClass]="{'performance-overview__card-value--currency': metric.value.toString().includes('€')}">
-                {{ metric.value }}
-            </div>
-            <div class="performance-overview__sparkline" *ngIf="metric.sparklineData">
-                <svg viewBox="0 0 80 32" preserveAspectRatio="none">
-                    <path
-                        [attr.d]="getSparklinePath(metric.sparklineData)"
-                        fill="none"
-                        [attr.stroke]="metric.percentage > 0 ? '#10b981' : metric.percentage < 0 ? '#ef4444' : '#9ca3af'"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    />
-                </svg>
-            </div>
-            <div class="performance-overview__card-percentage"
-                 [ngClass]="{
-                   'performance-overview__card-percentage--up': metric.percentage > 0,
-                   'performance-overview__card-percentage--down': metric.percentage < 0,
-                   'performance-overview__card-percentage--neutral': metric.percentage === 0
-                 }">
-                <ui-icon *ngIf="metric.percentage > 0" name="trending-up" size="sm"></ui-icon>
-                <ui-icon *ngIf="metric.percentage < 0" name="trending-down" size="sm"></ui-icon>
-                <span>{{ metric.percentage | number:'1.2-2' }} %</span>
+            <div class="performance-overview__card-body">
+                <div class="performance-overview__card-data">
+                    <div class="performance-overview__card-value" [ngClass]="{'performance-overview__card-value--currency': metric.value.toString().includes('€')}">
+                        {{ metric.value }}
+                    </div>
+                    <div class="performance-overview__percentage"
+                         [ngClass]="{
+                           'performance-overview__percentage--increasing': metric.percentage > 0,
+                           'performance-overview__percentage--decreasing': metric.percentage < 0,
+                           'performance-overview__percentage--neutral': metric.percentage === 0
+                         }">
+                        <svg *ngIf="metric.percentage > 0" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="18 15 12 9 6 15"></polyline>
+                        </svg>
+                        <svg *ngIf="metric.percentage < 0" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                        <span *ngIf="metric.percentage === 0">—</span>
+                        <span>{{ metric.percentage >= 0 ? '+' : '' }}{{ metric.percentage | number:'1.1-1' }}%</span>
+                    </div>
+                </div>
+                <div class="performance-overview__sparkline" *ngIf="metric.sparklineData">
+                    <svg viewBox="0 0 80 32" preserveAspectRatio="none">
+                        <path
+                            [attr.d]="getSparklinePath(metric.sparklineData)"
+                            fill="none"
+                            [attr.stroke]="metric.percentage > 0 ? '#10b981' : metric.percentage < 0 ? '#ef4444' : '#9ca3af'"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+                </div>
             </div>
         </div>
     </div>

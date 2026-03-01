@@ -1,8 +1,7 @@
-import { Component, Input, OnInit, ViewChild, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, OnInit, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DatePickerComponent } from "@shared/components/date-picker/date-picker.component";
 import { ReactiveFormsModule, FormGroup, FormBuilder } from "@angular/forms";
-import { IconComponent, ButtonComponent } from '@app/ui-kit';
 import { HttpClient } from '@angular/common/http';
 import { Subject, takeUntil } from 'rxjs';
 import { environment } from "@env/environment";
@@ -14,6 +13,11 @@ interface PerformanceMetric {
     isIncreasing: boolean;
     infoTooltip?: string;
     sparklineData?: number[];
+}
+
+interface DateRangePreset {
+    label: string;
+    getValue: () => { start: Date; end: Date };
 }
 
 interface MetricData {
@@ -41,7 +45,7 @@ interface DashboardResponse {
 
 @Component({
     selector: 'app-performance-overview',
-    imports: [CommonModule, DatePickerComponent, ReactiveFormsModule, IconComponent, ButtonComponent],
+    imports: [CommonModule, DatePickerComponent, ReactiveFormsModule],
     templateUrl: './performance-overview.component.html',
     styleUrls: ['./performance-overview.component.scss']
 })
@@ -58,10 +62,66 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
     isLoading = false;
     error: string | null = null;
 
+    activePreset: string | null = 'Last 30 days';
+
+    datePresets: DateRangePreset[] = [
+        {
+            label: 'Today',
+            getValue: () => {
+                const today = new Date();
+                return { start: today, end: today };
+            }
+        },
+        {
+            label: 'Last 7 days',
+            getValue: () => {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(start.getDate() - 6);
+                return { start, end };
+            }
+        },
+        {
+            label: 'Last 30 days',
+            getValue: () => {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(start.getDate() - 29);
+                return { start, end };
+            }
+        },
+        {
+            label: 'This month',
+            getValue: () => {
+                const now = new Date();
+                const start = new Date(now.getFullYear(), now.getMonth(), 1);
+                const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                return { start, end };
+            }
+        },
+        {
+            label: 'Last month',
+            getValue: () => {
+                const now = new Date();
+                const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                const end = new Date(now.getFullYear(), now.getMonth(), 0);
+                return { start, end };
+            }
+        },
+        {
+            label: 'This year',
+            getValue: () => {
+                const now = new Date();
+                const start = new Date(now.getFullYear(), 0, 1);
+                const end = now;
+                return { start, end };
+            }
+        }
+    ];
+
     constructor(
         private fb: FormBuilder,
-        private http: HttpClient,
-        private cdr: ChangeDetectorRef
+        private http: HttpClient
     ) {
         this.dateRangeForm = this.fb.group({
             dateRange: [null]
@@ -77,14 +137,14 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
                 }
             });
 
-        // Apply "Last 30 days" as default
-        const end = new Date();
-        const start = new Date();
-        start.setDate(start.getDate() - 29);
-
-        this.startDate = start.toISOString().split('T')[0];
-        this.endDate = end.toISOString().split('T')[0];
-        this.dateRangeForm.get('dateRange')?.setValue({ start, end }, { emitEvent: false });
+        // Apply "Last 30 days" preset by default
+        const defaultPreset = this.datePresets.find(p => p.label === 'Last 30 days');
+        if (defaultPreset) {
+            const range = defaultPreset.getValue();
+            this.startDate = range.start.toISOString().split('T')[0];
+            this.endDate = range.end.toISOString().split('T')[0];
+            this.dateRangeForm.get('dateRange')?.setValue(range, { emitEvent: false });
+        }
 
         this.loadPerformanceData();
     }
@@ -103,8 +163,18 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
         if (range && range.start && range.end) {
             this.startDate = range.start.toISOString().split('T')[0];
             this.endDate = range.end.toISOString().split('T')[0];
+            this.activePreset = null;
             this.loadPerformanceData();
         }
+    }
+
+    applyPreset(preset: DateRangePreset): void {
+        const range = preset.getValue();
+        this.activePreset = preset.label;
+        this.dateRangeForm.get('dateRange')?.setValue(range, { emitEvent: false });
+        this.startDate = range.start.toISOString().split('T')[0];
+        this.endDate = range.end.toISOString().split('T')[0];
+        this.loadPerformanceData();
     }
 
     loadPerformanceData() {
@@ -122,14 +192,12 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
                 next: (data) => {
                     this.updateMetrics(data);
                     this.isLoading = false;
-                    this.cdr.detectChanges();
                 },
                 error: (error) => {
-                    console.error('[PerformanceOverview] Error loading performance data:', error);
+                    console.error('Error loading performance data:', error);
                     this.error = 'Failed to load performance data. Please try again.';
                     this.isLoading = false;
                     this.setDefaultMetrics();
-                    this.cdr.detectChanges();
                 }
             });
     }
