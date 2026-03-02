@@ -174,15 +174,14 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   // Order status options
   orderStatusOptions: SelectOption[] = [
     { value: 'draft', label: 'Draft' },
-    { value: 'submitted', label: 'Submitted' },
-    { value: 'in_review', label: 'In Review' },
-    { value: 'more_info', label: 'More Info Needed' },
-    { value: 'information_provided', label: 'Info Provided' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'confirmed', label: 'Confirmed' },
-    { value: 'dispatched', label: 'Dispatched' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'canceled', label: 'Canceled' }
+    { value: 'new', label: 'New' },
+    { value: 'in_process', label: 'In process' },
+    { value: 'waiting_for_payment', label: 'Waiting for payment' },
+    { value: 'ready_for_shipment', label: 'Ready for shipment' },
+    { value: 'shipped', label: 'Shipped' },
+    { value: 'delivered', label: 'Delivered' },
+    { value: 'canceled', label: 'Canceled' },
+    { value: 'reversal', label: 'Reversal' }
   ];
 
   get statusOptions(): SelectOption[] {
@@ -193,24 +192,24 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   paymentTypeOptions = signal<SelectOption[]>([]);
   deliveryTypeOptions = signal<SelectOption[]>([]);
 
-  // Selected values for ngModel
-  selectedAccount = '';
-  selectedContact = '';
-  selectedBillingAddress = '';
-  selectedShippingAddress = '';
-  selectedStatus = '';
-  selectedPaymentType = '';
-  selectedDeliveryType = '';
+  // Selected values as signals for reactive validation
+  selectedAccount = signal('');
+  selectedContact = signal('');
+  selectedBillingAddress = signal('');
+  selectedShippingAddress = signal('');
+  selectedStatus = signal('');
+  selectedPaymentType = signal('');
+  selectedDeliveryType = signal('');
 
   // Validation state
   touched = signal<Record<string, boolean>>({});
   errors = computed(() => {
     const errs: Record<string, string> = {};
-    if (!this.selectedAccount) errs['account'] = 'Account is required';
-    if (!this.selectedContact) errs['contact'] = 'Contact is required';
-    if (!this.selectedBillingAddress) errs['billingAddress'] = 'Billing address is required';
-    if (!this.selectedShippingAddress) errs['shippingAddress'] = 'Shipping address is required';
-    if (!this.selectedStatus) errs['status'] = 'Status is required';
+    if (!this.selectedAccount()) errs['account'] = 'Account is required';
+    if (!this.selectedContact()) errs['contact'] = 'Contact is required';
+    if (!this.selectedBillingAddress()) errs['billingAddress'] = 'Billing address is required';
+    if (!this.selectedShippingAddress()) errs['shippingAddress'] = 'Shipping address is required';
+    if (!this.selectedStatus()) errs['status'] = 'Status is required';
     return errs;
   });
   isValid = computed(() => Object.keys(this.errors()).length === 0);
@@ -303,7 +302,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
           // and load addresses for that client
           const currentOrder = this.order();
           if (currentOrder.accountId) {
-            this.selectedAccount = currentOrder.accountId;
+            this.selectedAccount.set(currentOrder.accountId);
             const client = this.loadedClients.find(c => String(c.id) === currentOrder.accountId);
             if (client?.code) {
               this.loadContactsAndAddresses(client.code, String(client.id));
@@ -383,17 +382,22 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
           this.shippingAddressOptions.set(shippingOptions);
 
           // Try to match the order's address strings to Address entity IDs
+          // Match billing against billing-flagged addresses first, shipping against delivery-flagged first
           const currentOrder = this.order();
+
           if (currentOrder.billingAddress) {
-            const matchedBilling = this.findMatchingAddressId(currentOrder.billingAddress, addresses);
+            const matchedBilling = this.findMatchingAddressId(currentOrder.billingAddress, billingAddresses.length > 0 ? billingAddresses : addresses)
+              || this.findMatchingAddressId(currentOrder.billingAddress, addresses);
             if (matchedBilling) {
-              this.selectedBillingAddress = matchedBilling;
+              this.selectedBillingAddress.set(matchedBilling);
             }
           }
+
           if (currentOrder.shippingAddress) {
-            const matchedShipping = this.findMatchingAddressId(currentOrder.shippingAddress, addresses);
+            const matchedShipping = this.findMatchingAddressId(currentOrder.shippingAddress, shippingAddresses.length > 0 ? shippingAddresses : addresses)
+              || this.findMatchingAddressId(currentOrder.shippingAddress, addresses);
             if (matchedShipping) {
-              this.selectedShippingAddress = matchedShipping;
+              this.selectedShippingAddress.set(matchedShipping);
             }
           }
 
@@ -533,9 +537,9 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       date: this.formatDate(o.createdAt),
       paymentType: o.paymentType && typeof o.paymentType === 'object' ? String(o.paymentType.id) : '',
       deliveryType: o.deliveryType && typeof o.deliveryType === 'object' ? String(o.deliveryType.id) : '',
-      priceWithoutTax: 0,
-      totalPrice: o.totalAmount ?? 0,
-      priceTax: 0,
+      priceWithoutTax: o.totalAmount ?? 0,
+      totalPrice: (o.totalAmount ?? 0) + (o.totalTax ?? 0),
+      priceTax: o.totalTax ?? 0,
       productGroups,
       subtotalBeforeDiscount: (o.subtotalBeforeDiscount && o.subtotalBeforeDiscount > 0) ? o.subtotalBeforeDiscount : (o.totalAmount ?? 0),
       totalDiscount: o.totalDiscount ?? 0,
@@ -559,13 +563,13 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       { label: 'Shop orders', route: '/admin/shop-orders' },
       { label: orderData.internalRef ? `#${orderData.internalRef}` : String(orderData.id) }
     ];
-    this.selectedAccount = orderData.accountId;
-    this.selectedContact = orderData.contactId;
-    this.selectedBillingAddress = orderData.billingAddress;
-    this.selectedShippingAddress = orderData.shippingAddress;
-    this.selectedStatus = orderData.status;
-    this.selectedPaymentType = orderData.paymentType;
-    this.selectedDeliveryType = orderData.deliveryType;
+    this.selectedAccount.set(orderData.accountId);
+    this.selectedContact.set(orderData.contactId);
+    // Don't set address signals here — they use string values but dropdowns use IDs.
+    // loadClientAddresses() will match the strings to IDs after loading.
+    this.selectedStatus.set(orderData.status);
+    this.selectedPaymentType.set(orderData.paymentType);
+    this.selectedDeliveryType.set(orderData.deliveryType);
     this.cdr.markForCheck();
   }
 
@@ -573,14 +577,14 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   onAccountChange(value: string | number): void {
     const option = this.accountOptions().find(o => o.value === value);
     if (option) {
-      this.selectedAccount = String(value);
+      this.selectedAccount.set(String(value));
       this.order.update(o => ({ ...o, accountId: String(value), account: option.label }));
       this.touched.update(t => ({ ...t, account: true }));
 
       // Clear contact and addresses when account changes
-      this.selectedContact = '';
-      this.selectedBillingAddress = '';
-      this.selectedShippingAddress = '';
+      this.selectedContact.set('');
+      this.selectedBillingAddress.set('');
+      this.selectedShippingAddress.set('');
       this.contactOptions.set([]);
       this.billingAddressOptions.set([]);
       this.shippingAddressOptions.set([]);
@@ -595,10 +599,10 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   clearAccount(): void {
-    this.selectedAccount = '';
-    this.selectedContact = '';
-    this.selectedBillingAddress = '';
-    this.selectedShippingAddress = '';
+    this.selectedAccount.set('');
+    this.selectedContact.set('');
+    this.selectedBillingAddress.set('');
+    this.selectedShippingAddress.set('');
     this.contactOptions.set([]);
     this.billingAddressOptions.set([]);
     this.shippingAddressOptions.set([]);
@@ -609,14 +613,14 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   onContactChange(value: string | number): void {
     const option = this.contactOptions().find(o => o.value === value);
     if (option) {
-      this.selectedContact = String(value);
+      this.selectedContact.set(String(value));
       this.order.update(o => ({ ...o, contactId: String(value), contact: option.label, contactDropdown: String(value) }));
       this.touched.update(t => ({ ...t, contact: true }));
     }
   }
 
   onBillingAddressChange(value: string | number): void {
-    this.selectedBillingAddress = String(value);
+    this.selectedBillingAddress.set(String(value));
     // Find the address and store the full address string for the order
     const address = this.loadedAddresses.find(a => String(a.id) === String(value));
     const addressStr = address
@@ -627,7 +631,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   onShippingAddressChange(value: string | number): void {
-    this.selectedShippingAddress = String(value);
+    this.selectedShippingAddress.set(String(value));
     // Find the address and store the full address string for the order
     const address = this.loadedAddresses.find(a => String(a.id) === String(value));
     const addressStr = address
@@ -638,53 +642,53 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   clearShippingAddress(): void {
-    this.selectedShippingAddress = '';
+    this.selectedShippingAddress.set('');
     this.order.update(o => ({ ...o, shippingAddress: '' }));
     this.touched.update(t => ({ ...t, shippingAddress: true }));
   }
 
   onStatusChange(value: string | number): void {
-    this.selectedStatus = String(value);
+    this.selectedStatus.set(String(value));
     this.order.update(o => ({ ...o, status: String(value) }));
     this.touched.update(t => ({ ...t, status: true }));
   }
 
   onPaymentTypeChange(value: string | number): void {
-    this.selectedPaymentType = String(value);
+    this.selectedPaymentType.set(String(value));
     this.order.update(o => ({ ...o, paymentType: String(value) }));
   }
 
   onDeliveryTypeChange(value: string | number): void {
-    this.selectedDeliveryType = String(value);
+    this.selectedDeliveryType.set(String(value));
     this.order.update(o => ({ ...o, deliveryType: String(value) }));
   }
 
   // Clear handlers
   clearContact(): void {
-    this.selectedContact = '';
+    this.selectedContact.set('');
     this.order.update(o => ({ ...o, contact: '', contactDropdown: '' }));
     this.touched.update(t => ({ ...t, contact: true }));
   }
 
   clearBillingAddress(): void {
-    this.selectedBillingAddress = '';
+    this.selectedBillingAddress.set('');
     this.order.update(o => ({ ...o, billingAddress: '' }));
     this.touched.update(t => ({ ...t, billingAddress: true }));
   }
 
   clearStatus(): void {
-    this.selectedStatus = '';
+    this.selectedStatus.set('');
     this.order.update(o => ({ ...o, status: '' }));
     this.touched.update(t => ({ ...t, status: true }));
   }
 
   clearPaymentType(): void {
-    this.selectedPaymentType = '';
+    this.selectedPaymentType.set('');
     this.order.update(o => ({ ...o, paymentType: '' }));
   }
 
   clearDeliveryType(): void {
-    this.selectedDeliveryType = '';
+    this.selectedDeliveryType.set('');
     this.order.update(o => ({ ...o, deliveryType: '' }));
   }
 
@@ -747,9 +751,9 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       shippingAddress: orderData.shippingAddress,
       isDraft: !orderData.enableSale,
       // User reference - this determines the account (user's client)
-      user: `/api/v1/users/${this.selectedContact}`,
-      paymentType: this.selectedPaymentType ? `/api/v1/payment_types/${this.selectedPaymentType}` : null,
-      deliveryType: this.selectedDeliveryType ? `/api/v1/delivery_types/${this.selectedDeliveryType}` : null,
+      user: `/api/v1/users/${this.selectedContact()}`,
+      paymentType: this.selectedPaymentType() ? `/api/v1/payment_types/${this.selectedPaymentType()}` : null,
+      deliveryType: this.selectedDeliveryType() ? `/api/v1/delivery_types/${this.selectedDeliveryType()}` : null,
     };
 
     console.log('[ShopOrdersEdit] Saving order ID:', orderData.id);
@@ -770,15 +774,14 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   getStatusBadgeVariant(status: string): 'success' | 'warning' | 'danger' | 'info' | 'secondary' {
     const variants: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'secondary'> = {
       'draft': 'secondary',
-      'submitted': 'info',
-      'in_review': 'info',
-      'more_info': 'warning',
-      'information_provided': 'info',
-      'in_progress': 'warning',
-      'confirmed': 'info',
-      'dispatched': 'warning',
-      'completed': 'success',
-      'canceled': 'danger'
+      'new': 'info',
+      'in_process': 'warning',
+      'waiting_for_payment': 'warning',
+      'ready_for_shipment': 'info',
+      'shipped': 'info',
+      'delivered': 'success',
+      'canceled': 'danger',
+      'reversal': 'danger'
     };
     return variants[status.toLowerCase()] || 'secondary';
   }

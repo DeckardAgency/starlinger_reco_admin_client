@@ -13,6 +13,8 @@ import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { DHL_ZONES } from '@core/models/country.model';
 import { CountryService } from '@core/services/http/country.service';
+import { TaxTypeService } from '@core/services/http/tax-type.service';
+import { TaxType } from '@core/models/tax-type.model';
 
 interface CountryDetail {
   id: number;
@@ -20,6 +22,7 @@ interface CountryDetail {
   code: string;
   iso31661Alpha3Code: string;
   dhlZone: string;
+  taxType: string;
   defaultTaxPercent: string;
 }
 
@@ -29,6 +32,7 @@ const EMPTY_COUNTRY: CountryDetail = {
   code: '',
   iso31661Alpha3Code: '',
   dhlZone: '',
+  taxType: '',
   defaultTaxPercent: ''
 };
 
@@ -56,6 +60,7 @@ interface SelectOption {
 })
 export class CountriesEditComponent implements OnInit, OnDestroy {
   private toastService = inject(ToastService);
+  private taxTypeService = inject(TaxTypeService);
   private destroy$ = new Subject<void>();
   private countryId: string | null = null;
 
@@ -82,6 +87,11 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
   // Selected value for DHL zone select
   selectedDhlZone = '';
 
+  // Tax type options (loaded from API)
+  taxTypes: TaxType[] = [];
+  taxTypeOptions: SelectOption[] = [];
+  selectedTaxType = '';
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -90,6 +100,8 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.loadTaxTypes();
+
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       this.countryId = params['id'] || null;
       this.isEditMode.set(!!this.countryId && this.countryId !== 'new');
@@ -112,15 +124,19 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
 
     this.countryService.getCountryById(id).subscribe({
       next: (country) => {
+        const taxTypeId = typeof country.taxType === 'object' && country.taxType?.id
+          ? String(country.taxType.id) : '';
         this.country.set({
           id: country.id || Number(id),
           name: country.name || '',
           code: country.code || '',
           iso31661Alpha3Code: country.iso31661Alpha3Code || '',
           dhlZone: country.dhlZone != null ? String(country.dhlZone) : '',
+          taxType: taxTypeId,
           defaultTaxPercent: country.defaultTaxPercent != null ? String(country.defaultTaxPercent) : ''
         });
         this.selectedDhlZone = country.dhlZone != null ? String(country.dhlZone) : '';
+        this.selectedTaxType = taxTypeId;
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
@@ -171,6 +187,37 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
     this.country.update(c => ({ ...c, dhlZone: '' }));
   }
 
+  private loadTaxTypes(): void {
+    this.taxTypeService.getTaxTypes({ itemsPerPage: 100 }).subscribe({
+      next: (response) => {
+        this.taxTypes = response.member;
+        this.taxTypeOptions = response.member.map(tt => ({
+          value: String(tt.id),
+          label: `${tt.name} (${tt.percent}%)`
+        }));
+        this.cdr.markForCheck();
+      },
+      error: (err) => console.error('Failed to load tax types:', err)
+    });
+  }
+
+  onTaxTypeChange(value: string | number): void {
+    const strValue = String(value);
+    this.selectedTaxType = strValue;
+    this.country.update(c => ({ ...c, taxType: strValue }));
+
+    // Auto-fill defaultTaxPercent from selected tax type
+    const taxType = this.taxTypes.find(tt => String(tt.id) === strValue);
+    if (taxType) {
+      this.country.update(c => ({ ...c, defaultTaxPercent: taxType.percent }));
+    }
+  }
+
+  clearTaxType(): void {
+    this.selectedTaxType = '';
+    this.country.update(c => ({ ...c, taxType: '' }));
+  }
+
   // Validation helpers
   markAllTouched(): void {
     this.touched.set({ name: true, code: true });
@@ -206,7 +253,8 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
       code: c.code,
       iso31661Alpha3Code: c.iso31661Alpha3Code || null,
       defaultTaxPercent: c.defaultTaxPercent !== '' ? c.defaultTaxPercent : null,
-      dhlZone: c.dhlZone !== '' ? parseInt(c.dhlZone, 10) : null
+      dhlZone: c.dhlZone !== '' ? parseInt(c.dhlZone, 10) : null,
+      taxType: c.taxType !== '' ? `/api/v1/tax_types/${c.taxType}` : null
     };
 
     const isCreating = !this.isEditMode();

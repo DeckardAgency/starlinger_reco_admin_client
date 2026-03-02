@@ -87,7 +87,7 @@
             <ui-select
               variant="pill"
               [options]="accountOptions()"
-              [value]="selectedAccount"
+              [value]="selectedAccount()"
               placeholder="Select account"
               (selectChange)="onAccountChange($event)"
               (cleared)="clearAccount()">
@@ -98,7 +98,7 @@
             <ui-select
               variant="pill"
               [options]="contactOptions()"
-              [value]="selectedContact"
+              [value]="selectedContact()"
               placeholder="Select contact"
               (selectChange)="onContactChange($event)"
               (cleared)="clearContact()">
@@ -109,7 +109,7 @@
             <ui-select
               variant="pill"
               [options]="billingAddressOptions()"
-              [value]="selectedBillingAddress"
+              [value]="selectedBillingAddress()"
               placeholder="Select address"
               (selectChange)="onBillingAddressChange($event)"
               (cleared)="clearBillingAddress()">
@@ -120,7 +120,7 @@
             <ui-select
               variant="pill"
               [options]="shippingAddressOptions()"
-              [value]="selectedShippingAddress"
+              [value]="selectedShippingAddress()"
               placeholder="Select address"
               (selectChange)="onShippingAddressChange($event)"
               (cleared)="clearShippingAddress()">
@@ -131,7 +131,7 @@
             <ui-select
               variant="pill"
               [options]="statusOptions"
-              [value]="selectedStatus"
+              [value]="selectedStatus()"
               placeholder="Select status"
               (selectChange)="onStatusChange($event)"
               (cleared)="clearStatus()">
@@ -153,7 +153,7 @@
             <ui-select
               variant="pill"
               [options]="paymentTypeOptions()"
-              [value]="selectedPaymentType"
+              [value]="selectedPaymentType()"
               placeholder="Select payment type"
               (selectChange)="onPaymentTypeChange($event)"
               (cleared)="clearPaymentType()">
@@ -164,7 +164,7 @@
             <ui-select
               variant="pill"
               [options]="deliveryTypeOptions()"
-              [value]="selectedDeliveryType"
+              [value]="selectedDeliveryType()"
               placeholder="Select delivery type"
               (selectChange)="onDeliveryTypeChange($event)"
               (cleared)="clearDeliveryType()">

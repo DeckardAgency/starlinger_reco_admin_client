@@ -24,6 +24,8 @@ export interface OrderItem {
     subtotal: number;
     originalUnitPrice?: number;
     discountPercent?: number;
+    taxPercent?: number;
+    taxAmount?: number;
     createdAt: string;
     updatedAt: string;
     isCustomPrice?: boolean;
@@ -64,6 +66,7 @@ export interface Order {
     totalAmount: number;
     subtotalBeforeDiscount?: number;
     totalDiscount?: number;
+    totalTax?: number;
     notes?: string;
     shippingAddress: string;
     billingAddress: string;

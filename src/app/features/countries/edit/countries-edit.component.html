@@ -39,6 +39,18 @@
           </ui-select>
         </ui-form-field>
 
+        <ui-form-field label="Tax type" layout="horizontal">
+          <ui-select
+            variant="pill"
+            [options]="taxTypeOptions"
+            [value]="selectedTaxType"
+            [clearable]="true"
+            placeholder="Select"
+            (selectChange)="onTaxTypeChange($event)"
+            (cleared)="clearTaxType()">
+          </ui-select>
+        </ui-form-field>
+
         <ui-form-field label="Name" layout="horizontal" [required]="true" [error]="getError('name')">
           <input type="text" [value]="country().name" (input)="onNameChange($event)" placeholder="Enter name">
         </ui-form-field>

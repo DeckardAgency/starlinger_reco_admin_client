@@ -28,12 +28,16 @@ import { UserService } from '@core/services/http/user.service';
 import { ClientDetail, ClientAddress, ClientUser } from '@core/models/client.model';
 import { Order } from '@core/models/order.model';
 import { AccountGroupService } from '@core/services/http/account-group.service';
+import { CountryService } from '@core/services/http/country.service';
+import { CountryOption } from '../../../shared/components/modals/address-modal/address-modal.component';
 
 // Interfaces for tab data
 interface Address {
   id: number;
   street: string;
   city: string;
+  postalCode: string;
+  countryId: string;
   country: string;
   isBilling: boolean;
   isDelivery: boolean;
@@ -109,6 +113,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   private orderService = inject(OrderService);
   private addressService = inject(AddressService);
   private accountGroupService = inject(AccountGroupService);
+  private countryService = inject(CountryService);
   private toastService = inject(ToastService);
   private destroy$ = new Subject<void>();
 
@@ -171,6 +176,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   isAddressModalOpen = signal(false);
   selectedAddress = signal<Address | null>(null);
   isAddressSaving = signal(false);
+  countries = signal<CountryOption[]>([]);
 
   // User assignment modal state
   isUserModalOpen = signal(false);
@@ -242,8 +248,9 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   ];
 
   ngOnInit(): void {
-    // Load account groups for dropdown
+    // Load account groups and countries for dropdowns
     this.loadAccountGroups();
+    this.loadCountries();
 
     // Subscribe to route param changes to handle navigation between add/edit
     this.route.paramMap
@@ -346,6 +353,17 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+  private loadCountries(): void {
+    this.countryService.getCountries({ itemsPerPage: 300, 'order[name]': 'asc' }).subscribe({
+      next: (response) => {
+        this.countries.set(
+          (response.member || []).map(c => ({ id: c.id, name: c.name, code: c.code }))
+        );
+      },
+      error: (err) => console.error('Error loading countries:', err)
+    });
+  }
+
   private loadAccount(id: string): void {
     this.isLoading.set(true);
     this.loadError.set(null);
@@ -417,6 +435,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       id: addr.id,
       street: addr.street,
       city: addr.city,
+      postalCode: addr.postalCode ?? '',
+      countryId: addr.country?.id ? String(addr.country.id) : '',
       country: addr.country?.name ?? '',
       isBilling: addr.isBilling,
       isDelivery: addr.isDelivery
@@ -816,11 +836,15 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    const countryIri = formData.countryId ? `/api/v1/countries/${formData.countryId}` : undefined;
+
     if (formData.id !== undefined) {
       // Update existing address
       this.addressService.updateAddress(String(formData.id), {
         street: formData.street,
         city: formData.city,
+        postalCode: formData.postalCode || undefined,
+        country: countryIri,
         isBilling: formData.isBilling,
         isDelivery: formData.isDelivery
       }).subscribe({
@@ -839,6 +863,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       this.addressService.createAddressForClient(clientId, {
         street: formData.street,
         city: formData.city,
+        postalCode: formData.postalCode || undefined,
+        country: countryIri,
         isBilling: formData.isBilling,
         isDelivery: formData.isDelivery
       }).subscribe({

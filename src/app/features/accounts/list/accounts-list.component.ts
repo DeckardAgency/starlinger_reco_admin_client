@@ -155,7 +155,12 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
 
     const query = this.searchQuery().trim();
     if (query) {
-      params['name'] = query;
+      // Check if query looks like an email, otherwise search by name
+      if (query.includes('@')) {
+        params['email'] = query;
+      } else {
+        params['name'] = query;
+      }
     }
 
     const sortCol = this.sortColumn();
@@ -190,8 +195,8 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
       name: client.name,
       email: client.email || '',
       status: client.isActive ? 'active' : 'inactive',
-      purchaseLimit: client.maxActiveUsers ?? undefined,
-      amountSpent: undefined,
+      purchaseLimit: client.purchaseLimit ? parseFloat(client.purchaseLimit) : undefined,
+      amountSpent: client.amountSpent ? parseFloat(client.amountSpent) : undefined,
       createdAt: client.createdAt,
       updatedAt: client.updatedAt
     };

@@ -30,13 +30,23 @@
             >
           </ui-form-field>
 
-          <ui-form-field label="Country" [error]="getError('country')" [required]="true">
+          <ui-form-field label="Postal code" [error]="getError('postalCode')">
             <input
               type="text"
-              formControlName="country"
-              placeholder="Enter country"
-              [class.has-error]="hasError('country')"
+              formControlName="postalCode"
+              placeholder="Enter postal code"
+              [class.has-error]="hasError('postalCode')"
             >
+          </ui-form-field>
+
+          <ui-form-field label="Country" [error]="getError('countryId')" [required]="true">
+            <select
+              formControlName="countryId"
+              [class.has-error]="hasError('countryId')"
+            >
+              <option value="">Select country</option>
+              <option *ngFor="let c of countries" [value]="c.id">{{ c.name }}</option>
+            </select>
           </ui-form-field>
 
           <div class="toggle-fields">

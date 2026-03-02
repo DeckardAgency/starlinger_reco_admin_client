@@ -20,7 +20,7 @@ import { Order } from '@core/models/order.model';
 import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
 import { ColumnSettingsService } from '@core/services/column-settings.service';
 
-type OrderStatus = 'draft' | 'submitted' | 'in_review' | 'more_info' | 'information_provided' | 'in_progress' | 'completed' | 'canceled';
+type OrderStatus = 'draft' | 'new' | 'in_process' | 'waiting_for_payment' | 'ready_for_shipment' | 'shipped' | 'delivered' | 'canceled' | 'reversal';
 
 interface ShopOrder {
   id: number;
@@ -92,7 +92,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   // Tabs configuration
   tabs: TabItem[] = [
     { id: 'latest', label: 'Latest' },
-    { id: 'completed', label: 'Completed' },
+    { id: 'delivered', label: 'Delivered' },
     { id: 'cancelled', label: 'Cancelled' }
   ];
 
@@ -157,8 +157,8 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
 
     // Apply tab-based status filter
     const tab = this.activeTab();
-    if (tab === 'completed') {
-      params['status'] = 'completed';
+    if (tab === 'delivered') {
+      params['status'] = 'delivered';
     } else if (tab === 'cancelled') {
       params['status'] = 'canceled';
     }
@@ -220,7 +220,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   }
 
   private mapStatus(status: string): OrderStatus {
-    const valid: OrderStatus[] = ['draft', 'submitted', 'in_review', 'more_info', 'information_provided', 'in_progress', 'completed', 'canceled'];
+    const valid: OrderStatus[] = ['draft', 'new', 'in_process', 'waiting_for_payment', 'ready_for_shipment', 'shipped', 'delivered', 'canceled', 'reversal'];
     const s = (status || '').toLowerCase();
     if (valid.includes(s as OrderStatus)) return s as OrderStatus;
     if (s === 'cancelled') return 'canceled';
@@ -288,8 +288,8 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   onExport(): void {
     const filters: { status?: string[]; isDraft?: boolean } = { isDraft: false };
     const tab = this.activeTab();
-    if (tab === 'completed') {
-      filters.status = ['completed'];
+    if (tab === 'delivered') {
+      filters.status = ['delivered'];
     } else if (tab === 'cancelled') {
       filters.status = ['canceled'];
     }
@@ -368,13 +368,14 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
       'draft': 'Draft',
-      'submitted': 'Submitted',
-      'in_review': 'In Review',
-      'more_info': 'More Info',
-      'information_provided': 'Info Provided',
-      'in_progress': 'In Progress',
-      'completed': 'Completed',
-      'canceled': 'Canceled'
+      'new': 'New',
+      'in_process': 'In process',
+      'waiting_for_payment': 'Waiting for payment',
+      'ready_for_shipment': 'Ready for shipment',
+      'shipped': 'Shipped',
+      'delivered': 'Delivered',
+      'canceled': 'Canceled',
+      'reversal': 'Reversal'
     };
     return labels[status] || status;
   }
@@ -382,13 +383,14 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   getStatusVariant(status: string): 'success' | 'danger' | 'warning' | 'info' | 'secondary' {
     const variants: Record<string, 'success' | 'danger' | 'warning' | 'info' | 'secondary'> = {
       'draft': 'secondary',
-      'submitted': 'info',
-      'in_review': 'info',
-      'more_info': 'warning',
-      'information_provided': 'info',
-      'in_progress': 'warning',
-      'completed': 'success',
-      'canceled': 'danger'
+      'new': 'info',
+      'in_process': 'warning',
+      'waiting_for_payment': 'warning',
+      'ready_for_shipment': 'info',
+      'shipped': 'info',
+      'delivered': 'success',
+      'canceled': 'danger',
+      'reversal': 'danger'
     };
     return variants[status] || 'secondary';
   }

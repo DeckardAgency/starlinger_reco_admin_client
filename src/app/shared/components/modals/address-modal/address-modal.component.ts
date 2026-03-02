@@ -18,9 +18,16 @@ export interface AddressFormData {
   id?: number | string;
   street: string;
   city: string;
-  country: string;
+  postalCode: string;
+  countryId: string;
   isBilling: boolean;
   isDelivery: boolean;
+}
+
+export interface CountryOption {
+  id: number;
+  name: string;
+  code: string;
 }
 
 export interface ExistingAddress {
@@ -68,6 +75,7 @@ export class AddressModalComponent implements OnChanges {
   @Input({ transform: booleanAttribute }) isOpen = false;
   @Input() address: AddressFormData | null = null;
   @Input() existingAddresses: ExistingAddress[] = [];
+  @Input() countries: CountryOption[] = [];
   @Input({ transform: booleanAttribute }) saving = false;
 
   @Output() closeModal = new EventEmitter<void>();
@@ -79,7 +87,8 @@ export class AddressModalComponent implements OnChanges {
     this.addressForm = this.fb.group({
       street: ['', [Validators.required, Validators.minLength(3)]],
       city: ['', [Validators.required, Validators.minLength(2)]],
-      country: ['', [Validators.required, Validators.minLength(2)]],
+      postalCode: [''],
+      countryId: ['', [Validators.required]],
       isBilling: [false],
       isDelivery: [false]
     });
@@ -91,7 +100,8 @@ export class AddressModalComponent implements OnChanges {
         this.addressForm.patchValue({
           street: this.address.street || '',
           city: this.address.city || '',
-          country: this.address.country || '',
+          postalCode: this.address.postalCode || '',
+          countryId: this.address.countryId || '',
           isBilling: this.address.isBilling || false,
           isDelivery: this.address.isDelivery || false
         });
@@ -99,7 +109,8 @@ export class AddressModalComponent implements OnChanges {
         this.addressForm.reset({
           street: '',
           city: '',
-          country: '',
+          postalCode: '',
+          countryId: '',
           isBilling: false,
           isDelivery: false
         });
@@ -137,7 +148,8 @@ export class AddressModalComponent implements OnChanges {
     const labels: Record<string, string> = {
       street: 'Street',
       city: 'City',
-      country: 'Country'
+      postalCode: 'Postal code',
+      countryId: 'Country'
     };
     return labels[field] || field;
   }

@@ -80,16 +80,14 @@ export class DashboardService {
     getStatusLabel(status: string): string {
         const statusLabels: Record<string, string> = {
             'draft': 'Draft',
-            'pending': 'Pending',
-            'submitted': 'Submitted',
-            'processing': 'Processing',
-            'in_review': 'In Review',
-            'more_info': 'More Info',
-            'information_provided': 'Info Provided',
-            'in_progress': 'In Progress',
-            'dispatched': 'Dispatched',
-            'completed': 'Completed',
-            'canceled': 'Canceled'
+            'new': 'New',
+            'in_process': 'In process',
+            'waiting_for_payment': 'Waiting for payment',
+            'ready_for_shipment': 'Ready for shipment',
+            'shipped': 'Shipped',
+            'delivered': 'Delivered',
+            'canceled': 'Canceled',
+            'reversal': 'Reversal'
         };
         return statusLabels[status] || status;
     }
@@ -100,16 +98,14 @@ export class DashboardService {
     getStatusClass(status: string): string {
         const statusClasses: Record<string, string> = {
             'draft': 'status--draft',
-            'pending': 'status--pending',
-            'submitted': 'status--submitted',
-            'processing': 'status--processing',
-            'in_review': 'status--in-review',
-            'more_info': 'status--more-info',
-            'information_provided': 'status--info-provided',
-            'in_progress': 'status--in-progress',
-            'dispatched': 'status--dispatched',
-            'completed': 'status--completed',
-            'canceled': 'status--canceled'
+            'new': 'status--new',
+            'in_process': 'status--in-process',
+            'waiting_for_payment': 'status--waiting-for-payment',
+            'ready_for_shipment': 'status--ready-for-shipment',
+            'shipped': 'status--shipped',
+            'delivered': 'status--delivered',
+            'canceled': 'status--canceled',
+            'reversal': 'status--reversal'
         };
         return statusClasses[status] || 'status--default';
     }

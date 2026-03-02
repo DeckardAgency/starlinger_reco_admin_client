@@ -30,6 +30,7 @@ export interface CreateAddressDto {
     client: string; // IRI reference to client
     street: string;
     city: string;
+
     postalCode?: string;
     country?: string; // IRI reference to country
     isBilling?: boolean;
@@ -43,6 +44,7 @@ export interface CreateAddressDto {
 export interface UpdateAddressDto {
     street?: string;
     city?: string;
+
     postalCode?: string;
     country?: string; // IRI reference to country
     isBilling?: boolean;

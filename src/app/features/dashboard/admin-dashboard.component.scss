@@ -299,47 +299,32 @@
             color: #6b7280;
         }
 
-        &--pending {
+        &--new {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        &--in-process {
             background: #fef3c7;
             color: #d97706;
         }
 
-        &--submitted {
-            background: #dbeafe;
-            color: #1d4ed8;
-        }
-
-        &--processing {
-            background: #dbeafe;
-            color: #1d4ed8;
-        }
-
-        &--in-review {
+        &--waiting-for-payment {
             background: #ede9fe;
             color: #7c3aed;
         }
 
-        &--more-info {
-            background: #fef3c7;
-            color: #d97706;
-        }
-
-        &--info-provided {
+        &--ready-for-shipment {
             background: #cffafe;
             color: #0891b2;
         }
 
-        &--in-progress {
+        &--shipped {
             background: #e0e7ff;
             color: #4f46e5;
         }
 
-        &--dispatched {
-            background: #d1fae5;
-            color: #059669;
-        }
-
-        &--completed {
+        &--delivered {
             background: #d1fae5;
             color: #059669;
         }
@@ -347,6 +332,11 @@
         &--canceled {
             background: #fee2e2;
             color: #dc2626;
+        }
+
+        &--reversal {
+            background: #fce7f3;
+            color: #be185d;
         }
 
         &--default {
