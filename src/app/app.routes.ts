@@ -114,21 +114,21 @@ export const routes: Routes = [
         title: 'Admin | Product Detail'
       },
 
-      // Product Groups (Categories)
-      { path: 'product-groups', redirectTo: 'product-groups/list', pathMatch: 'full' },
+      // Product Categories
+      { path: 'product-categories', redirectTo: 'product-categories/list', pathMatch: 'full' },
       {
-        path: 'product-groups/list',
-        loadComponent: () => import('@features/product-groups/list/product-groups-list.component').then(m => m.ProductGroupsListComponent),
+        path: 'product-categories/list',
+        loadComponent: () => import('@features/product-categories/list/product-categories-list.component').then(m => m.ProductCategoriesListComponent),
         title: 'Admin | Categories'
       },
       {
-        path: 'product-groups/new',
-        loadComponent: () => import('@features/product-groups/edit/product-groups-edit.component').then(m => m.ProductGroupsEditComponent),
+        path: 'product-categories/new',
+        loadComponent: () => import('@features/product-categories/edit/product-categories-edit.component').then(m => m.ProductCategoriesEditComponent),
         title: 'Admin | New Category'
       },
       {
-        path: 'product-groups/:id/edit',
-        loadComponent: () => import('@features/product-groups/edit/product-groups-edit.component').then(m => m.ProductGroupsEditComponent),
+        path: 'product-categories/:id/edit',
+        loadComponent: () => import('@features/product-categories/edit/product-categories-edit.component').then(m => m.ProductCategoriesEditComponent),
         title: 'Admin | Category Detail'
       },
 

@@ -73,12 +73,12 @@
           <ui-form-field label="Weight" layout="horizontal">
             <input type="text" [value]="product().weight" placeholder="kg 0.00" (input)="updateProduct('weight', $event)">
           </ui-form-field>
-          <ui-form-field label="Product group" layout="horizontal">
+          <ui-form-field label="Product category" layout="horizontal">
             <ui-select
               variant="pill"
               [options]="productGroupOptions()"
               [value]="productGroupValue"
-              placeholder="Select product group"
+              placeholder="Select product category"
               (selectChange)="onProductGroupChange($event)"
               (cleared)="clearProductGroup()">
             </ui-select>

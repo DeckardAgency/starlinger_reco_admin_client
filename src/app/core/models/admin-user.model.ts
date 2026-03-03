@@ -8,7 +8,7 @@ export interface AdminUser {
   selected?: boolean;
 }
 
-export type AdminUserRoleType = 'viewer' | 'editor' | 'admin' | 'profis';
+export type AdminUserRoleType = 'admin' | 'client_admin' | 'client';
 
 export interface AdminUserRoleOption {
   id: AdminUserRoleType;
@@ -18,23 +18,18 @@ export interface AdminUserRoleOption {
 
 export const ADMIN_USER_ROLE_OPTIONS: AdminUserRoleOption[] = [
   {
-    id: 'viewer',
-    name: 'Viewer',
-    description: 'Can view and monitor data within the application but cannot make any changes.'
-  },
-  {
-    id: 'editor',
-    name: 'Editor',
-    description: 'Has the ability to view and modify data, enabling content creation and updates.'
-  },
-  {
     id: 'admin',
     name: 'Admin',
-    description: 'Possesses full control over the application, including user management, settings configuration, and access to all features and data.'
+    description: 'Full control over the application, including user management, settings configuration, and access to all features and data.'
   },
   {
-    id: 'profis',
-    name: 'Profis',
-    description: 'Has access to core application features and relevant data to manage their specific region or area.'
+    id: 'client_admin',
+    name: 'Client Admin',
+    description: 'Manages their client account and users, with access to client-specific settings and data.'
+  },
+  {
+    id: 'client',
+    name: 'Client',
+    description: 'Standard client access for browsing the shop and placing orders.'
   }
 ];

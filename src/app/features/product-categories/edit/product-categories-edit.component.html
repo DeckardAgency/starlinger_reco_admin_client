@@ -1,10 +1,10 @@
-<div class="product-group-detail-page">
+<div class="product-category-detail-page">
   <!-- Page Header with Breadcrumb -->
   <ui-breadcrumbs
     variant="page-header"
     separator="chevron"
     [items]="[
-      { label: 'Product Groups', route: '/admin/product-groups/list' },
+      { label: 'Product Categories', route: '/admin/product-categories/list' },
       { label: isEditMode() ? 'Edit' : 'Add' }
     ]"
   ></ui-breadcrumbs>
@@ -37,7 +37,7 @@
           <ui-form-field label="Name" layout="horizontal" [required]="true">
             <input
               type="text"
-              [value]="productGroup().name"
+              [value]="productCategory().name"
               (input)="onNameChange($event)"
               placeholder="Enter category name"
             >
@@ -46,7 +46,7 @@
           <ui-form-field label="Code" layout="horizontal">
             <input
               type="text"
-              [value]="productGroup().productGroupCode"
+              [value]="productCategory().productGroupCode"
               (input)="onCodeChange($event)"
               placeholder="Enter category code"
             >
@@ -55,7 +55,7 @@
           <ui-form-field label="Description" layout="horizontal">
             <textarea
               rows="3"
-              [value]="productGroup().description"
+              [value]="productCategory().description"
               (input)="onDescriptionChange($event)"
               placeholder="Enter description"
             ></textarea>
@@ -64,7 +64,7 @@
           <ui-form-field label="Sort order" layout="horizontal">
             <input
               type="number"
-              [value]="productGroup().sortOrder"
+              [value]="productCategory().sortOrder"
               (input)="onSortOrderChange($event)"
               placeholder="0"
             >
@@ -74,7 +74,7 @@
             <label class="checkbox-wrapper">
               <input
                 type="checkbox"
-                [checked]="productGroup().isActive"
+                [checked]="productCategory().isActive"
                 (change)="onIsActiveChange($event)"
               >
               <span class="checkbox-label">This category is active</span>
@@ -85,7 +85,7 @@
             <label class="checkbox-wrapper">
               <input
                 type="checkbox"
-                [checked]="productGroup().showOnHomepage"
+                [checked]="productCategory().showOnHomepage"
                 (change)="onShowOnHomepageChange($event)"
               >
               <span class="checkbox-label">Display this category on the homepage</span>
@@ -102,7 +102,7 @@
           <ui-form-field label="Meta title" layout="horizontal">
             <input
               type="text"
-              [value]="productGroup().metaTitle"
+              [value]="productCategory().metaTitle"
               (input)="onMetaTitleChange($event)"
               placeholder="Enter meta title"
             >
@@ -111,7 +111,7 @@
           <ui-form-field label="Meta description" layout="horizontal">
             <textarea
               rows="2"
-              [value]="productGroup().metaDescription"
+              [value]="productCategory().metaDescription"
               (input)="onMetaDescriptionChange($event)"
               placeholder="Enter meta description"
             ></textarea>
@@ -120,7 +120,7 @@
           <ui-form-field label="Meta keywords" layout="horizontal">
             <input
               type="text"
-              [value]="productGroup().metaKeywords"
+              [value]="productCategory().metaKeywords"
               (input)="onMetaKeywordsChange($event)"
               placeholder="Enter meta keywords"
             >

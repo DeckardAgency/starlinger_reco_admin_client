@@ -1,9 +1,9 @@
-<div class="product-groups-page" (click)="closeDropdown()">
-  <ui-breadcrumbs variant="page-header" separator="line" [items]="[{ label: 'Product Groups' }]"></ui-breadcrumbs>
+<div class="product-categories-page" (click)="closeDropdown()">
+  <ui-breadcrumbs variant="page-header" separator="line" [items]="[{ label: 'Product Categories' }]"></ui-breadcrumbs>
 
   <main class="page-content">
     <ui-list-header
-      title="Product Groups"
+      title="Product Categories"
       icon="folder"
       [count]="totalItems()"
       addButtonLabel="Add category"
@@ -13,7 +13,7 @@
       [searchQuery]="searchQuery()"
       searchWidth="346px"
       (searchQueryChange)="onSearchChange($event)"
-      (add)="onAddProductGroup()"
+      (add)="onAddProductCategory()"
       (bulkDelete)="onBulkDelete()"
       [hideAddButtonOnMobile]="true"
     >
@@ -26,13 +26,13 @@
 
     <div class="table-container">
       @if (isLoading()) {
-        <p>Loading product groups...</p>
-      } @else if (productGroups().length === 0) {
-        <p class="empty-state">No product groups found</p>
+        <p>Loading product categories...</p>
+      } @else if (productCategories().length === 0) {
+        <p class="empty-state">No product categories found</p>
       } @else {
         <ui-data-table
           [columns]="columns"
-          [data]="productGroups()"
+          [data]="productCategories()"
           [sortColumn]="sortColumn()"
           [sortDirection]="sortDirection()"
           (sort)="onSortChange($event)"
@@ -107,5 +107,5 @@
   primaryLabel="Add category"
   primaryIcon="plus"
   [showSecondary]="false"
-  (primaryClick)="onAddProductGroup()"
+  (primaryClick)="onAddProductCategory()"
 ></ui-mobile-footer>

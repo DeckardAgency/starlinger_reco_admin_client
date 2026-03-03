@@ -190,7 +190,12 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (data) => {
-                    this.updateMetrics(data);
+                    try {
+                        this.updateMetrics(data);
+                    } catch (e) {
+                        console.error('Error processing dashboard data:', e);
+                        this.setDefaultMetrics();
+                    }
                     this.isLoading = false;
                 },
                 error: (error) => {

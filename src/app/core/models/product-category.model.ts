@@ -1,9 +1,9 @@
 /**
- * Product Group Model
- * Represents a category/group of products in the shop
+ * Product Category Model
+ * Represents a product category in the shop
  */
 
-export interface ProductGroup {
+export interface ProductCategory {
   '@id': string;
   '@type': string;
   id: number;
@@ -26,10 +26,14 @@ export interface ProductGroup {
   updatedAt: string;
 }
 
-export interface ProductGroupsCollection {
+export interface ProductCategoriesCollection {
   '@context': string;
   '@id': string;
   '@type': string;
   totalItems: number;
-  member: ProductGroup[];
+  member: ProductCategory[];
 }
+
+// Backward compatibility aliases
+export type ProductGroup = ProductCategory;
+export type ProductGroupsCollection = ProductCategoriesCollection;

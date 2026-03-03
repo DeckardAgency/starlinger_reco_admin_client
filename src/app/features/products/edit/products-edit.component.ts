@@ -20,7 +20,7 @@ import { TextEditorComponent } from '@shared/components/text-editor/text-editor.
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { ProductService } from '@core/services/http/product.service';
-import { ProductGroupService } from '@core/services/http/product-group.service';
+import { ProductCategoryService } from '@core/services/http/product-category.service';
 import { TaxTypeService } from '@core/services/http/tax-type.service';
 import { ProductDiscountService } from '@core/services/http/product-discount.service';
 import { ProductProductLinkService } from '@core/services/http/product-product-link.service';
@@ -294,7 +294,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     private cdr: ChangeDetectorRef,
     private http: HttpClient,
     private productService: ProductService,
-    private productGroupService: ProductGroupService,
+    private productCategoryService: ProductCategoryService,
     private taxTypeService: TaxTypeService,
     private productDiscountService: ProductDiscountService,
     private productProductLinkService: ProductProductLinkService,
@@ -302,7 +302,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadProductGroups();
+    this.loadProductCategories();
     this.loadTaxTypes();
 
     this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
@@ -319,8 +319,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.loadAvailableProducts();
   }
 
-  private loadProductGroups(): void {
-    this.productGroupService.getProductGroups({ page: 1, itemsPerPage: 100 })
+  private loadProductCategories(): void {
+    this.productCategoryService.getProductCategories({ page: 1, itemsPerPage: 100 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -330,7 +330,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           this.productGroupOptions.set(options);
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('Error loading product groups:', err)
+        error: (err) => console.error('Error loading product categories:', err)
       });
   }
 
@@ -1017,7 +1017,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  // Product group handlers
+  // Product category handlers
   onProductGroupChange(value: string | number): void {
     this.productGroupValue = String(value);
     this.product.update(p => ({ ...p, productGroup: String(value) }));

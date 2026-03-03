@@ -9,10 +9,10 @@ import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
-import { ProductGroupService } from '@core/services/http/product-group.service';
+import { ProductCategoryService } from '@core/services/http/product-category.service';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
-interface ProductGroupDetail {
+interface ProductCategoryDetail {
   id: number;
   name: string;
   productGroupCode: string;
@@ -25,7 +25,7 @@ interface ProductGroupDetail {
   metaKeywords: string;
 }
 
-const EMPTY_PRODUCT_GROUP: ProductGroupDetail = {
+const EMPTY_PRODUCT_CATEGORY: ProductCategoryDetail = {
   id: 0,
   name: '',
   productGroupCode: '',
@@ -39,7 +39,7 @@ const EMPTY_PRODUCT_GROUP: ProductGroupDetail = {
 };
 
 @Component({
-  selector: 'app-product-groups-edit',
+  selector: 'app-product-categories-edit',
   standalone: true,
   imports: [
     CommonModule,
@@ -50,17 +50,17 @@ const EMPTY_PRODUCT_GROUP: ProductGroupDetail = {
     DetailHeaderComponent,
     MobileFooterComponent
   ],
-  templateUrl: './product-groups-edit.component.html',
-  styleUrls: ['./product-groups-edit.component.scss'],
+  templateUrl: './product-categories-edit.component.html',
+  styleUrls: ['./product-categories-edit.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProductGroupsEditComponent implements OnInit, OnDestroy {
+export class ProductCategoriesEditComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
-  private productGroupId: string | null = null;
+  private productCategoryId: string | null = null;
   private toastService = inject(ToastService);
 
   // Form state
-  productGroup = signal<ProductGroupDetail>({ ...EMPTY_PRODUCT_GROUP });
+  productCategory = signal<ProductCategoryDetail>({ ...EMPTY_PRODUCT_CATEGORY });
   isEditMode = signal(false);
   isLoading = signal(false);
   isSaving = signal(false);
@@ -69,18 +69,18 @@ export class ProductGroupsEditComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private productGroupService: ProductGroupService
+    private productCategoryService: ProductCategoryService
   ) {}
 
   ngOnInit(): void {
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
-      this.productGroupId = params['id'] || null;
-      this.isEditMode.set(!!this.productGroupId && this.productGroupId !== 'new');
+      this.productCategoryId = params['id'] || null;
+      this.isEditMode.set(!!this.productCategoryId && this.productCategoryId !== 'new');
 
       if (this.isEditMode()) {
-        this.loadProductGroup(this.productGroupId!);
+        this.loadProductCategory(this.productCategoryId!);
       } else {
-        this.productGroup.set({ ...EMPTY_PRODUCT_GROUP });
+        this.productCategory.set({ ...EMPTY_PRODUCT_CATEGORY });
       }
     });
   }
@@ -90,28 +90,28 @@ export class ProductGroupsEditComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private loadProductGroup(id: string): void {
+  private loadProductCategory(id: string): void {
     this.isLoading.set(true);
 
-    this.productGroupService.getProductGroupById(id).subscribe({
-      next: (pg) => {
-        this.productGroup.set({
-          id: pg.id || Number(id),
-          name: pg.name || '',
-          productGroupCode: pg.productGroupCode || '',
-          description: pg.description || '',
-          isActive: pg.isActive ?? true,
-          showOnHomepage: pg.showOnHomepage ?? false,
-          sortOrder: pg.sortOrder || 0,
-          metaTitle: pg.metaTitle || '',
-          metaDescription: pg.metaDescription || '',
-          metaKeywords: pg.metaKeywords || ''
+    this.productCategoryService.getProductCategoryById(id).subscribe({
+      next: (pc) => {
+        this.productCategory.set({
+          id: pc.id || Number(id),
+          name: pc.name || '',
+          productGroupCode: pc.productGroupCode || '',
+          description: pc.description || '',
+          isActive: pc.isActive ?? true,
+          showOnHomepage: pc.showOnHomepage ?? false,
+          sortOrder: pc.sortOrder || 0,
+          metaTitle: pc.metaTitle || '',
+          metaDescription: pc.metaDescription || '',
+          metaKeywords: pc.metaKeywords || ''
         });
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error loading product group:', error);
+        console.error('Error loading product category:', error);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -120,67 +120,67 @@ export class ProductGroupsEditComponent implements OnInit, OnDestroy {
 
   // Navigation
   goBack(): void {
-    this.router.navigate(['/admin/product-groups/list']);
+    this.router.navigate(['/admin/product-categories/list']);
   }
 
   // Form handlers
   onNameChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.productGroup.update(pg => ({ ...pg, name: value }));
+    this.productCategory.update(pc => ({ ...pc, name: value }));
   }
 
   onCodeChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.productGroup.update(pg => ({ ...pg, productGroupCode: value }));
+    this.productCategory.update(pc => ({ ...pc, productGroupCode: value }));
   }
 
   onDescriptionChange(event: Event): void {
     const value = (event.target as HTMLTextAreaElement).value;
-    this.productGroup.update(pg => ({ ...pg, description: value }));
+    this.productCategory.update(pc => ({ ...pc, description: value }));
   }
 
   onSortOrderChange(event: Event): void {
     const value = parseInt((event.target as HTMLInputElement).value, 10) || 0;
-    this.productGroup.update(pg => ({ ...pg, sortOrder: value }));
+    this.productCategory.update(pc => ({ ...pc, sortOrder: value }));
   }
 
   onMetaTitleChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.productGroup.update(pg => ({ ...pg, metaTitle: value }));
+    this.productCategory.update(pc => ({ ...pc, metaTitle: value }));
   }
 
   onMetaDescriptionChange(event: Event): void {
     const value = (event.target as HTMLTextAreaElement).value;
-    this.productGroup.update(pg => ({ ...pg, metaDescription: value }));
+    this.productCategory.update(pc => ({ ...pc, metaDescription: value }));
   }
 
   onMetaKeywordsChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.productGroup.update(pg => ({ ...pg, metaKeywords: value }));
+    this.productCategory.update(pc => ({ ...pc, metaKeywords: value }));
   }
 
   onIsActiveChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
-    this.productGroup.update(pg => ({ ...pg, isActive: checked }));
+    this.productCategory.update(pc => ({ ...pc, isActive: checked }));
   }
 
   onShowOnHomepageChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
-    this.productGroup.update(pg => ({ ...pg, showOnHomepage: checked }));
+    this.productCategory.update(pc => ({ ...pc, showOnHomepage: checked }));
   }
 
   // Save actions
   onSave(): void {
-    this.saveProductGroup(false);
+    this.saveProductCategory(false);
   }
 
   onSaveAndContinue(): void {
-    this.saveProductGroup(true);
+    this.saveProductCategory(true);
   }
 
-  private saveProductGroup(navigateToList: boolean): void {
+  private saveProductCategory(navigateToList: boolean): void {
     this.isSaving.set(true);
-    const formData = this.productGroup();
+    const formData = this.productCategory();
     const isCreating = !this.isEditMode();
 
     // Exclude id when creating (let backend generate it)
@@ -188,26 +188,26 @@ export class ProductGroupsEditComponent implements OnInit, OnDestroy {
     const data = isCreating ? createData : formData;
 
     const operation = isCreating
-      ? this.productGroupService.createProductGroup(data)
-      : this.productGroupService.updateProductGroup(this.productGroupId!, data);
+      ? this.productCategoryService.createProductCategory(data)
+      : this.productCategoryService.updateProductCategory(this.productCategoryId!, data);
 
     operation.subscribe({
       next: (result) => {
         this.isSaving.set(false);
         this.toastService.success('Saved successfully');
         if (navigateToList) {
-          this.router.navigate(['/admin/product-groups/list']);
+          this.router.navigate(['/admin/product-categories/list']);
         } else if (isCreating && result?.id) {
-          this.router.navigate(['/admin/product-groups', result.id, 'edit']);
-        } else if (!isCreating && this.productGroupId) {
-          this.loadProductGroup(this.productGroupId);
+          this.router.navigate(['/admin/product-categories', result.id, 'edit']);
+        } else if (!isCreating && this.productCategoryId) {
+          this.loadProductCategory(this.productCategoryId);
         }
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error saving product group:', error);
+        console.error('Error saving product category:', error);
         this.isSaving.set(false);
-        this.toastService.error('Failed to save product group');
+        this.toastService.error('Failed to save product category');
         this.cdr.markForCheck();
       }
     });

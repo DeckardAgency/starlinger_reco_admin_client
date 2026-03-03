@@ -3,7 +3,7 @@ export * from './ui.model';
 export * from './auth.model';
 export * from './pagination.model';
 export * from './product.model';
-export * from './product-group.model';
+export * from './product-category.model';
 export * from './country.model';
 export * from './tax-type.model';
 export * from './payment-type.model';

@@ -213,9 +213,9 @@ export class UsersListComponent implements OnInit, AfterViewInit {
   private mapRolesToAdminRole(roles: string[]): AdminUserRoleType | null {
     if (!roles || roles.length === 0) return null;
     if (roles.includes('ROLE_ADMIN')) return 'admin';
-    if (roles.includes('ROLE_CLIENT_ADMIN')) return 'admin';
-    if (roles.includes('ROLE_CLIENT')) return 'editor';
-    return 'editor';
+    if (roles.includes('ROLE_CLIENT_ADMIN')) return 'client_admin';
+    if (roles.includes('ROLE_CLIENT')) return 'client';
+    return 'client';
   }
 
   ngAfterViewInit(): void {

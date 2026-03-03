@@ -131,9 +131,18 @@ export class UsersEditComponent implements OnInit {
   private mapRolesToAdminRole(roles: string[]): AdminUserRoleType | null {
     if (!roles || roles.length === 0) return null;
     if (roles.includes('ROLE_ADMIN')) return 'admin';
-    if (roles.includes('ROLE_CLIENT_ADMIN')) return 'admin';
-    if (roles.includes('ROLE_CLIENT')) return 'editor';
-    return 'editor';
+    if (roles.includes('ROLE_CLIENT_ADMIN')) return 'client_admin';
+    if (roles.includes('ROLE_CLIENT')) return 'client';
+    return 'client';
+  }
+
+  private mapAdminRoleToRoles(role: AdminUserRoleType | null): string[] {
+    switch (role) {
+      case 'admin': return ['ROLE_ADMIN'];
+      case 'client_admin': return ['ROLE_CLIENT_ADMIN'];
+      case 'client': return ['ROLE_CLIENT'];
+      default: return ['ROLE_CLIENT'];
+    }
   }
 
   // Validation methods
@@ -211,7 +220,8 @@ export class UsersEditComponent implements OnInit {
     const data: Record<string, unknown> = {
       firstName: user.firstName,
       lastName: user.lastName,
-      email: user.email
+      email: user.email,
+      roles: this.mapAdminRoleToRoles(user.role)
     };
 
     // Include plainPassword only if set (for create or password change)
@@ -246,7 +256,8 @@ export class UsersEditComponent implements OnInit {
     const data: Record<string, unknown> = {
       firstName: user.firstName,
       lastName: user.lastName,
-      email: user.email
+      email: user.email,
+      roles: this.mapAdminRoleToRoles(user.role)
     };
 
     if (this.password()) {

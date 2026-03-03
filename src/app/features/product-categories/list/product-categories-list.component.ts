@@ -15,20 +15,20 @@ import {
   TableCheckboxSelectionComponent,
   TableAction
 } from '@app/ui-kit/molecules';
-import { ProductGroup } from '@core/models/product-group.model';
-import { ProductGroupService } from '@core/services/http/product-group.service';
+import { ProductCategory } from '@core/models/product-category.model';
+import { ProductCategoryService } from '@core/services/http/product-category.service';
 import { AlertService } from '@services/alert.service';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
 import { ColumnSettingsService } from '@core/services/column-settings.service';
 
-interface ProductGroupRow extends ProductGroup {
+interface ProductCategoryRow extends ProductCategory {
   selected?: boolean;
 }
 
 @Component({
-  selector: 'app-product-groups-list',
+  selector: 'app-product-categories-list',
   standalone: true,
   imports: [
     CommonModule,
@@ -44,14 +44,14 @@ interface ProductGroupRow extends ProductGroup {
     MobileFooterComponent,
     ColumnSelectorComponent
   ],
-  templateUrl: './product-groups-list.component.html',
-  styleUrls: ['./product-groups-list.component.scss'],
+  templateUrl: './product-categories-list.component.html',
+  styleUrls: ['./product-categories-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProductGroupsListComponent implements OnInit, AfterViewInit {
+export class ProductCategoriesListComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
-  private productGroupService = inject(ProductGroupService);
+  private productCategoryService = inject(ProductCategoryService);
   private alertService = inject(AlertService);
   private toastService = inject(ToastService);
   private destroyRef = inject(DestroyRef);
@@ -85,13 +85,13 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
   selectAll = signal(false);
 
   // Computed: selected count
-  selectedCount = computed(() => this.productGroups().filter(p => p.selected).length);
+  selectedCount = computed(() => this.productCategories().filter(p => p.selected).length);
 
   // Computed: has any selected
   hasSelected = computed(() => this.selectedCount() > 0);
 
   // Column selector
-  readonly COLUMN_STORAGE_KEY = 'product-groups';
+  readonly COLUMN_STORAGE_KEY = 'product-categories';
   columnDefs: ColumnDefinition[] = [];
   private allColumns: TableColumn[] = [];
 
@@ -114,7 +114,7 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
   showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage(), this.totalItems()));
 
   // Data from API
-  productGroups = signal<ProductGroupRow[]>([]);
+  productCategories = signal<ProductCategoryRow[]>([]);
 
   constructor() {
     this.searchSubject.pipe(
@@ -124,15 +124,15 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
     ).subscribe(query => {
       this.searchQuery.set(query);
       this.currentPage.set(1);
-      this.loadProductGroups();
+      this.loadProductCategories();
     });
   }
 
   ngOnInit(): void {
-    this.loadProductGroups();
+    this.loadProductCategories();
   }
 
-  private loadProductGroups(): void {
+  private loadProductCategories(): void {
     this.isLoading.set(true);
 
     const params: Record<string, string | number | boolean> = {
@@ -151,17 +151,17 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
       params[`order[${sortCol}]`] = sortDir;
     }
 
-    this.productGroupService.getProductGroups(params).subscribe({
+    this.productCategoryService.getProductCategories(params).subscribe({
       next: (response) => {
         const items = (response.member || []).map(p => ({ ...p, selected: false }));
-        this.productGroups.set(items);
+        this.productCategories.set(items);
         this.totalItems.set(response.totalItems || 0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Failed to load product groups:', error);
-        this.productGroups.set([]);
+        console.error('Failed to load product categories:', error);
+        this.productCategories.set([]);
         this.totalItems.set(0);
         this.isLoading.set(false);
         this.cdr.markForCheck();
@@ -222,11 +222,11 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
     this.sortColumn.set(event.column);
     this.sortDirection.set(event.direction);
     this.currentPage.set(1);
-    this.loadProductGroups();
+    this.loadProductCategories();
   }
 
-  onAddProductGroup(): void {
-    this.router.navigate(['/admin/product-groups/new']);
+  onAddProductCategory(): void {
+    this.router.navigate(['/admin/product-categories/new']);
   }
 
   toggleDropdown(id: number, event: Event | void): void {
@@ -246,32 +246,32 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
   }
 
   onActionClick(event: { action: TableAction; row: unknown }): void {
-    const productGroup = event.row as ProductGroupRow;
+    const productCategory = event.row as ProductCategoryRow;
     switch (event.action.id) {
       case 'edit':
-        this.onEdit(productGroup);
+        this.onEdit(productCategory);
         break;
       case 'delete':
-        this.onDelete(productGroup);
+        this.onDelete(productCategory);
         break;
     }
   }
 
-  onEdit(productGroup: ProductGroupRow): void {
-    this.router.navigate(['/admin/product-groups', productGroup.id, 'edit']);
+  onEdit(productCategory: ProductCategoryRow): void {
+    this.router.navigate(['/admin/product-categories', productCategory.id, 'edit']);
     this.closeDropdown();
   }
 
-  async onDelete(productGroup: ProductGroupRow): Promise<void> {
-    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${productGroup.name}"?`, 'Delete');
+  async onDelete(productCategory: ProductCategoryRow): Promise<void> {
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete "${productCategory.name}"?`, 'Delete');
     if (confirmed) {
-      this.productGroupService.deleteProductGroup(String(productGroup.id)).subscribe({
+      this.productCategoryService.deleteProductCategory(String(productCategory.id)).subscribe({
         next: () => {
-          this.loadProductGroups();
+          this.loadProductCategories();
         },
         error: (error) => {
-          console.error('Failed to delete product group:', error);
-          this.toastService.error('Failed to delete product group');
+          console.error('Failed to delete product category:', error);
+          this.toastService.error('Failed to delete product category');
         }
       });
     }
@@ -279,13 +279,13 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
   }
 
   async onBulkDelete(): Promise<void> {
-    const selected = this.productGroups().filter(p => p.selected);
-    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} product group(s)?`, 'Delete');
+    const selected = this.productCategories().filter(p => p.selected);
+    const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} product category(ies)?`, 'Delete');
     if (confirmed) {
       selected.forEach(p => {
-        this.productGroupService.deleteProductGroup(String(p.id)).subscribe({
+        this.productCategoryService.deleteProductCategory(String(p.id)).subscribe({
           next: () => {
-            this.loadProductGroups();
+            this.loadProductCategories();
           }
         });
       });
@@ -295,7 +295,7 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
-    this.loadProductGroups();
+    this.loadProductCategories();
   }
 
   onHeaderDropdownToggle(isOpen: boolean): void {
@@ -306,22 +306,22 @@ export class ProductGroupsListComponent implements OnInit, AfterViewInit {
   }
 
   onSelectAll(): void {
-    const updated = this.productGroups().map(p => ({ ...p, selected: true }));
-    this.productGroups.set(updated);
+    const updated = this.productCategories().map(p => ({ ...p, selected: true }));
+    this.productCategories.set(updated);
     this.selectAll.set(true);
   }
 
   onSelectNone(): void {
-    const updated = this.productGroups().map(p => ({ ...p, selected: false }));
-    this.productGroups.set(updated);
+    const updated = this.productCategories().map(p => ({ ...p, selected: false }));
+    this.productCategories.set(updated);
     this.selectAll.set(false);
   }
 
-  toggleSelection(productGroup: ProductGroupRow): void {
-    const updated = this.productGroups().map(p =>
-      p.id === productGroup.id ? { ...p, selected: !p.selected } : p
+  toggleSelection(productCategory: ProductCategoryRow): void {
+    const updated = this.productCategories().map(p =>
+      p.id === productCategory.id ? { ...p, selected: !p.selected } : p
     );
-    this.productGroups.set(updated);
+    this.productCategories.set(updated);
     this.selectAll.set(updated.every(p => p.selected));
   }
 }
