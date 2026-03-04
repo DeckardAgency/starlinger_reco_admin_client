@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, ViewChild, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DatePickerComponent } from "@shared/components/date-picker/date-picker.component";
 import { ReactiveFormsModule, FormGroup, FormBuilder } from "@angular/forms";
@@ -122,7 +122,8 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
 
     constructor(
         private fb: FormBuilder,
-        private http: HttpClient
+        private http: HttpClient,
+        private cdr: ChangeDetectorRef
     ) {
         this.dateRangeForm = this.fb.group({
             dateRange: [null]
@@ -161,6 +162,7 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
     }
 
     onDateRangeChanged(range: { start: Date, end: Date }) {
+        console.log('[Perf] onDateRangeChanged called', range);
         if (range && range.start && range.end) {
             this.startDate = range.start.toISOString().split('T')[0];
             this.endDate = range.end.toISOString().split('T')[0];
@@ -180,6 +182,7 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
 
     loadPerformanceData() {
         const requestId = ++this.currentRequestId;
+        console.log('[Perf] loadPerformanceData called, requestId:', requestId, 'dates:', this.startDate, '-', this.endDate);
         this.isLoading = true;
         this.error = null;
 
@@ -192,6 +195,7 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (data) => {
+                    console.log('[Perf] Response received, requestId:', requestId, 'currentRequestId:', this.currentRequestId, 'match:', requestId === this.currentRequestId);
                     if (requestId !== this.currentRequestId) return;
                     try {
                         this.updateMetrics(data);
@@ -200,13 +204,17 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
                         this.setDefaultMetrics();
                     }
                     this.isLoading = false;
+                    this.cdr.markForCheck();
+                    console.log('[Perf] isLoading set to false, metrics count:', this.metrics.length);
                 },
                 error: (error) => {
+                    console.log('[Perf] Error received, requestId:', requestId, 'currentRequestId:', this.currentRequestId);
                     if (requestId !== this.currentRequestId) return;
                     console.error('Error loading performance data:', error);
                     this.error = 'Failed to load performance data. Please try again.';
                     this.isLoading = false;
                     this.setDefaultMetrics();
+                    this.cdr.markForCheck();
                 }
             });
     }
