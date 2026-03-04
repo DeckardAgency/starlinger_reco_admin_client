@@ -55,14 +55,13 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
     @ViewChild(DatePickerComponent) rangePicker!: DatePickerComponent;
 
     private destroy$ = new Subject<void>();
-    private cancelRequest$ = new Subject<void>();
     private apiUrl = `${environment.apiBaseUrl}/api/v1/dashboard/performance`;
+    private currentRequestId = 0;
 
     dateRangeForm: FormGroup;
     metrics: PerformanceMetric[] = [];
     isLoading = false;
     error: string | null = null;
-    private isUpdatingFromResponse = false;
 
     activePreset: string | null = 'Last 30 days';
 
@@ -162,7 +161,6 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
     }
 
     onDateRangeChanged(range: { start: Date, end: Date }) {
-        if (this.isUpdatingFromResponse) return;
         if (range && range.start && range.end) {
             this.startDate = range.start.toISOString().split('T')[0];
             this.endDate = range.end.toISOString().split('T')[0];
@@ -181,7 +179,7 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
     }
 
     loadPerformanceData() {
-        this.cancelRequest$.next();
+        const requestId = ++this.currentRequestId;
         this.isLoading = true;
         this.error = null;
 
@@ -191,9 +189,10 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
         }
 
         this.http.get<DashboardResponse>(url)
-            .pipe(takeUntil(this.destroy$), takeUntil(this.cancelRequest$))
+            .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (data) => {
+                    if (requestId !== this.currentRequestId) return;
                     try {
                         this.updateMetrics(data);
                     } catch (e) {
@@ -203,6 +202,7 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
                     this.isLoading = false;
                 },
                 error: (error) => {
+                    if (requestId !== this.currentRequestId) return;
                     console.error('Error loading performance data:', error);
                     this.error = 'Failed to load performance data. Please try again.';
                     this.isLoading = false;
@@ -212,14 +212,6 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
     }
 
     private updateMetrics(data: DashboardResponse) {
-        this.isUpdatingFromResponse = true;
-        if (data.period) {
-            const start = new Date(data.period.start);
-            const end = new Date(data.period.end);
-            this.dateRangeForm.get('dateRange')?.setValue({ start, end }, { emitEvent: false });
-        }
-        this.isUpdatingFromResponse = false;
-
         const zero: MetricData = { value: 0, percentageChange: 0, trend: 'neutral' };
 
         this.metrics = [
