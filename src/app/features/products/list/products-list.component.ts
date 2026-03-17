@@ -144,7 +144,7 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
 
     const query = this.searchQuery().trim();
     if (query) {
-      params['name'] = query;
+      params['search'] = query;
     }
 
     const sortCol = this.sortColumn();

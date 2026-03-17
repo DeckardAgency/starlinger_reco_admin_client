@@ -155,12 +155,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
 
     const query = this.searchQuery().trim();
     if (query) {
-      // Check if query looks like an email, otherwise search by name
-      if (query.includes('@')) {
-        params['email'] = query;
-      } else {
-        params['name'] = query;
-      }
+      params['search'] = query;
     }
 
     const sortCol = this.sortColumn();

@@ -711,23 +711,48 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   onExport(): void {
+    const orderData = this.order();
+    if (!orderData.id) return;
+    const orderNumber = orderData.internalRef || String(orderData.id);
+    this.orderService.exportOrdersToExcel(
+      undefined,
+      undefined,
+      { query: orderNumber }
+    ).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `order-${orderNumber}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Export failed:', err);
+        this.alertService.error('Failed to export order to Excel.');
+      }
+    });
+  }
+
+  onPrint(): void {
     const orderId = this.order().id;
     if (!orderId) return;
     this.orderService.exportOrderPdf(String(orderId)).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `order-${this.order().internalRef || orderId}.pdf`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        const printWindow = window.open(url);
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+            setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+          };
+        }
       },
-      error: (err) => console.error('Export failed:', err)
+      error: (err) => {
+        console.error('Print failed:', err);
+        this.alertService.error('Failed to generate print preview.');
+      }
     });
-  }
-
-  onPrint(): void {
-    window.print();
   }
 
   onSave(): void {

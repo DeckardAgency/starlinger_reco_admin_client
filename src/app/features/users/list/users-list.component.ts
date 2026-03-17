@@ -155,10 +155,10 @@ export class UsersListComponent implements OnInit, AfterViewInit {
       itemsPerPage: this.itemsPerPage()
     };
 
-    // Apply search
+    // Apply search (OR filter: email, firstName, lastName)
     const query = this.searchQuery().trim();
     if (query) {
-      params['email'] = query;
+      params['search'] = query;
     }
 
     // Apply hasClient filter
