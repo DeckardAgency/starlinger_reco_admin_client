@@ -3,6 +3,7 @@ export interface ProductDiscount {
   '@type': string;
   id: number;
   productId: number;
+  discountId: number;
   discountPriceBase: string | null;
   discountPriceRetail: string | null;
   rebate: string | null;

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject, forkJoin } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
@@ -16,6 +16,7 @@ import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-f
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { CalendarComponent } from '@app/ui-kit/molecules/calendar/calendar.component';
+import { ModalComponent } from '@app/ui-kit/organisms/modal/modal.component';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { DiscountService } from '@core/services/http/discount.service';
 import { AccountGroupService } from '@core/services/http/account-group.service';
@@ -37,8 +38,15 @@ interface DiscountDetail {
 
 interface DiscountProduct {
   id: string;
+  productDiscountId?: number;  // ProductDiscount entity ID for deletion
   code: string;
   shortDescription: string;
+}
+
+interface SearchResult {
+  id: number;
+  code: string;
+  name: string;
 }
 
 const EMPTY_DISCOUNT: DiscountDetail = {
@@ -70,7 +78,8 @@ const EMPTY_DISCOUNT: DiscountDetail = {
     TableFooterComponent,
     TableActionsDropdownComponent,
     DataTableComponent,
-    CalendarComponent
+    CalendarComponent,
+    ModalComponent
   ],
   templateUrl: './discounts-edit.component.html',
   styleUrls: ['./discounts-edit.component.scss'],
@@ -125,6 +134,13 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   accountOptions = signal<{ value: string; label: string }[]>([]);
 
 
+  // Product modal
+  isProductModalOpen = signal(false);
+  productSearchResults = signal<SearchResult[]>([]);
+  isSearchingProducts = signal(false);
+  productSearchQuery = signal('');
+  private productSearchSubject = new Subject<string>();
+
   // Product actions
   productActions: TableAction[] = [
     { id: 'remove', label: 'Remove', icon: 'trash', variant: 'danger' }
@@ -155,6 +171,38 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
         // New discount - reset form
         this.discount.set({ ...EMPTY_DISCOUNT });
       }
+    });
+
+    // Debounced product search for modal
+    this.productSearchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
+    ).subscribe(query => {
+      if (!query.trim()) {
+        this.productSearchResults.set([]);
+        this.isSearchingProducts.set(false);
+        this.cdr.markForCheck();
+        return;
+      }
+      this.isSearchingProducts.set(true);
+      this.productService.getProducts({ search: query, itemsPerPage: 20 }).subscribe({
+        next: (res) => {
+          const linkedIds = new Set(this.products().map(p => p.id));
+          const members = (res as any).member || (res as any)['hydra:member'] || [];
+          this.productSearchResults.set(
+            members
+              .filter((p: any) => !linkedIds.has(String(p.id)))
+              .map((p: any) => ({ id: p.id, code: p.partNo, name: p.name }))
+          );
+          this.isSearchingProducts.set(false);
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isSearchingProducts.set(false);
+          this.cdr.markForCheck();
+        }
+      });
     });
   }
 
@@ -220,24 +268,26 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     ).subscribe({
       next: (response) => {
         const productDiscounts = response.member || [];
-        const productIds = productDiscounts
-          .map(pd => pd.productId)
-          .filter((id): id is number => id != null);
-
-        if (productIds.length === 0) {
+        if (productDiscounts.length === 0) {
           this.products.set([]);
           this.cdr.markForCheck();
           return;
         }
 
-        // Fetch each product's details
-        const uniqueIds = [...new Set(productIds)];
+        // Build a map of productId → productDiscountId
+        const pdMap = new Map<number, number>();
+        productDiscounts.forEach(pd => {
+          if (pd.productId != null) pdMap.set(pd.productId, pd.id);
+        });
+
+        const uniqueIds = [...pdMap.keys()];
         forkJoin(
           uniqueIds.map(pid => this.productService.getProductById(String(pid)))
         ).pipe(takeUntil(this.destroy$)).subscribe({
           next: (products) => {
             this.products.set(products.map(p => ({
               id: String(p.id),
+              productDiscountId: pdMap.get(p.id),
               code: p.partNo || '',
               shortDescription: p.shortDescription || p.name || ''
             })));
@@ -447,7 +497,44 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
 
   onSearch(query: string): void {
     this.searchQuery.set(query);
-    console.log('Searching:', query);
+  }
+
+  // Product modal
+  openProductModal(): void {
+    this.isProductModalOpen.set(true);
+    this.productSearchQuery.set('');
+    this.productSearchResults.set([]);
+  }
+
+  onProductSearchChange(event: Event): void {
+    const query = (event.target as HTMLInputElement).value;
+    this.productSearchQuery.set(query);
+    this.productSearchSubject.next(query);
+  }
+
+  onAddProduct(result: SearchResult): void {
+    if (!this.discountId) return;
+
+    this.productDiscountService.createProductDiscount({
+      productId: result.id,
+      discountId: Number(this.discountId)
+    }).subscribe({
+      next: (pd) => {
+        this.products.update(list => [...list, {
+          id: String(result.id),
+          productDiscountId: pd.id,
+          code: result.code,
+          shortDescription: result.name
+        }]);
+        this.productSearchResults.update((list: SearchResult[]) => list.filter((r: SearchResult) => r.id !== result.id));
+        this.toastService.success(`Added ${result.code}`);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error linking product:', err);
+        this.toastService.error('Failed to link product');
+      }
+    });
   }
 
   onPageChange(page: number): void {
@@ -478,7 +565,21 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   onRemoveProduct(product: DiscountProduct): void {
-    this.products.update(list => list.filter(p => p.id !== product.id));
+    if (product.productDiscountId) {
+      this.productDiscountService.deleteProductDiscount(String(product.productDiscountId)).subscribe({
+        next: () => {
+          this.products.update(list => list.filter(p => p.id !== product.id));
+          this.toastService.success(`Removed ${product.code}`);
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          console.error('Error removing product:', err);
+          this.toastService.error('Failed to remove product');
+        }
+      });
+    } else {
+      this.products.update(list => list.filter(p => p.id !== product.id));
+    }
     this.closeDropdown();
   }
 }
