@@ -18,7 +18,10 @@
 
 .form-card {
   @include admin.form-card;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+
+  & {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
 }

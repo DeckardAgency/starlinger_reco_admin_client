@@ -26,7 +26,10 @@
 // =============================================================================
 .form-card {
   @include admin.form-card;
-  margin-bottom: 16px;
+
+  & {
+    margin-bottom: 16px;
+  }
 
   &__title {
     font-family: 'Inter', sans-serif;

@@ -411,7 +411,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           (apiProduct.imageGallery || []).map((m: MediaItem) => ({
             id: m.id,
             name: m.filename || '',
-            url: m.filePath || '',
+            url: m.filePath ? `${environment.apiBaseUrl}${m.filePath}` : '',
             isPrimary: m.id === featuredId
           }))
         );
@@ -1171,7 +1171,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
               this.galleryImages.update(images => [...images, {
                 id: media.id,
                 name: media.filename || file.name,
-                url: media.filePath || '',
+                url: media.filePath ? `${environment.apiBaseUrl}${media.filePath}` : '',
                 isPrimary: false
               }]);
               uploaded++;
