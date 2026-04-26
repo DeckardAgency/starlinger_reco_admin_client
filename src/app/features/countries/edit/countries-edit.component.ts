@@ -20,20 +20,16 @@ interface CountryDetail {
   id: number;
   name: string;
   code: string;
-  iso31661Alpha3Code: string;
   dhlZone: string;
   taxType: string;
-  defaultTaxPercent: string;
 }
 
 const EMPTY_COUNTRY: CountryDetail = {
   id: 0,
   name: '',
   code: '',
-  iso31661Alpha3Code: '',
   dhlZone: '',
   taxType: '',
-  defaultTaxPercent: ''
 };
 
 interface SelectOption {
@@ -77,6 +73,7 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
     if (!country.name?.trim()) errs['name'] = 'Name is required';
     if (!country.code?.trim()) errs['code'] = 'Code is required';
     else if (country.code.trim().length !== 2) errs['code'] = 'Code must be exactly 2 characters';
+    if (!country.taxType) errs['taxType'] = 'Tax type is required';
     return errs;
   });
   isValid = computed(() => Object.keys(this.errors()).length === 0);
@@ -130,10 +127,8 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
           id: country.id || Number(id),
           name: country.name || '',
           code: country.code || '',
-          iso31661Alpha3Code: country.iso31661Alpha3Code || '',
           dhlZone: country.dhlZone != null ? String(country.dhlZone) : '',
           taxType: taxTypeId,
-          defaultTaxPercent: country.defaultTaxPercent != null ? String(country.defaultTaxPercent) : ''
         });
         this.selectedDhlZone = country.dhlZone != null ? String(country.dhlZone) : '';
         this.selectedTaxType = taxTypeId;
@@ -166,16 +161,6 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
     this.markFieldTouched('code');
   }
 
-  onIso31661Alpha3CodeChange(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.country.update(c => ({ ...c, iso31661Alpha3Code: value }));
-  }
-
-  onDefaultTaxPercentChange(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.country.update(c => ({ ...c, defaultTaxPercent: value }));
-  }
-
   onDhlZoneChange(value: string | number): void {
     const strValue = String(value);
     this.selectedDhlZone = strValue;
@@ -205,22 +190,12 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
     const strValue = String(value);
     this.selectedTaxType = strValue;
     this.country.update(c => ({ ...c, taxType: strValue }));
-
-    // Auto-fill defaultTaxPercent from selected tax type
-    const taxType = this.taxTypes.find(tt => String(tt.id) === strValue);
-    if (taxType) {
-      this.country.update(c => ({ ...c, defaultTaxPercent: taxType.percent }));
-    }
-  }
-
-  clearTaxType(): void {
-    this.selectedTaxType = '';
-    this.country.update(c => ({ ...c, taxType: '' }));
+    this.markFieldTouched('taxType');
   }
 
   // Validation helpers
   markAllTouched(): void {
-    this.touched.set({ name: true, code: true });
+    this.touched.set({ name: true, code: true, taxType: true });
   }
 
   markFieldTouched(field: string): void {
@@ -251,10 +226,8 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
     const payload: Record<string, unknown> = {
       name: c.name,
       code: c.code,
-      iso31661Alpha3Code: c.iso31661Alpha3Code || null,
-      defaultTaxPercent: c.defaultTaxPercent !== '' ? c.defaultTaxPercent : null,
       dhlZone: c.dhlZone !== '' ? parseInt(c.dhlZone, 10) : null,
-      taxType: c.taxType !== '' ? `/api/v1/tax_types/${c.taxType}` : null
+      taxType: `/api/v1/tax_types/${c.taxType}`
     };
 
     const isCreating = !this.isEditMode();

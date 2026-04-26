@@ -298,20 +298,17 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
           partNo: fullProduct.partNo ? `${fullProduct.partNo}-copy` : '',
           slug: fullProduct.slug ? `${fullProduct.slug}-copy` : undefined,
           isActive: false,
-          readyForShop: false,
           qty: fullProduct.qty,
           qtyStep: fullProduct.qtyStep,
           quoteItemLimit: fullProduct.quoteItemLimit,
           fixedQty: fullProduct.fixedQty,
           weight: fullProduct.weight || null,
           productGroupId: fullProduct.productGroupId || null,
+          productType: fullProduct.productType || null,
           catalogCode: fullProduct.catalogCode || null,
           price: fullProduct.price,
-          retailPrice: fullProduct.retailPrice,
           taxTypeId: fullProduct.taxTypeId || null,
           currency: fullProduct.currency || null,
-          discountPercent: fullProduct.discountPercent,
-          discountPrice: fullProduct.discountPrice,
           shortDescription: fullProduct.shortDescription || null
         };
 

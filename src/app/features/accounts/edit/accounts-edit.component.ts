@@ -61,7 +61,7 @@ interface ShopOrder {
 const EMPTY_ACCOUNT: Account = {
   id: 0,
   code: '',
-  oib: '',
+  vatNumber: '',
   name: '',
   email: '',
   status: 'active',
@@ -498,7 +498,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     return {
       id: c.id,
       code: c.code,
-      oib: c.vatNumber ?? '',
+      vatNumber: c.vatNumber ?? '',
       name: c.name ?? '',
       email: c.email ?? '',
       status: c.isActive ? 'active' : 'inactive',
@@ -684,7 +684,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       code: account.code?.trim() ?? '',
       name: account.name?.trim() ?? '',
       email: account.email?.trim() || null,
-      vatNumber: account.oib?.trim() || null,
+      vatNumber: account.vatNumber?.trim() || null,
       phoneNumber: account.phone?.trim() || null,
       otherPhone: account.otherPhone?.trim() || null,
       otherEmail: account.otherEmail?.trim() || null,

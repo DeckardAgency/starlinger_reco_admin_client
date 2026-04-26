@@ -18,7 +18,6 @@ interface TaxTypeDetail {
   name: string;
   percent: string;
   remoteId: number | null;
-  remoteCode: string | null;
   isActive: boolean;
 }
 
@@ -27,7 +26,6 @@ const EMPTY_TAX_TYPE: TaxTypeDetail = {
   name: '',
   percent: '0',
   remoteId: null,
-  remoteCode: null,
   isActive: true
 };
 
@@ -109,7 +107,6 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
           name: taxType.name || '',
           percent: taxType.percent ?? '0',
           remoteId: taxType.remoteId ?? null,
-          remoteCode: taxType.remoteCode || null,
           isActive: taxType.isActive ?? true
         });
         this.isLoading.set(false);
@@ -161,7 +158,6 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
     const data: Record<string, unknown> = {
       name: detail.name,
       percent: String(parseFloat(detail.percent) || 0),
-      remoteCode: detail.remoteCode
     };
 
     const isCreating = !this.isEditMode();
@@ -195,11 +191,6 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     this.taxType.update(t => ({ ...t, percent: input.value }));
     this.markFieldTouched('percent');
-  }
-
-  onRemoteCodeChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.taxType.update(t => ({ ...t, remoteCode: input.value || null }));
   }
 
 }

@@ -162,14 +162,6 @@ export class AddressModalComponent implements OnChanges {
     return `"${existing.street}, ${existing.city}" is currently the billing address and will be overridden.`;
   }
 
-  get deliveryWarning(): string | null {
-    if (!this.addressForm.get('isDelivery')?.value) return null;
-    const currentId = this.address?.id;
-    const existing = this.existingAddresses.find(a => a.isDelivery && a.id !== currentId);
-    if (!existing) return null;
-    return `"${existing.street}, ${existing.city}" is currently the delivery address and will be overridden.`;
-  }
-
   onBillingChange(value: boolean): void {
     this.addressForm.patchValue({ isBilling: value });
   }

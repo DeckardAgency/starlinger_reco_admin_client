@@ -43,12 +43,6 @@
             [checked]="product().active"
             (toggleChange)="onActiveChange($event)">
           </ui-toggle>
-          <ui-toggle
-            label="Ready for Shop"
-            labelPosition="left"
-            [checked]="product().readyForShop"
-            (toggleChange)="onReadyForShopChange($event)">
-          </ui-toggle>
         </div>
 
         <div class="card__fields">
@@ -83,6 +77,17 @@
               (cleared)="clearProductGroup()">
             </ui-select>
           </ui-form-field>
+          <ui-form-field label="Product type" layout="horizontal">
+            <ui-select
+              variant="pill"
+              [options]="productTypeOptions"
+              [value]="productTypeValue"
+              [clearable]="true"
+              placeholder="Select product type"
+              (selectChange)="onProductTypeChange($event)"
+              (cleared)="clearProductType()">
+            </ui-select>
+          </ui-form-field>
           <ui-form-field label="Code" layout="horizontal">
             <input type="text" [value]="product().code" placeholder="Enter code" (input)="updateProduct('code', $event)">
           </ui-form-field>
@@ -99,9 +104,6 @@
         <div class="card__fields">
           <ui-form-field label="Base price" layout="horizontal">
             <input type="number" [value]="product().basePrice" placeholder="0.00" (input)="updateProductNumber('basePrice', $event)">
-          </ui-form-field>
-          <ui-form-field label="Retail price" layout="horizontal">
-            <input type="number" [value]="product().retailPrice" placeholder="0.00" (input)="updateProductNumber('retailPrice', $event)">
           </ui-form-field>
           <ui-form-field label="Tax type" layout="horizontal">
             <ui-select
@@ -122,12 +124,6 @@
               (selectChange)="onCurrencyChange($event)"
               (cleared)="clearCurrency()">
             </ui-select>
-          </ui-form-field>
-          <ui-form-field label="Discount %" layout="horizontal">
-            <input type="number" [value]="product().discountPercent" placeholder="0.00" (input)="updateProductNumber('discountPercent', $event)">
-          </ui-form-field>
-          <ui-form-field label="Discount price" layout="horizontal">
-            <input type="number" [value]="product().discountPrice" placeholder="0.00" (input)="updateProductNumber('discountPrice', $event)">
           </ui-form-field>
         </div>
       </div>
@@ -237,37 +233,6 @@
             emptyMessage="No documents"
             (sort)="onSort($event)">
           </ui-data-table>
-        </div>
-      </div>
-
-      <!-- Applied Discounts Tab Content -->
-      <div class="tab-content tab-content--no-padding" *ngIf="activeTab() === 'discounts'">
-        <div class="discounts-table" *ngIf="appliedDiscounts().length > 0">
-          <table class="discount-table">
-            <thead>
-              <tr>
-                <th style="width: 112px;">Id</th>
-                <th style="width: 180px;">Date valid from</th>
-                <th style="width: 180px;">Date valid to</th>
-                <th style="width: 180px;">Discount price base</th>
-                <th style="width: 180px;">Discount %</th>
-                <th>Applied to</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let discount of appliedDiscounts(); let odd = odd" [class.discount-table__row--odd]="odd">
-                <td>{{ discount.id }}</td>
-                <td>{{ discount.dateValidFrom }}</td>
-                <td>{{ discount.dateValidTo }}</td>
-                <td>{{ discount.discountPriceBase }}</td>
-                <td>{{ discount.discountPercent }}</td>
-                <td>{{ discount.appliedTo }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="empty-state" *ngIf="appliedDiscounts().length === 0">
-          <p class="empty-state__text">No applied discounts</p>
         </div>
       </div>
 

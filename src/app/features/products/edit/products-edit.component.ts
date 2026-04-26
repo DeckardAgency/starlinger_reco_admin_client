@@ -22,7 +22,6 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
 import { ProductService } from '@core/services/http/product.service';
 import { ProductCategoryService } from '@core/services/http/product-category.service';
 import { TaxTypeService } from '@core/services/http/tax-type.service';
-import { ProductDiscountService } from '@core/services/http/product-discount.service';
 import { ProductProductLinkService } from '@core/services/http/product-product-link.service';
 import { Product, MediaItem } from '@core/models';
 import { MediaService } from '@core/services/http/media.service';
@@ -35,7 +34,6 @@ interface ProductDetail {
   code: string;
   name: string;
   active: boolean;
-  readyForShop: boolean;
   url: string;
   quantity: number;
   quantityStep: number;
@@ -43,13 +41,11 @@ interface ProductDetail {
   fixedQuantity: number;
   weight: string;
   productGroup: string;
+  productType: string;
   catalogCode: string;
   basePrice: number;
-  retailPrice: number;
   taxPercent: string;
   currency: string;
-  discountPercent: number;
-  discountPrice: number;
   shortDescription: string;
 }
 
@@ -77,22 +73,11 @@ interface ProductDocument {
   size: string;
 }
 
-interface AppliedDiscount {
-  id: string;
-  dateValidFrom: string;
-  dateValidTo: string;
-  discountPriceBase: string;
-  discountPercent: string;
-  appliedTo: string;
-}
-
-
 const EMPTY_PRODUCT: ProductDetail = {
   id: 0,
   code: '',
   name: '',
   active: false,
-  readyForShop: false,
   url: '',
   quantity: 0,
   quantityStep: 1,
@@ -100,13 +85,11 @@ const EMPTY_PRODUCT: ProductDetail = {
   fixedQuantity: 0,
   weight: '',
   productGroup: '',
+  productType: '',
   catalogCode: '',
   basePrice: 0,
-  retailPrice: 0,
   taxPercent: '',
   currency: '',
-  discountPercent: 0,
-  discountPrice: 0,
   shortDescription: ''
 };
 
@@ -165,7 +148,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   selectedDocumentIds = signal<Set<number>>(new Set());
 
   // Applied discounts
-  appliedDiscounts = signal<AppliedDiscount[]>([]);
 
   // Related products
   availableProducts = signal<RelatedProduct[]>([]);
@@ -221,10 +203,16 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   taxOptions = signal<SelectOption[]>([]);
 
+  productTypeOptions: SelectOption[] = [
+    { value: 'VT', label: 'VT' },
+    { value: 'ET', label: 'ET' }
+  ];
+
   // Select model values
   productGroupValue = '';
   taxPercentValue = '';
   currencyValue = '';
+  productTypeValue = '';
 
   // Validation state
   touched = signal<Record<string, boolean>>({});
@@ -253,7 +241,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     { id: 'shortDescription', label: 'Short description' },
     { id: 'gallery', label: 'Gallery' },
     { id: 'documents', label: 'Product documents' },
-    { id: 'discounts', label: 'Applied discounts' },
     { id: 'relatedProducts', label: 'Related products' }
   ];
 
@@ -296,7 +283,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     private productService: ProductService,
     private productCategoryService: ProductCategoryService,
     private taxTypeService: TaxTypeService,
-    private productDiscountService: ProductDiscountService,
     private productProductLinkService: ProductProductLinkService,
     private mediaService: MediaService
   ) {}
@@ -401,6 +387,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.productGroupValue = productData.productGroup;
         this.taxPercentValue = productData.taxPercent;
         this.currencyValue = productData.currency;
+        this.productTypeValue = productData.productType;
 
         // Track featured image
         const featuredId = (apiProduct as any).featuredImage?.id || null;
@@ -426,8 +413,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           }))
         );
 
-        // Load applied discounts and related products
-        this.loadAppliedDiscounts(id);
+        // Load related products
         this.loadRelatedProducts(id);
 
         this.cdr.markForCheck();
@@ -445,7 +431,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       code: p.partNo ?? '',
       name: p.name ?? '',
       active: p.isActive ?? true,
-      readyForShop: p.readyForShop ?? false,
       url: p.slug ?? '',
       quantity: p.qty ?? 0,
       quantityStep: p.qtyStep ?? 1,
@@ -453,13 +438,11 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       fixedQuantity: p.fixedQty ?? 0,
       weight: p.weight ?? '',
       productGroup: String(p.productGroupId ?? ''),
+      productType: p.productType ?? '',
       catalogCode: p.catalogCode ?? '',
       basePrice: p.price ?? 0,
-      retailPrice: p.retailPrice ?? 0,
       taxPercent: String(p.taxTypeId ?? ''),
       currency: p.currency ?? 'EUR',
-      discountPercent: p.discountPercent ?? 0,
-      discountPrice: p.discountPrice ?? 0,
       shortDescription: p.shortDescription ?? ''
     };
   }
@@ -552,25 +535,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       });
   }
 
-  private loadAppliedDiscounts(productId: string): void {
-    this.productDiscountService.getByProductId(productId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          const discounts = (response.member || []).map(d => ({
-            id: String(d.id),
-            dateValidFrom: d.dateValidFrom ? new Date(d.dateValidFrom).toLocaleString() : '-',
-            dateValidTo: d.dateValidTo ? new Date(d.dateValidTo).toLocaleString() : '-',
-            discountPriceBase: d.discountPriceBase ? `\u20AC ${d.discountPriceBase}` : '-',
-            discountPercent: d.rebate ?? '-',
-            appliedTo: d.appliedTo || '-'
-          }));
-          this.appliedDiscounts.set(discounts);
-          this.cdr.markForCheck();
-        },
-        error: (err) => console.error('Error loading applied discounts:', err)
-      });
-  }
 
   private resetForm(): void {
     this.product.set({ ...EMPTY_PRODUCT });
@@ -579,6 +543,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.productGroupValue = '';
     this.taxPercentValue = '';
     this.currencyValue = '';
+    this.productTypeValue = '';
   }
 
   // Navigation
@@ -589,10 +554,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Toggle handlers
   onActiveChange(value: boolean): void {
     this.product.update(p => ({ ...p, active: value }));
-  }
-
-  onReadyForShopChange(value: boolean): void {
-    this.product.update(p => ({ ...p, readyForShop: value }));
   }
 
   // Field update handlers
@@ -971,20 +932,17 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       partNo: product.code,
       slug: product.url || undefined,
       isActive: product.active,
-      readyForShop: product.readyForShop,
       qty: product.quantity ?? null,
       qtyStep: product.quantityStep ?? null,
       quoteItemLimit: product.quoteItemLimit ?? null,
       fixedQty: product.fixedQuantity ?? null,
       weight: product.weight || null,
       productGroupId: product.productGroup ? parseInt(product.productGroup, 10) : null,
+      productType: product.productType || null,
       catalogCode: product.catalogCode || null,
       price: product.basePrice ?? 0,
-      retailPrice: product.retailPrice ?? null,
       taxTypeId: product.taxPercent ? parseInt(product.taxPercent, 10) : null,
       currency: product.currency || null,
-      discountPercent: product.discountPercent ?? null,
-      discountPrice: product.discountPrice ?? null,
       shortDescription: product.shortDescription || null,
       imageGallery: this.galleryImages().map(img => mediaIriPrefix + img.id),
       documents: this.productDocuments().map(doc => mediaIriPrefix + doc.id),
@@ -1026,6 +984,17 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   clearProductGroup(): void {
     this.productGroupValue = '';
     this.product.update(p => ({ ...p, productGroup: '' }));
+  }
+
+  // Product type handlers
+  onProductTypeChange(value: string | number): void {
+    this.productTypeValue = String(value);
+    this.product.update(p => ({ ...p, productType: String(value) }));
+  }
+
+  clearProductType(): void {
+    this.productTypeValue = '';
+    this.product.update(p => ({ ...p, productType: '' }));
   }
 
   // Helpers

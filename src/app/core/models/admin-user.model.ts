@@ -8,7 +8,7 @@ export interface AdminUser {
   selected?: boolean;
 }
 
-export type AdminUserRoleType = 'admin' | 'client_admin' | 'client';
+export type AdminUserRoleType = 'admin' | 'client_admin' | 'client' | 'finance';
 
 export interface AdminUserRoleOption {
   id: AdminUserRoleType;
@@ -31,5 +31,10 @@ export const ADMIN_USER_ROLE_OPTIONS: AdminUserRoleOption[] = [
     id: 'client',
     name: 'Client',
     description: 'Standard client access for browsing the shop and placing orders.'
+  },
+  {
+    id: 'finance',
+    name: 'Finance',
+    description: 'Receives email notifications for orders placed by users of the same company. No webshop access.'
   }
 ];

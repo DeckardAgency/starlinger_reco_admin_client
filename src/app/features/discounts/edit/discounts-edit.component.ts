@@ -34,6 +34,7 @@ interface DiscountDetail {
   priority: number;
   accountGroups: string[];
   accounts: string[];
+  productTypes: string[];
 }
 
 interface DiscountProduct {
@@ -58,7 +59,8 @@ const EMPTY_DISCOUNT: DiscountDetail = {
   discountPercent: 0,
   priority: 0,
   accountGroups: [],
-  accounts: []
+  accounts: [],
+  productTypes: []
 };
 
 @Component({
@@ -132,6 +134,11 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   // Account options (loaded from API)
   accountGroupOptions = signal<{ value: string; label: string }[]>([]);
   accountOptions = signal<{ value: string; label: string }[]>([]);
+
+  productTypeOptions: { value: string; label: string }[] = [
+    { value: 'VT', label: 'VT' },
+    { value: 'ET', label: 'ET' }
+  ];
 
 
   // Product modal
@@ -243,7 +250,8 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
           discountPercent: parseFloat(discount.discountPercent || '0') || 0,
           priority: discount.priority || 0,
           accountGroups: parseIris(discountAny.accountGroups),
-          accounts: parseIris(discountAny.clients)
+          accounts: parseIris(discountAny.clients),
+          productTypes: Array.isArray(discountAny.productTypes) ? discountAny.productTypes : []
         });
         this.dateFromDate.set(this.parseDateString(discount.dateValidFrom || ''));
         this.dateToDate.set(this.parseDateString(discount.dateValidTo || ''));
@@ -431,6 +439,10 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     this.discount.update(d => ({ ...d, accounts: values.map(String) }));
   }
 
+  onProductTypesChange(values: (string | number)[]): void {
+    this.discount.update(d => ({ ...d, productTypes: values.map(String) }));
+  }
+
   clearAccountGroups(): void {
     this.discount.update(d => ({ ...d, accountGroups: [] }));
   }
@@ -465,7 +477,8 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
       discountPercent: data.discountPercent.toString(),
       priority: data.priority,
       accountGroups: data.accountGroups.map(id => `/api/v1/account_groups/${id}`),
-      clients: data.accounts.map(id => `/api/v1/clients/${id}`)
+      clients: data.accounts.map(id => `/api/v1/clients/${id}`),
+      productTypes: data.productTypes.length > 0 ? data.productTypes : null
     };
 
     const isCreating = !this.isEditMode();

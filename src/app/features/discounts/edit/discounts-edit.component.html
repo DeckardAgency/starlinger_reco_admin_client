@@ -111,6 +111,17 @@
             placeholder="Select accounts">
           </ui-select>
         </ui-form-field>
+
+        <ui-form-field label="Product types" layout="horizontal">
+          <ui-select
+            variant="pill"
+            [multiple]="true"
+            [options]="productTypeOptions"
+            [ngModel]="discount().productTypes"
+            (ngModelChange)="onProductTypesChange($event)"
+            placeholder="All product types">
+          </ui-select>
+        </ui-form-field>
       </div>
     </div>
 

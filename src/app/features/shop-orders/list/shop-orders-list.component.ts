@@ -104,7 +104,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   // Table actions
   tableActions: TableAction[] = [
     { id: 'view', label: 'View', icon: 'eye' },
-    { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
+    { id: 'delete', label: 'Cancel', icon: 'trash', variant: 'danger' }
   ];
 
   // Pagination
@@ -342,7 +342,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   }
 
   async onDelete(order: ShopOrder): Promise<void> {
-    const confirmed = await this.alertService.confirm(`Are you sure you want to delete order "${order.internalRef}"?`, 'Delete');
+    const confirmed = await this.alertService.confirm(`Are you sure you want to cancel order "${order.internalRef}"?`, 'Cancel order');
     if (!confirmed) {
       this.closeDropdown();
       return;
@@ -351,7 +351,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
       next: () => {
         this.loadData();
       },
-      error: (error) => console.error('Error deleting order:', error)
+      error: (error) => console.error('Error cancelling order:', error)
     });
     this.closeDropdown();
   }

@@ -133,6 +133,7 @@ export class UsersEditComponent implements OnInit {
     if (roles.includes('ROLE_ADMIN')) return 'admin';
     if (roles.includes('ROLE_CLIENT_ADMIN')) return 'client_admin';
     if (roles.includes('ROLE_CLIENT')) return 'client';
+    if (roles.includes('ROLE_FINANCE')) return 'finance';
     return 'client';
   }
 
@@ -141,6 +142,7 @@ export class UsersEditComponent implements OnInit {
       case 'admin': return ['ROLE_ADMIN'];
       case 'client_admin': return ['ROLE_CLIENT_ADMIN'];
       case 'client': return ['ROLE_CLIENT'];
+      case 'finance': return ['ROLE_FINANCE'];
       default: return ['ROLE_CLIENT'];
     }
   }

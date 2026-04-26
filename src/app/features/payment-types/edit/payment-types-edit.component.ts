@@ -30,8 +30,6 @@ interface PaymentTypeDetail {
   name: string;
   isActive: boolean;
   enableInstallments: boolean;
-  configuration: string | null;
-  providerCode: string | null;
   shortDescription: string;
   useAsDefault: boolean;
   remoteCode: string | null;
@@ -47,8 +45,6 @@ const EMPTY_PAYMENT_TYPE: PaymentTypeDetail = {
   name: '',
   isActive: false,
   enableInstallments: false,
-  configuration: null,
-  providerCode: null,
   shortDescription: '',
   useAsDefault: false,
   remoteCode: null,
@@ -190,24 +186,11 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
 
     this.paymentTypeService.getPaymentTypeById(id).subscribe({
       next: (paymentType) => {
-        // Unwrap configuration: if it's {value: "text"}, extract just the text
-        let configStr: string | null = null;
-        if (paymentType.configuration) {
-          const cfg = paymentType.configuration as Record<string, unknown>;
-          if (typeof cfg === 'object' && Object.keys(cfg).length === 1 && typeof cfg['value'] === 'string') {
-            configStr = cfg['value'] as string;
-          } else {
-            configStr = JSON.stringify(paymentType.configuration);
-          }
-        }
-
         this.paymentType.set({
           id: paymentType.id || Number(id),
           name: paymentType.name || '',
           isActive: paymentType.isActive ?? false,
           enableInstallments: paymentType.enableInstallments || false,
-          configuration: configStr,
-          providerCode: paymentType.providerCode || null,
           shortDescription: paymentType.shortDescription || '',
           useAsDefault: paymentType.useAsDefault || false,
           remoteCode: paymentType.remoteCode || null,
@@ -281,25 +264,12 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     }
 
     const detail = this.paymentType();
-    // Parse configuration string back to JSON object for the backend (?array column)
-    let parsedConfig: Record<string, unknown> | null = null;
-    if (detail.configuration) {
-      try {
-        const parsed = JSON.parse(detail.configuration);
-        parsedConfig = typeof parsed === 'object' && parsed !== null ? parsed : { value: detail.configuration };
-      } catch {
-        parsedConfig = { value: detail.configuration };
-      }
-    }
-
     // Build payload with only writable fields
     const mediaIriPrefix = `${environment.apiPath}/media_items/`;
     const data: Record<string, unknown> = {
       name: detail.name,
       isActive: detail.isActive,
       enableInstallments: detail.enableInstallments,
-      configuration: parsedConfig,
-      providerCode: detail.providerCode,
       shortDescription: detail.shortDescription,
       useAsDefault: detail.useAsDefault,
       remoteCode: detail.remoteCode,
@@ -355,15 +325,6 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     this.markFieldTouched('name');
   }
 
-  onConfigurationChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.paymentType.update(p => ({ ...p, configuration: input.value || null }));
-  }
-
-  onProviderCodeChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.paymentType.update(p => ({ ...p, providerCode: input.value || null }));
-  }
 
   onRemoteCodeChange(event: Event): void {
     const input = event.target as HTMLInputElement;

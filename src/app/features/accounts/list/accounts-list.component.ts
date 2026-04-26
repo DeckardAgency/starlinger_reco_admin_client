@@ -106,7 +106,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     const defaultColumnDefs: ColumnDefinition[] = [
       { key: 'id', label: 'Id', visible: true, locked: true },
       { key: 'code', label: 'Code', visible: true },
-      { key: 'oib', label: 'OIB', visible: true },
+      { key: 'vatNumber', label: 'VAT Number', visible: true },
       { key: 'name', label: 'Name', visible: true, locked: true },
       { key: 'email', label: 'Email', visible: true },
       { key: 'status', label: 'Status', visible: true },
@@ -119,7 +119,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     this.allColumns = [
       { key: 'id', label: 'Id', sortable: true, width: '80px' },
       { key: 'code', label: 'Code', sortable: true, width: '80px' },
-      { key: 'oib', label: 'OIB', sortable: true, width: '120px' },
+      { key: 'vatNumber', label: 'VAT Number', sortable: true, width: '120px' },
       { key: 'name', label: 'Name', sortable: true },
       { key: 'email', label: 'Email', sortable: true, width: '180px' },
       { key: 'status', label: 'Status', sortable: true, width: '100px', template: this.statusTemplate },
@@ -186,7 +186,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     return {
       id: client.id,
       code: client.code,
-      oib: client.vatNumber || '',
+      vatNumber: client.vatNumber || '',
       name: client.name,
       email: client.email || '',
       status: client.isActive ? 'active' : 'inactive',

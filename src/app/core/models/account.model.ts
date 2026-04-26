@@ -1,7 +1,7 @@
 export interface Account {
   id: number;
   code?: string;
-  oib: string;
+  vatNumber: string;
   name: string;
   email: string;
   status: 'active' | 'inactive';

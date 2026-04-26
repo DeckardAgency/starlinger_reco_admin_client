@@ -29,10 +29,6 @@
         <ui-form-field label="Percent" layout="horizontal" [required]="true" [error]="getError('percent')">
           <input type="text" [value]="taxType().percent" (input)="onPercentChange($event)" placeholder="0">
         </ui-form-field>
-
-        <ui-form-field label="Remote code" layout="horizontal">
-          <input type="text" [value]="taxType().remoteCode || ''" (input)="onRemoteCodeChange($event)" placeholder="Enter remote code">
-        </ui-form-field>
       </div>
     </div>
   </div>

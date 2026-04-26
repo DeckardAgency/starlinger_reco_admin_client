@@ -92,6 +92,7 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     { value: USER_ROLES.ADMIN, label: 'Admin' },
     { value: USER_ROLES.CLIENT_ADMIN, label: 'Client Admin' },
     { value: USER_ROLES.CLIENT, label: 'Client' },
+    { value: USER_ROLES.FINANCE, label: 'Finance' },
     { value: USER_ROLES.USER, label: 'User' }
   ];
 

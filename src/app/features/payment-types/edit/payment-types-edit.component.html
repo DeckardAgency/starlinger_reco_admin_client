@@ -45,14 +45,6 @@
         <ui-form-field label="Name" layout="horizontal" [required]="true" [error]="getError('name')">
           <input type="text" [value]="paymentType().name" (input)="onNameChange($event)" placeholder="Enter name">
         </ui-form-field>
-
-        <ui-form-field label="Configuration" layout="horizontal">
-          <input type="text" [value]="paymentType().configuration || ''" (input)="onConfigurationChange($event)" placeholder="Enter configuration">
-        </ui-form-field>
-
-        <ui-form-field label="Provider code" layout="horizontal">
-          <input type="text" [value]="paymentType().providerCode || ''" (input)="onProviderCodeChange($event)" placeholder="Enter provider code">
-        </ui-form-field>
       </div>
     </div>
 

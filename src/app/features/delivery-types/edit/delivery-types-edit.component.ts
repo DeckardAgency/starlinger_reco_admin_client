@@ -29,8 +29,6 @@ interface DeliveryTypeDetail {
   id: number;
   name: string;
   isActive: boolean;
-  readyForShop: boolean;
-  isDelivery: boolean;
   useAsDefault: boolean;
   grossFactor: number;
   sortOrder: number;
@@ -42,8 +40,6 @@ const EMPTY_DELIVERY_TYPE: DeliveryTypeDetail = {
   id: 0,
   name: '',
   isActive: false,
-  readyForShop: false,
-  isDelivery: true,
   useAsDefault: false,
   grossFactor: 1.0,
   sortOrder: 0,
@@ -185,8 +181,6 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
           id: deliveryType.id || Number(id),
           name: deliveryType.name || '',
           isActive: deliveryType.isActive ?? false,
-          readyForShop: deliveryType.readyForShop ?? false,
-          isDelivery: deliveryType.isDelivery ?? true,
           useAsDefault: deliveryType.useAsDefault ?? false,
           grossFactor: deliveryType.grossFactor ? Number(deliveryType.grossFactor) : 1.0,
           sortOrder: deliveryType.sortOrder || 0,
@@ -264,8 +258,6 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
     const data: Record<string, unknown> = {
       name: detail.name,
       isActive: detail.isActive,
-      readyForShop: detail.readyForShop,
-      isDelivery: detail.isDelivery,
       useAsDefault: detail.useAsDefault,
       grossFactor: String(detail.grossFactor),
       sortOrder: detail.sortOrder,
@@ -301,14 +293,6 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
   // Toggle handlers
   toggleActive(): void {
     this.deliveryType.update(d => ({ ...d, isActive: !d.isActive }));
-  }
-
-  toggleReadyForShop(): void {
-    this.deliveryType.update(d => ({ ...d, readyForShop: !d.readyForShop }));
-  }
-
-  toggleIsDelivery(): void {
-    this.deliveryType.update(d => ({ ...d, isDelivery: !d.isDelivery }));
   }
 
   toggleUseAsDefault(): void {
