@@ -71,8 +71,6 @@ export interface Client {
     maxActiveUsers?: number | null;
     isActive: boolean;
     isArchived: boolean;
-    isLegalEntity?: boolean;
-    accountType?: string;
     purchaseLimit?: string | null;
     amountSpent?: string | null;
     otherPhone?: string | null;
@@ -171,8 +169,6 @@ export interface CreateClientDto {
     maxActiveUsers?: number | null;
     isActive?: boolean;
     isArchived?: boolean;
-    isLegalEntity?: boolean;
-    accountType?: string;
     accountGroup?: string | null;
 }
 
@@ -192,8 +188,6 @@ export interface UpdateClientDto {
     maxActiveUsers?: number | null;
     isActive?: boolean;
     isArchived?: boolean;
-    isLegalEntity?: boolean;
-    accountType?: string;
     accountGroup?: string | null;
 }
 

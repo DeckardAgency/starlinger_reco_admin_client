@@ -47,30 +47,11 @@
             [checked]="isActive()"
             (toggleChange)="onActiveChange($event)">
           </ui-toggle>
-          <ui-toggle
-            label="Legal entity"
-            labelPosition="left"
-            labelMinWidth="100px"
-            labelColor="#71717a"
-            [checked]="isLegalEntity()"
-            (toggleChange)="onLegalEntityChange($event)">
-          </ui-toggle>
         </div>
 
         <div class="card__fields">
           <ui-form-field label="Title" layout="horizontal" [error]="getError('name')" [required]="true">
             <input type="text" [value]="account().name" (input)="updateAccount('name', $event)" placeholder="Company title">
-          </ui-form-field>
-
-          <ui-form-field label="Client type" layout="horizontal" [error]="getError('accountType')" [required]="true">
-            <ui-select
-              variant="pill"
-              [options]="accountTypeOptions"
-              [value]="account().accountType || ''"
-              placeholder="Select type..."
-              (selectChange)="onAccountTypeChange($event)"
-              (cleared)="clearAccountType()">
-            </ui-select>
           </ui-form-field>
 
           <ui-form-field label="Client group" layout="horizontal">

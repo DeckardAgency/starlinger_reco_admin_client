@@ -68,8 +68,6 @@ const EMPTY_ACCOUNT: Account = {
   purchaseLimit: 0,
   amountSpent: 0,
   isActive: true,
-  isLegalEntity: false,
-  accountType: '',
   phone: '',
   otherPhone: '',
   otherEmail: '',
@@ -170,7 +168,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Form state
   isActive = signal(true);
-  isLegalEntity = signal(false);
 
   // Address modal state
   isAddressModalOpen = signal(false);
@@ -191,35 +188,14 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     const account = this.account();
     const errs: Record<string, string> = {};
     if (!account.name?.trim()) errs['name'] = 'Title is required';
-    if (!account.accountType) errs['accountType'] = 'Account type is required';
     if (!account.code?.trim()) errs['code'] = 'Code is required';
     else if (account.code.trim().length < 2) errs['code'] = 'Code must be at least 2 characters';
     return errs;
   });
   isValid = computed(() => Object.keys(this.errors()).length === 0);
 
-  // Account type options for single-select
-  accountTypeOptions = [
-    { value: 'client', label: 'Client' },
-    { value: 'supplier', label: 'Supplier' },
-    { value: 'partner', label: 'Partner' },
-    { value: 'distributor', label: 'Distributor' }
-  ];
-
   // Account group options - loaded from API
   accountGroupOptions = signal<{ value: string; label: string }[]>([]);
-
-  // Handle account type change
-  onAccountTypeChange(value: string | number): void {
-    this.account.update(a => ({ ...a, accountType: String(value) }));
-    this.touched.update(t => ({ ...t, accountType: true }));
-  }
-
-  // Clear account type
-  clearAccountType(): void {
-    this.account.update(a => ({ ...a, accountType: '' }));
-    this.touched.update(t => ({ ...t, accountType: true }));
-  }
 
   // Handle account group change
   onAccountGroupChange(value: string | number): void {
@@ -335,7 +311,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.shopOrders.set([]);
     this.manualEntries.set([]);
     this.isActive.set(true);
-    this.isLegalEntity.set(false);
     this.activeTab.set('users');
     this.touched.set({});
     this.cdr.markForCheck();
@@ -373,7 +348,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.account.set(this.mapClientToAccount(client));
         this.manualEntries.set([]);
         this.isActive.set(client.isActive ?? true);
-        this.isLegalEntity.set(client.isLegalEntity ?? false);
         this.isLoading.set(false);
         this.cdr.markForCheck();
 
@@ -503,8 +477,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       email: c.email ?? '',
       status: c.isActive ? 'active' : 'inactive',
       isActive: c.isActive,
-      isLegalEntity: c.isLegalEntity ?? false,
-      accountType: c.accountType ?? '',
       accountGroupId: c.accountGroup?.id ?? undefined,
       phone: c.phoneNumber,
       otherPhone: c.otherPhone ?? '',
@@ -572,10 +544,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isActive.set(value);
   }
 
-  onLegalEntityChange(value: boolean): void {
-    this.isLegalEntity.set(value);
-  }
-
   updateAccount(field: keyof Account, event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.account.update(a => ({ ...a, [field]: value }));
@@ -583,7 +551,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   markAllTouched(): void {
-    this.touched.set({ name: true, code: true, email: true, accountType: true });
+    this.touched.set({ name: true, code: true, email: true });
   }
 
   hasError(field: string): boolean {
@@ -692,8 +660,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       web: account.web?.trim() || null,
       purchaseLimit: account.purchaseLimit?.toString() || null,
       isActive: this.isActive(),
-      isLegalEntity: this.isLegalEntity(),
-      accountType: account.accountType || null,
       accountGroup: account.accountGroupId ? `/api/v1/account_groups/${account.accountGroupId}` : null
     };
 
