@@ -391,7 +391,9 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           fullName: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email || '–',
           email: u.email ?? '',
           role: (u.roles || []).includes('ROLE_ADMIN') ? 'Admin' :
-                (u.roles || []).includes('ROLE_CLIENT_ADMIN') ? 'Client Admin' : 'User',
+                (u.roles || []).includes('ROLE_CLIENT_ADMIN') ? 'Client Admin' :
+                (u.roles || []).includes('ROLE_FINANCE') ? 'Finance' :
+                (u.roles || []).includes('ROLE_CLIENT') ? 'Client' : 'User',
           isActive: u.isActive ?? true
         }));
         this.clientUsers.set(users);
@@ -720,7 +722,9 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
             fullName: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email || '–',
             email: u.email ?? '',
             role: (u.roles || []).includes('ROLE_ADMIN') ? 'Admin' :
-                  (u.roles || []).includes('ROLE_CLIENT_ADMIN') ? 'Client Admin' : 'User'
+                  (u.roles || []).includes('ROLE_CLIENT_ADMIN') ? 'Client Admin' :
+                  (u.roles || []).includes('ROLE_FINANCE') ? 'Finance' :
+                  (u.roles || []).includes('ROLE_CLIENT') ? 'Client' : 'User'
           }));
         this.unassignedUsers.set(users);
         this.filteredUnassignedUsers.set(users);

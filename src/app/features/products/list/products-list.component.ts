@@ -307,7 +307,6 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
           productType: fullProduct.productType || null,
           catalogCode: fullProduct.catalogCode || null,
           price: fullProduct.price,
-          taxTypeId: fullProduct.taxTypeId || null,
           currency: fullProduct.currency || null,
           shortDescription: fullProduct.shortDescription || null
         };

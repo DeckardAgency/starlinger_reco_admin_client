@@ -31,7 +31,6 @@ export interface Product {
   productGroupId: number | null;
   productType: string | null;
   catalogCode: string | null;
-  taxTypeId: number | null;
   currency: string | null;
   featuredImage: MediaItem | null;
   createdAt: string;

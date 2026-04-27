@@ -52,21 +52,6 @@
           <ui-form-field label="URL" layout="horizontal">
             <input type="text" [value]="product().url" placeholder="Enter URL" (input)="updateProduct('url', $event)">
           </ui-form-field>
-          <ui-form-field label="Quantity" layout="horizontal">
-            <input type="number" [value]="product().quantity" placeholder="0" (input)="updateProductNumber('quantity', $event)">
-          </ui-form-field>
-          <ui-form-field label="Quantity step" layout="horizontal">
-            <input type="number" [value]="product().quantityStep" placeholder="0" (input)="updateProductNumber('quantityStep', $event)">
-          </ui-form-field>
-          <ui-form-field label="Quote item limit" layout="horizontal">
-            <input type="number" [value]="product().quoteItemLimit" placeholder="0" (input)="updateProductNumber('quoteItemLimit', $event)">
-          </ui-form-field>
-          <ui-form-field label="Fixed quantity" layout="horizontal">
-            <input type="number" [value]="product().fixedQuantity" placeholder="0" (input)="updateProductNumber('fixedQuantity', $event)">
-          </ui-form-field>
-          <ui-form-field label="Weight" layout="horizontal">
-            <input type="text" [value]="product().weight" placeholder="kg 0.00" (input)="updateProduct('weight', $event)">
-          </ui-form-field>
           <ui-form-field label="Product category" layout="horizontal">
             <ui-select
               variant="pill"
@@ -105,16 +90,6 @@
           <ui-form-field label="Base price" layout="horizontal">
             <input type="number" [value]="product().basePrice" placeholder="0.00" (input)="updateProductNumber('basePrice', $event)">
           </ui-form-field>
-          <ui-form-field label="Tax type" layout="horizontal">
-            <ui-select
-              variant="pill"
-              [options]="taxOptions()"
-              [value]="taxPercentValue"
-              placeholder="Select tax type"
-              (selectChange)="onTaxTypeChange($event)"
-              (cleared)="clearTaxType()">
-            </ui-select>
-          </ui-form-field>
           <ui-form-field label="Currency" layout="horizontal">
             <ui-select
               variant="pill"
@@ -124,6 +99,29 @@
               (selectChange)="onCurrencyChange($event)"
               (cleared)="clearCurrency()">
             </ui-select>
+          </ui-form-field>
+        </div>
+      </div>
+
+      <!-- Inventory Card -->
+      <div class="card">
+        <h2 class="card__title">Inventory</h2>
+
+        <div class="card__fields">
+          <ui-form-field label="Quantity" layout="horizontal">
+            <input type="number" [value]="product().quantity" placeholder="0" (input)="updateProductNumber('quantity', $event)">
+          </ui-form-field>
+          <ui-form-field label="Quantity step" layout="horizontal">
+            <input type="number" [value]="product().quantityStep" placeholder="0" (input)="updateProductNumber('quantityStep', $event)">
+          </ui-form-field>
+          <ui-form-field label="Quote item limit" layout="horizontal">
+            <input type="number" [value]="product().quoteItemLimit" placeholder="0" (input)="updateProductNumber('quoteItemLimit', $event)">
+          </ui-form-field>
+          <ui-form-field label="Fixed quantity" layout="horizontal">
+            <input type="number" [value]="product().fixedQuantity" placeholder="0" (input)="updateProductNumber('fixedQuantity', $event)">
+          </ui-form-field>
+          <ui-form-field label="Weight" layout="horizontal">
+            <input type="text" [value]="product().weight" placeholder="kg 0.00" (input)="updateProduct('weight', $event)">
           </ui-form-field>
         </div>
       </div>

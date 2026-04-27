@@ -21,7 +21,6 @@ import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@a
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { ProductService } from '@core/services/http/product.service';
 import { ProductCategoryService } from '@core/services/http/product-category.service';
-import { TaxTypeService } from '@core/services/http/tax-type.service';
 import { ProductProductLinkService } from '@core/services/http/product-product-link.service';
 import { Product, MediaItem } from '@core/models';
 import { MediaService } from '@core/services/http/media.service';
@@ -44,7 +43,6 @@ interface ProductDetail {
   productType: string;
   catalogCode: string;
   basePrice: number;
-  taxPercent: string;
   currency: string;
   shortDescription: string;
 }
@@ -88,7 +86,6 @@ const EMPTY_PRODUCT: ProductDetail = {
   productType: '',
   catalogCode: '',
   basePrice: 0,
-  taxPercent: '',
   currency: '',
   shortDescription: ''
 };
@@ -201,8 +198,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     { value: 'GBP', label: 'British Pound' }
   ];
 
-  taxOptions = signal<SelectOption[]>([]);
-
   productTypeOptions: SelectOption[] = [
     { value: 'VT', label: 'VT' },
     { value: 'ET', label: 'ET' }
@@ -210,7 +205,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Select model values
   productGroupValue = '';
-  taxPercentValue = '';
   currencyValue = '';
   productTypeValue = '';
 
@@ -282,14 +276,12 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     private http: HttpClient,
     private productService: ProductService,
     private productCategoryService: ProductCategoryService,
-    private taxTypeService: TaxTypeService,
     private productProductLinkService: ProductProductLinkService,
     private mediaService: MediaService
   ) {}
 
   ngOnInit(): void {
     this.loadProductCategories();
-    this.loadTaxTypes();
 
     this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
       const id = params.get('id');
@@ -317,25 +309,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           this.cdr.markForCheck();
         },
         error: (err) => console.error('Error loading product categories:', err)
-      });
-  }
-
-  private loadTaxTypes(): void {
-    this.taxTypeService.getTaxTypes({ itemsPerPage: 100 })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          const options = response.member
-            .filter((tt: any) => tt.isActive !== false)
-            .map(tt => {
-              const pct = parseFloat(String(tt.percent));
-              const pctLabel = Number.isInteger(pct) ? pct.toString() : pct.toFixed(2).replace(/\.?0+$/, '');
-              return { value: tt.id, label: `${tt.name} (${pctLabel}%)` };
-            });
-          this.taxOptions.set(options);
-          this.cdr.markForCheck();
-        },
-        error: (err) => console.error('Error loading tax types:', err)
       });
   }
 
@@ -385,7 +358,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         const productData = this.mapApiProductToDetail(apiProduct);
         this.product.set(productData);
         this.productGroupValue = productData.productGroup;
-        this.taxPercentValue = productData.taxPercent;
         this.currencyValue = productData.currency;
         this.productTypeValue = productData.productType;
 
@@ -441,7 +413,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       productType: p.productType ?? '',
       catalogCode: p.catalogCode ?? '',
       basePrice: p.price ?? 0,
-      taxPercent: String(p.taxTypeId ?? ''),
       currency: p.currency ?? 'EUR',
       shortDescription: p.shortDescription ?? ''
     };
@@ -541,7 +512,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.editorContent.set('');
     this.selectedProductIds.set(new Set());
     this.productGroupValue = '';
-    this.taxPercentValue = '';
     this.currencyValue = '';
     this.productTypeValue = '';
   }
@@ -565,17 +535,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   updateProductNumber(field: string, event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.product.update(p => ({ ...p, [field]: value ? parseFloat(value) : 0 }));
-  }
-
-  // Tax type handlers
-  onTaxTypeChange(value: string | number): void {
-    this.taxPercentValue = String(value);
-    this.product.update(p => ({ ...p, taxPercent: String(value) }));
-  }
-
-  clearTaxType(): void {
-    this.taxPercentValue = '';
-    this.product.update(p => ({ ...p, taxPercent: '' }));
   }
 
   // Currency handlers
@@ -941,7 +900,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       productType: product.productType || null,
       catalogCode: product.catalogCode || null,
       price: product.basePrice ?? 0,
-      taxTypeId: product.taxPercent ? parseInt(product.taxPercent, 10) : null,
       currency: product.currency || null,
       shortDescription: product.shortDescription || null,
       imageGallery: this.galleryImages().map(img => mediaIriPrefix + img.id),
