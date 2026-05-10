@@ -105,10 +105,26 @@ export class SupportTicketService {
   }
 
   /**
-   * Create a new support ticket
+   * Create a new support ticket.
+   *
+   * The backend's POST /support_tickets only accepts multipart/form-data
+   * (see SupportTicket entity inputFormats config), so we send FormData here
+   * even when there's no file attachment. Letting the browser set the
+   * Content-Type header automatically (with the boundary) is required.
    */
   createSupportTicket(ticketData: Partial<SupportTicket>): Observable<SupportTicket> {
-    return this.http.post<SupportTicket>(this.apiUrl, ticketData, this.httpOptions);
+    const formData = new FormData();
+    if (ticketData.subject !== undefined) formData.append('subject', String(ticketData.subject));
+    if (ticketData.message !== undefined) formData.append('message', String(ticketData.message));
+    if (ticketData.urgency !== undefined) formData.append('urgency', String(ticketData.urgency));
+    if (ticketData.orderId !== undefined && ticketData.orderId !== null) formData.append('orderId', String(ticketData.orderId));
+    if ((ticketData as any).machine !== undefined && (ticketData as any).machine !== null) {
+      formData.append('machine', String((ticketData as any).machine));
+    }
+
+    return this.http.post<SupportTicket>(this.apiUrl, formData, {
+      headers: new HttpHeaders({ 'Accept': 'application/ld+json' })
+    });
   }
 
   /**
