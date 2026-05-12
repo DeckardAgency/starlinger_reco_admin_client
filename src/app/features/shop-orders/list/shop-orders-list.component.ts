@@ -347,7 +347,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
       this.closeDropdown();
       return;
     }
-    this.orderService.deleteOrder(String(order.id)).subscribe({
+    this.orderService.updateOrder(String(order.id), { status: 'canceled' } as Partial<Order>).subscribe({
       next: () => {
         this.loadData();
       },
