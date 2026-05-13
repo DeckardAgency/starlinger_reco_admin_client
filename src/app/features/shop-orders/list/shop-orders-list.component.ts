@@ -342,12 +342,24 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   }
 
   async onDelete(order: ShopOrder): Promise<void> {
-    const confirmed = await this.alertService.confirm(`Are you sure you want to cancel order "${order.internalRef}"?`, 'Cancel order');
-    if (!confirmed) {
+    const reason = window.prompt(
+      `Cancel order "${order.internalRef}". Please enter a reason for cancellation:`,
+      ''
+    );
+    if (reason === null) {
       this.closeDropdown();
       return;
     }
-    this.orderService.updateOrder(String(order.id), { status: 'canceled' } as Partial<Order>).subscribe({
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      this.alertService.error('A cancellation reason is required.');
+      this.closeDropdown();
+      return;
+    }
+    this.orderService.updateOrder(
+      String(order.id),
+      { status: 'canceled', cancellationReason: trimmed } as Partial<Order>
+    ).subscribe({
       next: () => {
         this.loadData();
       },
