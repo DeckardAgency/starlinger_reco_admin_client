@@ -29,6 +29,16 @@ export class ProductService extends BaseHttpService {
   }
 
   /**
+   * Fetch multiple products by id in a single request (id[]=… → SQL IN),
+   * instead of one HTTP request per id.
+   */
+  getProductsByIds(ids: Array<string | number>): Observable<ProductsCollection> {
+    let params = new HttpParams().set('itemsPerPage', String(Math.max(ids.length, 1)));
+    ids.forEach(id => { params = params.append('id[]', String(id)); });
+    return this.getWithJsonLd<ProductsCollection>(this.endpoint, params);
+  }
+
+  /**
    * Get product by slug
    */
   getProductBySlug(slug: string): Observable<ProductsCollection> {

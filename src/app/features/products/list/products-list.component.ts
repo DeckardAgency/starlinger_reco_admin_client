@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, forkJoin } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
@@ -340,13 +340,12 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   async onBulkDelete(): Promise<void> {
     const selected = this.products().filter(p => p.selected);
     const confirmed = await this.alertService.confirm(`Are you sure you want to delete ${selected.length} product(s)?`, 'Delete');
-    if (confirmed) {
-      selected.forEach(p => {
-        this.productService.deleteProduct(String(p.id)).subscribe({
-          next: () => {
-            this.loadProducts();
-          }
-        });
+    if (confirmed && selected.length > 0) {
+      // Delete in parallel and reload the list once, instead of one request +
+      // one full reload per selected product.
+      forkJoin(selected.map(p => this.productService.deleteProduct(String(p.id)))).subscribe({
+        next: () => this.loadProducts(),
+        error: (error) => console.error('Error deleting products:', error)
       });
     }
     this.selectAll.set(false);

@@ -456,35 +456,31 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
             return;
           }
           // Track all child product UUIDs for filtering
-          const childIds = new Set(links.map(l => l.childProductId));
-          this.relatedChildProductIds.set(childIds);
+          const childIds = links.map(l => l.childProductId);
+          this.relatedChildProductIds.set(new Set(childIds));
           this.linkToProductMap.clear();
           links.forEach(l => this.linkToProductMap.set(l.id, l.childProductId));
-          // For each link, fetch the child product details
-          const related: RelatedProduct[] = [];
-          let loaded = 0;
-          links.forEach(link => {
-            this.productService.getProductById(String(link.childProductId))
-              .pipe(takeUntil(this.destroy$))
-              .subscribe({
-                next: (p) => {
-                  related.push({
-                    id: link.id,
-                    productId: p.partNo || String(p.id),
-                    code: p.partNo || '',
-                    name: p.name || '',
-                    status: (p.isActive ? 'active' : 'inactive') as 'active' | 'inactive',
-                    available: p.isActive ?? true,
-                    sortOrder: link.ord ?? 0
-                  });
-                  loaded++;
-                  if (loaded === links.length) {
-                    this.relatedProducts.set(related.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)));
-                    this.cdr.markForCheck();
+          // Fetch all child product details in a single request instead of one per link.
+          this.productService.getProductsByIds(childIds)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (resp) => {
+                const byId = new Map<string, Product>();
+                (resp.member || []).forEach(p => byId.set(String(p.id), p));
+                const related: RelatedProduct[] = links.map((link): RelatedProduct => {
+                  const p = byId.get(String(link.childProductId));
+                  if (p) {
+                    return {
+                      id: link.id,
+                      productId: p.partNo || String(p.id),
+                      code: p.partNo || '',
+                      name: p.name || '',
+                      status: (p.isActive ? 'active' : 'inactive') as 'active' | 'inactive',
+                      available: p.isActive ?? true,
+                      sortOrder: link.ord ?? 0
+                    };
                   }
-                },
-                error: () => {
-                  related.push({
+                  return {
                     id: link.id,
                     productId: String(link.childProductId),
                     code: '-',
@@ -492,15 +488,13 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
                     status: 'inactive',
                     available: false,
                     sortOrder: link.ord ?? 0
-                  });
-                  loaded++;
-                  if (loaded === links.length) {
-                    this.relatedProducts.set(related.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)));
-                    this.cdr.markForCheck();
-                  }
-                }
-              });
-          });
+                  };
+                });
+                this.relatedProducts.set(related.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)));
+                this.cdr.markForCheck();
+              },
+              error: (err) => console.error('Error loading related product details:', err)
+            });
         },
         error: (err) => console.error('Error loading related products:', err)
       });
