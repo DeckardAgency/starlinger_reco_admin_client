@@ -324,6 +324,18 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
     this.openDropdownId.set(null);
   }
 
+  // Orders in a terminal state can't be canceled, so the Cancel action is
+  // hidden for them.
+  private readonly nonCancellableStatuses: OrderStatus[] = ['canceled', 'delivered', 'reversal'];
+
+  // Actions available for a given row.
+  getRowActions(order: ShopOrder): TableAction[] {
+    if (this.nonCancellableStatuses.includes(order.status)) {
+      return this.tableActions.filter(a => a.id !== 'delete');
+    }
+    return this.tableActions;
+  }
+
   onActionClick(event: ActionClickEvent): void {
     const order = event.row as ShopOrder;
     switch (event.actionId) {

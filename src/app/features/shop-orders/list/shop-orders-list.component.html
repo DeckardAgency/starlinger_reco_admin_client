@@ -95,7 +95,7 @@
   <ui-table-actions-dropdown
     [isOpen]="openDropdownId() === row.id"
     [row]="row"
-    [actions]="tableActions"
+    [actions]="getRowActions(row)"
     (toggle)="toggleDropdown(row.id)"
     (actionClick)="onActionClick($event)"
     (close)="closeDropdown()"
