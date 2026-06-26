@@ -14,6 +14,7 @@ import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detai
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
+import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { TabsComponent, TabItem } from '@app/ui-kit/molecules/tabs/tabs.component';
 import { TableCheckboxSelectionComponent } from '@app/ui-kit/molecules/table-checkbox-selection/table-checkbox-selection.component';
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
@@ -65,7 +66,8 @@ const EMPTY_DELIVERY_TYPE: DeliveryTypeDetail = {
     TabsComponent,
     TableCheckboxSelectionComponent,
     TableActionsDropdownComponent,
-    TextEditorComponent
+    TextEditorComponent,
+    SelectComponent
   ],
   templateUrl: './delivery-types-edit.component.html',
   styleUrls: ['./delivery-types-edit.component.scss'],

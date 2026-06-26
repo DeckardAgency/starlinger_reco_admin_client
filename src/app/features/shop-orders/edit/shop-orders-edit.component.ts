@@ -548,7 +548,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     };
   }
 
-  private formatDate(dateStr: string): string {
+  formatDate(dateStr: string): string {
     if (!dateStr) return '';
     const d = new Date(dateStr);
     const day = d.getDate().toString().padStart(2, '0');
