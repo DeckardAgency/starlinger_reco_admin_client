@@ -82,6 +82,10 @@ export interface Client {
         id: number;
         name: string;
     } | null;
+    // Whether this client acts as an agent that manages/orders for other clients
+    isClientAgent?: boolean;
+    // Number of clients this agent manages (read-only, server-computed)
+    managedClientCount?: number;
     createdAt: string;
     updatedAt: string;
 }
@@ -91,6 +95,8 @@ export interface ClientDetail extends Client {
     users?: ClientUser[];
     productPrices?: ProductPrice[];
     addresses?: ClientAddress[];
+    // Clients managed by this agent — serialized as IRIs (client:read:details)
+    managedClients?: string[] | Client[];
 }
 
 // User reference within Client
@@ -170,6 +176,8 @@ export interface CreateClientDto {
     isActive?: boolean;
     isArchived?: boolean;
     accountGroup?: string | null;
+    isClientAgent?: boolean;
+    managedClients?: string[]; // IRI references to managed clients
 }
 
 export interface UpdateClientDto {
@@ -189,6 +197,8 @@ export interface UpdateClientDto {
     isActive?: boolean;
     isArchived?: boolean;
     accountGroup?: string | null;
+    isClientAgent?: boolean;
+    managedClients?: string[]; // IRI references to managed clients
 }
 
 // Error responses

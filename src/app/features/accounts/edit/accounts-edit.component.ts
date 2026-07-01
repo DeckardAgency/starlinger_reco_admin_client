@@ -129,11 +129,13 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('orderCustomerTemplate') orderCustomerTemplate!: TemplateRef<any>;
   @ViewChild('orderStatusTemplate') orderStatusTemplate!: TemplateRef<any>;
   @ViewChild('orderActionsTemplate') orderActionsTemplate!: TemplateRef<any>;
+  @ViewChild('managedClientActionsTemplate') managedClientActionsTemplate!: TemplateRef<any>;
   // Table column configs
   usersColumns: TableColumn[] = [];
   addressesColumns: TableColumn[] = [];
   shopOrdersColumns: TableColumn[] = [];
   manualEntriesColumns: TableColumn[] = [];
+  managedClientsColumns: TableColumn[] = [];
 
   // Mode tracking
   isEditMode = signal(false);
@@ -154,12 +156,18 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Manual entries data - starts empty, loaded in edit mode
   manualEntries = signal<ShopOrder[]>([]);
 
-  // Tabs configuration
-  tabs: TabItem[] = [
-    { id: 'users', label: 'Users' },
-    { id: 'addresses', label: 'Addresses' },
-    { id: 'shop-orders', label: 'Shop orders' }
-  ];
+  // Tabs configuration — "Managed clients" only shows for client agents
+  tabs = computed<TabItem[]>(() => {
+    const base: TabItem[] = [
+      { id: 'users', label: 'Users' },
+      { id: 'addresses', label: 'Addresses' },
+      { id: 'shop-orders', label: 'Shop orders' }
+    ];
+    if (this.isClientAgent()) {
+      base.push({ id: 'managed-clients', label: 'Managed clients' });
+    }
+    return base;
+  });
 
   activeTab = signal('users');
 
@@ -168,6 +176,17 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Form state
   isActive = signal(true);
+  isClientAgent = signal(false);
+
+  // Managed clients (client-agent only)
+  managedClients = signal<{ id: number; name: string; code: string }[]>([]);
+  isManagedClientModalOpen = signal(false);
+  availableClients = signal<{ id: number; name: string; code: string }[]>([]);
+  filteredAvailableClients = signal<{ id: number; name: string; code: string }[]>([]);
+  managedClientSearchQuery = signal('');
+  isLoadingAvailableClients = signal(false);
+  private allClients: { id: number; name: string; code: string }[] = [];
+  private allClientsLoaded = false;
 
   // Address modal state
   isAddressModalOpen = signal(false);
@@ -221,6 +240,10 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   orderActions: TableAction[] = [
     { id: 'view', label: 'View', icon: 'eye' },
     { id: 'edit', label: 'Edit', icon: 'pencil' }
+  ];
+
+  managedClientActions: TableAction[] = [
+    { id: 'remove', label: 'Remove', icon: 'trash', variant: 'danger' }
   ];
 
   ngOnInit(): void {
@@ -285,6 +308,14 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       { key: 'actions', label: '', width: '64px', template: this.orderActionsTemplate }
     ];
 
+    // Managed clients columns
+    this.managedClientsColumns = [
+      { key: 'id', label: 'Id', sortable: true, width: '88px' },
+      { key: 'name', label: 'Name', sortable: true },
+      { key: 'code', label: 'Code', sortable: true, width: '160px' },
+      { key: 'actions', label: '', width: '64px', template: this.managedClientActionsTemplate }
+    ];
+
     // Manual entries columns (same as shop orders)
     this.manualEntriesColumns = [
       { key: 'orderId', label: 'Order ID', width: '100px' },
@@ -311,6 +342,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.shopOrders.set([]);
     this.manualEntries.set([]);
     this.isActive.set(true);
+    this.isClientAgent.set(false);
+    this.managedClients.set([]);
     this.activeTab.set('users');
     this.touched.set({});
     this.cdr.markForCheck();
@@ -348,6 +381,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.account.set(this.mapClientToAccount(client));
         this.manualEntries.set([]);
         this.isActive.set(client.isActive ?? true);
+        this.isClientAgent.set(client.isClientAgent ?? false);
+        this.setManagedClientsFromDetail(client.managedClients);
         this.isLoading.set(false);
         this.cdr.markForCheck();
 
@@ -496,6 +531,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   totalAddresses = computed(() => this.addresses().length);
   totalShopOrders = computed(() => this.shopOrders().length);
   totalManualEntries = computed(() => this.manualEntries().length);
+  totalManagedClients = computed(() => this.managedClients().length);
   // Get current tab count
   currentTabCount = computed(() => {
     switch (this.activeTab()) {
@@ -503,6 +539,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'addresses': return this.totalAddresses();
       case 'shop-orders': return this.totalShopOrders();
       case 'manual-entries': return this.totalManualEntries();
+      case 'managed-clients': return this.totalManagedClients();
       default: return 0;
     }
   });
@@ -514,6 +551,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'addresses': return 'Add address';
       case 'shop-orders': return 'Add order';
       case 'manual-entries': return 'Add entry';
+      case 'managed-clients': return 'Add client';
       default: return 'Add';
     }
   });
@@ -544,6 +582,17 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onActiveChange(value: boolean): void {
     this.isActive.set(value);
+  }
+
+  onClientAgentChange(value: boolean): void {
+    this.isClientAgent.set(value);
+    if (value) {
+      // Preload the client list so the "Managed clients" tab/modal is ready
+      this.ensureClientsLoaded();
+    } else if (this.activeTab() === 'managed-clients') {
+      // The tab disappears when the flag is off — fall back to a visible tab
+      this.activeTab.set('users');
+    }
   }
 
   updateAccount(field: keyof Account, event: Event): void {
@@ -662,6 +711,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       web: account.web?.trim() || null,
       purchaseLimit: account.purchaseLimit?.toString() || null,
       isActive: this.isActive(),
+      isClientAgent: this.isClientAgent(),
       accountGroup: account.accountGroupId ? `/api/v1/account_groups/${account.accountGroupId}` : null
     };
 
@@ -693,7 +743,130 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       this.openAddressModal();
     } else if (this.activeTab() === 'users') {
       this.openUserModal();
+    } else if (this.activeTab() === 'managed-clients') {
+      this.openManagedClientModal();
     }
+  }
+
+  // ---- Managed clients (client-agent only) ----
+
+  /** Build the managed-clients table from the IRIs (or embedded objects) on the detail. */
+  private setManagedClientsFromDetail(raw: unknown): void {
+    const ids = (Array.isArray(raw) ? raw : [])
+      .map((m: any) => (typeof m === 'string' ? this.idFromIri(m) : m?.id))
+      .filter((id: any): id is number => typeof id === 'number' && !Number.isNaN(id));
+
+    if (ids.length === 0) {
+      this.managedClients.set([]);
+      return;
+    }
+
+    this.ensureClientsLoaded(() => {
+      const byId = new Map(this.allClients.map(c => [c.id, c]));
+      this.managedClients.set(ids.map(id => byId.get(id) ?? { id, name: `Client #${id}`, code: '' }));
+      this.cdr.markForCheck();
+    });
+  }
+
+  private idFromIri(iri: string): number {
+    const match = iri.match(/\/(\d+)(?:\/)?$/);
+    return match ? Number(match[1]) : NaN;
+  }
+
+  /** Fetch the full client list once (used to resolve names + populate the picker). */
+  private ensureClientsLoaded(cb?: () => void): void {
+    if (this.allClientsLoaded) {
+      cb?.();
+      return;
+    }
+    this.isLoadingAvailableClients.set(true);
+    this.clientService.getClients({ itemsPerPage: 1000, 'order[name]': 'asc' }).subscribe({
+      next: (res) => {
+        this.allClients = (res.clients || []).map(c => ({ id: c.id, name: c.name, code: c.code }));
+        this.allClientsLoaded = true;
+        this.isLoadingAvailableClients.set(false);
+        cb?.();
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error loading clients:', err);
+        this.isLoadingAvailableClients.set(false);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  openManagedClientModal(): void {
+    this.isManagedClientModalOpen.set(true);
+    this.managedClientSearchQuery.set('');
+    this.ensureClientsLoaded(() => this.refreshAvailableClients());
+    this.refreshAvailableClients();
+  }
+
+  closeManagedClientModal(): void {
+    this.isManagedClientModalOpen.set(false);
+    this.managedClientSearchQuery.set('');
+  }
+
+  /** Candidates = all clients except this one and the already-managed ones. */
+  private refreshAvailableClients(): void {
+    const selfId = this.account().id;
+    const managedIds = new Set(this.managedClients().map(c => c.id));
+    this.availableClients.set(
+      this.allClients.filter(c => c.id !== selfId && !managedIds.has(c.id))
+    );
+    this.applyManagedClientFilter();
+  }
+
+  onManagedClientSearchChange(event: Event): void {
+    this.managedClientSearchQuery.set((event.target as HTMLInputElement).value.toLowerCase().trim());
+    this.applyManagedClientFilter();
+  }
+
+  private applyManagedClientFilter(): void {
+    const q = this.managedClientSearchQuery();
+    const list = this.availableClients();
+    this.filteredAvailableClients.set(
+      !q ? list : list.filter(c => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
+    );
+  }
+
+  addManagedClient(client: { id: number; name: string; code: string }): void {
+    this.managedClients.update(list => [...list, client]);
+    this.refreshAvailableClients();
+    this.persistManagedClients();
+  }
+
+  onManagedClientActionClick(event: ActionClickEvent): void {
+    this.closeDropdown();
+    if (event.actionId === 'remove') {
+      this.removeManagedClient(event.row as { id: number });
+    }
+  }
+
+  removeManagedClient(client: { id: number }): void {
+    this.managedClients.update(list => list.filter(c => c.id !== client.id));
+    this.refreshAvailableClients();
+    this.persistManagedClients();
+  }
+
+  /** Persist the managed-clients relation via PATCH (sends IRIs). */
+  private persistManagedClients(): void {
+    const clientId = this.accountId();
+    if (!clientId) {
+      return;
+    }
+    const managedClients = this.managedClients().map(c => `/api/v1/clients/${c.id}`);
+    this.clientService.updateClient(clientId, { managedClients } as any).subscribe({
+      next: () => {
+        this.toastService.success('Managed clients updated');
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error updating managed clients:', err);
+        this.toastService.error('Failed to update managed clients');
+      }
+    });
   }
 
   // User assignment modal methods

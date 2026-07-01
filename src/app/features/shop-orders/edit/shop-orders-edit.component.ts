@@ -40,6 +40,14 @@ interface ProductGroup {
   isExpanded: boolean;
 }
 
+/** Agent orders: product groups bucketed by the managed client they were ordered for. */
+interface ClientGroup {
+  clientId: string;
+  clientName: string;
+  clientCode: string;
+  productGroups: ProductGroup[];
+}
+
 interface LogMessage {
   status: string;
   statusVariant: 'success' | 'warning' | 'info' | 'secondary';
@@ -73,6 +81,11 @@ interface ShopOrderDetail {
   totalDiscount: number;
   orderTotal: number;
   logMessages: LogMessage[];
+  // Agent (on-behalf-of) presentation
+  isAgentOrder: boolean;
+  agentName: string;
+  agentEmail: string;
+  clientGroups: ClientGroup[];
 }
 
 const EMPTY_ORDER: ShopOrderDetail = {
@@ -99,7 +112,11 @@ const EMPTY_ORDER: ShopOrderDetail = {
   subtotalBeforeDiscount: 0,
   totalDiscount: 0,
   orderTotal: 0,
-  logMessages: []
+  logMessages: [],
+  isAgentOrder: false,
+  agentName: '',
+  agentEmail: '',
+  clientGroups: []
 };
 
 @Component({
@@ -496,20 +513,43 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private mapOrderToDetail(o: Order): ShopOrderDetail {
     const userName = o.user ? `${(o.user as { firstName?: string }).firstName || ''} ${(o.user as { lastName?: string }).lastName || ''}`.trim() || 'Unknown' : 'Unknown';
     const partsCount = o.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) ?? 0;
-    const productGroups: ProductGroup[] = (o.items || []).map((item, idx) => ({
-      id: item.id || String(idx),
-      name: item.product?.name || 'Product',
-      products: [{
-        partNo: item.product?.partNo ?? '',
-        productName: item.product?.name ?? '',
-        weight: item.product?.weight ?? '',
-        quantity: item.quantity ?? 0,
-        unitPrice: item.unitPrice ?? 0,
-        discount: item.discountPercent ? `${item.discountPercent.toFixed(1)}%` : '0%',
-        price: (item.quantity ?? 0) * (item.unitPrice ?? 0)
-      }],
-      isExpanded: true
-    }));
+    // Build one product group per item, and simultaneously bucket them by the
+    // managed client each item was ordered on behalf of (agent orders).
+    const productGroups: ProductGroup[] = [];
+    const clientGroupMap = new Map<string, ClientGroup>();
+    (o.items || []).forEach((item, idx) => {
+      const group: ProductGroup = {
+        id: item.id || String(idx),
+        name: item.product?.name || 'Product',
+        products: [{
+          partNo: item.product?.partNo ?? '',
+          productName: item.product?.name ?? '',
+          weight: item.product?.weight ?? '',
+          quantity: item.quantity ?? 0,
+          unitPrice: item.unitPrice ?? 0,
+          discount: item.discountPercent ? `${item.discountPercent.toFixed(1)}%` : '0%',
+          price: (item.quantity ?? 0) * (item.unitPrice ?? 0)
+        }],
+        isExpanded: true
+      };
+      productGroups.push(group);
+
+      const client = item.onBehalfOfClient;
+      const key = client?.id != null ? String(client.id) : '_self';
+      let cg = clientGroupMap.get(key);
+      if (!cg) {
+        cg = {
+          clientId: key,
+          clientName: client?.name ?? 'Own Company',
+          clientCode: client?.code ?? '',
+          productGroups: []
+        };
+        clientGroupMap.set(key, cg);
+      }
+      cg.productGroups.push(group);
+    });
+    const isAgentOrder = (o.items || []).some(i => !!i.onBehalfOfClient);
+    const clientGroups = Array.from(clientGroupMap.values());
     const logMessages: LogMessage[] = (o.logs || []).map(log => ({
       status: log.newStatus,
       statusVariant: 'info',
@@ -544,7 +584,11 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       subtotalBeforeDiscount: (o.subtotalBeforeDiscount && o.subtotalBeforeDiscount > 0) ? o.subtotalBeforeDiscount : (o.totalAmount ?? 0),
       totalDiscount: o.totalDiscount ?? 0,
       orderTotal: o.totalAmount ?? 0,
-      logMessages
+      logMessages,
+      isAgentOrder,
+      agentName: userName,
+      agentEmail: (o.user as { email?: string })?.email ?? '',
+      clientGroups
     };
   }
 
@@ -698,12 +742,18 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   toggleProductGroup(groupId: number | string): void {
-    this.order.update(o => ({
-      ...o,
-      productGroups: o.productGroups.map(g =>
-        g.id === groupId ? { ...g, isExpanded: !g.isExpanded } : g
-      )
-    }));
+    this.order.update(o => {
+      const toggle = (g: ProductGroup): ProductGroup =>
+        g.id === groupId ? { ...g, isExpanded: !g.isExpanded } : g;
+      return {
+        ...o,
+        productGroups: o.productGroups.map(toggle),
+        clientGroups: o.clientGroups.map(cg => ({
+          ...cg,
+          productGroups: cg.productGroups.map(toggle)
+        }))
+      };
+    });
   }
 
   goBack(): void {

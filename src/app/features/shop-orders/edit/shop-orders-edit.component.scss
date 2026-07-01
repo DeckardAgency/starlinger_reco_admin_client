@@ -51,6 +51,93 @@
 }
 
 // =============================================================================
+// Agent (on-behalf-of) banner
+// =============================================================================
+.agent-banner {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #f4f6f9;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  &__title {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: #18181b;
+  }
+
+  &__row {
+    margin-bottom: 8px;
+    font-size: 0.875rem;
+  }
+
+  &__label {
+    color: #71717a;
+    margin-right: 6px;
+  }
+
+  &__value {
+    color: #18181b;
+    font-weight: 500;
+  }
+
+  &__clients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &__tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    background: #fff;
+    border: 1px solid #d6e2f0;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    color: #2b3a4b;
+  }
+}
+
+// =============================================================================
+// Client groups (agent orders)
+// =============================================================================
+.client-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.client-group {
+  &__header {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e4e4e7;
+  }
+
+  &__name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: #18181b;
+  }
+
+  &__code {
+    color: #71717a;
+    font-size: 0.8125rem;
+  }
+}
+
+// =============================================================================
 // Form Cards
 // =============================================================================
 .form-cards {

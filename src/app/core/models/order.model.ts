@@ -1,6 +1,16 @@
 import { PaginationLinks } from '@models/pagination.model';
 import {User} from "@models/auth.model";
 
+/** Managed client an agent placed an order (or line) on behalf of. */
+export interface OrderClientRef {
+    '@id'?: string;
+    '@type'?: string;
+    id: number;
+    name: string;
+    code?: string;
+    isActive?: boolean;
+}
+
 export interface OrderProduct {
     '@context'?: string;
     '@id': string;
@@ -29,6 +39,7 @@ export interface OrderItem {
     createdAt: string;
     updatedAt: string;
     isCustomPrice?: boolean;
+    onBehalfOfClient?: OrderClientRef | null;
 }
 
 export interface OrderPaymentType {
@@ -76,6 +87,7 @@ export interface Order {
     lastSavedAt: string;
     items: OrderItem[];
     user: User;
+    onBehalfOfClient?: OrderClientRef | null;
     logs?: OrderLog[];
     // Tracking fields (for dispatched status)
     trackingNumber?: string;

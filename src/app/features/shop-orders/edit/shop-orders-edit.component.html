@@ -67,6 +67,31 @@
       </div>
     </div>
 
+    <!-- Agent (on-behalf-of) banner -->
+    @if (order().isAgentOrder) {
+      <div class="agent-banner">
+        <div class="agent-banner__head">
+          <ui-badge variant="info">Agent order</ui-badge>
+          <span class="agent-banner__title">
+            On behalf of {{ order().clientGroups.length }}
+            {{ order().clientGroups.length === 1 ? 'client' : 'clients' }}
+          </span>
+        </div>
+        <div class="agent-banner__row">
+          <span class="agent-banner__label">Placed by agent:</span>
+          <span class="agent-banner__value">
+            {{ order().agentName }}{{ order().agentEmail ? ' (' + order().agentEmail + ')' : '' }}
+          </span>
+        </div>
+        <div class="agent-banner__clients">
+          <span class="agent-banner__tag" *ngFor="let group of order().clientGroups">
+            {{ group.clientName }}{{ group.clientCode ? ' (' + group.clientCode + ')' : '' }}
+            — {{ group.productGroups.length }} {{ group.productGroups.length === 1 ? 'item' : 'items' }}
+          </span>
+        </div>
+      </div>
+    }
+
     <!-- Form Cards -->
     <div class="form-cards">
       <!-- Basic Information Card -->
@@ -194,8 +219,33 @@
       </div>
 
       <!-- Product Groups -->
-      <div class="product-groups">
-        <div class="product-group" *ngFor="let group of order().productGroups">
+      @if (order().isAgentOrder) {
+        <!-- Agent order: products grouped per managed client -->
+        <div class="client-groups">
+          <div class="client-group" *ngFor="let clientGroup of order().clientGroups">
+            <div class="client-group__header">
+              <span class="client-group__name">Client: {{ clientGroup.clientName }}</span>
+              <span class="client-group__code" *ngIf="clientGroup.clientCode">({{ clientGroup.clientCode }})</span>
+            </div>
+            <div class="product-groups">
+              <ng-container *ngFor="let group of clientGroup.productGroups">
+                <ng-container *ngTemplateOutlet="productGroupTpl; context: { $implicit: group }"></ng-container>
+              </ng-container>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <!-- Regular order: flat product list -->
+        <div class="product-groups">
+          <ng-container *ngFor="let group of order().productGroups">
+            <ng-container *ngTemplateOutlet="productGroupTpl; context: { $implicit: group }"></ng-container>
+          </ng-container>
+        </div>
+      }
+
+      <!-- Product group (shared by grouped + flat views) -->
+      <ng-template #productGroupTpl let-group>
+        <div class="product-group">
           <div class="product-group__header">
             <div class="product-group__title">
               <ui-icon name="clipboard-list" size="md"></ui-icon>
@@ -215,7 +265,7 @@
             </ui-data-table>
           </div>
         </div>
-      </div>
+      </ng-template>
 
       <!-- Order Summary -->
       <div class="order-summary">

@@ -47,6 +47,14 @@
             [checked]="isActive()"
             (toggleChange)="onActiveChange($event)">
           </ui-toggle>
+          <ui-toggle
+            label="Client agent"
+            labelPosition="left"
+            labelMinWidth="100px"
+            labelColor="#71717a"
+            [checked]="isClientAgent()"
+            (toggleChange)="onClientAgentChange($event)">
+          </ui-toggle>
         </div>
 
         <div class="card__fields">
@@ -120,7 +128,7 @@
       <div class="tabs-container">
         <div class="tabs-header">
           <ui-tabs
-            [tabs]="tabs"
+            [tabs]="tabs()"
             [activeTab]="activeTab()"
             variant="underline"
             [fullWidth]="true"
@@ -129,7 +137,7 @@
 
           <!-- Add Button (desktop: inline, mobile: hidden) -->
           <button
-            *ngIf="activeTab() === 'users' || activeTab() === 'addresses'"
+            *ngIf="activeTab() === 'users' || activeTab() === 'addresses' || activeTab() === 'managed-clients'"
             class="btn btn--outline tabs-header__add-btn"
             (click)="onAddTabItem()">
             <span>{{ addButtonText() }}</span>
@@ -138,7 +146,7 @@
         </div>
 
         <!-- Add Button Row (mobile only) -->
-        <div class="tabs-action-row" *ngIf="activeTab() === 'users' || activeTab() === 'addresses'">
+        <div class="tabs-action-row" *ngIf="activeTab() === 'users' || activeTab() === 'addresses' || activeTab() === 'managed-clients'">
           <button class="btn btn--outline btn--full-width" (click)="onAddTabItem()">
             <span>{{ addButtonText() }}</span>
             <ui-icon name="plus" size="sm"></ui-icon>
@@ -178,6 +186,15 @@
             [columns]="manualEntriesColumns"
             [data]="manualEntries()"
             emptyMessage="No results"
+          ></ui-data-table>
+        </div>
+
+        <!-- Managed Clients Table -->
+        <div class="table-wrapper" *ngIf="activeTab() === 'managed-clients'">
+          <ui-data-table
+            [columns]="managedClientsColumns"
+            [data]="managedClients()"
+            emptyMessage="No managed clients"
           ></ui-data-table>
         </div>
 
@@ -279,6 +296,18 @@
   ></ui-table-actions-dropdown>
 </ng-template>
 
+<!-- Template for Managed Clients Table -->
+<ng-template #managedClientActionsTemplate let-row>
+  <ui-table-actions-dropdown
+    [isOpen]="openDropdownId() === row.id"
+    [row]="row"
+    [actions]="managedClientActions"
+    (toggle)="toggleDropdown(row.id)"
+    (actionClick)="onManagedClientActionClick($event)"
+    (close)="closeDropdown()"
+  ></ui-table-actions-dropdown>
+</ng-template>
+
 <!-- Address Modal -->
 <app-address-modal
   [isOpen]="isAddressModalOpen()"
@@ -328,6 +357,48 @@
             </div>
             <button class="btn btn--outline btn--sm" (click)="assignUserToClient(user)">
               Assign
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</ui-modal>
+
+<!-- Managed Client Selection Modal -->
+<ui-modal
+  [isOpen]="isManagedClientModalOpen()"
+  (isOpenChange)="isManagedClientModalOpen.set($event)"
+  title="Add managed clients"
+  size="md"
+>
+  <div class="user-modal">
+    <div class="user-modal__toolbar">
+      <div class="user-modal__search">
+        <ui-icon name="search" size="sm"></ui-icon>
+        <input
+          type="text"
+          placeholder="Search clients..."
+          [value]="managedClientSearchQuery()"
+          (input)="onManagedClientSearchChange($event)"
+        >
+      </div>
+    </div>
+
+    @if (isLoadingAvailableClients()) {
+      <div class="user-modal__loading">Loading clients...</div>
+    } @else if (filteredAvailableClients().length === 0) {
+      <div class="user-modal__empty">No clients available to add</div>
+    } @else {
+      <div class="user-modal__list">
+        @for (client of filteredAvailableClients(); track client.id) {
+          <div class="user-modal__item">
+            <div class="user-modal__item-info">
+              <span class="user-modal__item-name">{{ client.name }}</span>
+              <span class="user-modal__item-email">{{ client.code }}</span>
+            </div>
+            <button class="btn btn--outline btn--sm" (click)="addManagedClient(client)">
+              Add
             </button>
           </div>
         }
