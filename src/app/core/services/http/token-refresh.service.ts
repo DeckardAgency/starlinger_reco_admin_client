@@ -1,16 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
-import { AuthService } from '@core/auth/auth.service';
+import { catchError } from 'rxjs/operators';
 import { LoggerService, ScopedLogger } from '@services/logger.service';
 import { environment } from '@env/environment';
 
-interface RefreshTokenResponse {
-  token: string;
-  refresh_token: string;
-}
-
+/**
+ * Refreshes the session using the HttpOnly refresh-token cookie. The refresh token is
+ * never read or sent by JS — the browser attaches the cookie automatically (withCredentials)
+ * and the server rotates both cookies. No tokens are stored client-side.
+ */
 @Injectable({
   providedIn: 'root'
 })
@@ -20,31 +19,15 @@ export class TokenRefreshService {
 
   constructor(
     private http: HttpClient,
-    private authService: AuthService,
     private loggerService: LoggerService
   ) {
     this.logger = this.loggerService.createLogger('TokenRefreshService');
   }
 
-  refreshToken(): Observable<RefreshTokenResponse> {
-    const refreshToken = this.authService.getRefreshToken();
-
-    if (!refreshToken) {
-      return throwError(() => new Error('No refresh token available'));
-    }
-
-    return this.http.post<RefreshTokenResponse>(this.refreshUrl, {
-      refresh_token: refreshToken
-    }).pipe(
-      tap(response => {
-        // Update tokens in storage
-        localStorage.setItem('auth_token', response.token);
-        localStorage.setItem('refresh_token', response.refresh_token);
-      }),
+  refreshToken(): Observable<unknown> {
+    return this.http.post(this.refreshUrl, {}, { withCredentials: true }).pipe(
       catchError(error => {
-        this.logger.error('Error refreshing token', error);
-        // If refresh fails, logout the user
-        this.authService.logout();
+        this.logger.error('Error refreshing session', error);
         return throwError(() => error);
       })
     );

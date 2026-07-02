@@ -10,12 +10,17 @@ import { Observable, throwError, BehaviorSubject } from 'rxjs';
 import { catchError, filter, take, switchMap, finalize } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 import { Router } from '@angular/router';
-import {TokenRefreshService} from '@services/http/token-refresh.service';
+import { TokenRefreshService } from '@services/http/token-refresh.service';
 
+/**
+ * Auth is carried by HttpOnly cookies, so this interceptor no longer injects a Bearer
+ * header. It (1) sends every request with credentials so the cookies travel, and (2) on a
+ * 401 tries a single cookie-based token refresh and replays the request.
+ */
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
   private isRefreshing = false;
-  private refreshTokenSubject: BehaviorSubject<string | null> = new BehaviorSubject<string | null>(null);
+  private refreshDone: BehaviorSubject<boolean | null> = new BehaviorSubject<boolean | null>(null);
 
   constructor(
     private authService: AuthService,
@@ -24,15 +29,11 @@ export class AuthInterceptor implements HttpInterceptor {
   ) {}
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    // Don't add token to authentication requests
+    // Always send cookies (auth + refresh) with API requests.
+    request = request.clone({ withCredentials: true });
+
     if (this.isAuthRequest(request)) {
       return next.handle(request);
-    }
-
-    // Add token to other requests
-    const token = this.authService.getToken();
-    if (token) {
-      request = this.addToken(request, token);
     }
 
     return next.handle(request).pipe(
@@ -45,34 +46,27 @@ export class AuthInterceptor implements HttpInterceptor {
     );
   }
 
-  private addToken(request: HttpRequest<unknown>, token: string): HttpRequest<unknown> {
-    return request.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-  }
-
   private isAuthRequest(request: HttpRequest<unknown>): boolean {
     return request.url.endsWith('/api/login_check') ||
-      request.url.endsWith('/api/token/refresh');
+      request.url.endsWith('/api/token/refresh') ||
+      request.url.endsWith('/api/logout');
   }
 
   private handle401Error(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     if (!this.isRefreshing) {
       this.isRefreshing = true;
-      this.refreshTokenSubject.next(null);
+      this.refreshDone.next(null);
 
       return this.tokenRefreshService.refreshToken().pipe(
-        switchMap(response => {
+        switchMap(() => {
           this.isRefreshing = false;
-          this.refreshTokenSubject.next(response.token);
-
-          // Retry the request with a new token
-          return next.handle(this.addToken(request, response.token));
+          this.refreshDone.next(true);
+          // Cookie has been rotated by the server; just replay the request.
+          return next.handle(request);
         }),
         catchError(err => {
           this.isRefreshing = false;
+          this.refreshDone.next(false);
           this.authService.logout();
           this.router.navigate(['/login']);
           return throwError(() => err);
@@ -81,13 +75,18 @@ export class AuthInterceptor implements HttpInterceptor {
           this.isRefreshing = false;
         })
       );
-    } else {
-      // Wait for the token to be refreshed
-      return this.refreshTokenSubject.pipe(
-        filter(token => token !== null),
-        take(1),
-        switchMap(token => next.handle(this.addToken(request, token)))
-      );
     }
+
+    // A refresh is already in flight — wait for it, then replay.
+    return this.refreshDone.pipe(
+      filter(done => done !== null),
+      take(1),
+      switchMap(done => {
+        if (done) {
+          return next.handle(request);
+        }
+        return throwError(() => new Error('Session expired'));
+      })
+    );
   }
 }

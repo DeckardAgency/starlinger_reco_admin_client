@@ -7,7 +7,7 @@ import { TokenRefreshService } from '@services/http/token-refresh.service';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-describe('AuthInterceptor', () => {
+describe('AuthInterceptor (cookie auth)', () => {
   let httpMock: HttpTestingController;
   let httpClient: HttpClient;
   let authService: jasmine.SpyObj<AuthService>;
@@ -15,18 +15,14 @@ describe('AuthInterceptor', () => {
   let router: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
-    const authServiceSpy = jasmine.createSpyObj('AuthService', ['getToken', 'logout']);
+    const authServiceSpy = jasmine.createSpyObj('AuthService', ['logout']);
     const tokenRefreshServiceSpy = jasmine.createSpyObj('TokenRefreshService', ['refreshToken']);
     const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
-        {
-          provide: HTTP_INTERCEPTORS,
-          useClass: AuthInterceptor,
-          multi: true
-        },
+        { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
         { provide: AuthService, useValue: authServiceSpy },
         { provide: TokenRefreshService, useValue: tokenRefreshServiceSpy },
         { provide: Router, useValue: routerSpy }
@@ -40,107 +36,63 @@ describe('AuthInterceptor', () => {
     router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
   });
 
-  afterEach(() => {
-    httpMock.verify();
-  });
+  afterEach(() => httpMock.verify());
 
-  it('should add Authorization header when token exists', () => {
-    const token = 'test-token-123';
-    authService.getToken.and.returnValue(token);
-
+  it('sends requests with credentials and no Authorization header', () => {
     httpClient.get('/api/test').subscribe();
-
     const req = httpMock.expectOne('/api/test');
-    expect(req.request.headers.has('Authorization')).toBe(true);
-    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${token}`);
-    req.flush({});
-  });
-
-  it('should not add Authorization header when token does not exist', () => {
-    authService.getToken.and.returnValue(null);
-
-    httpClient.get('/api/test').subscribe();
-
-    const req = httpMock.expectOne('/api/test');
+    expect(req.request.withCredentials).toBe(true);
     expect(req.request.headers.has('Authorization')).toBe(false);
     req.flush({});
   });
 
-  it('should not add Authorization header for login_check endpoint', () => {
-    const token = 'test-token-123';
-    authService.getToken.and.returnValue(token);
-
-    httpClient.post('/api/login_check', { username: 'test@test.com', password: 'password' }).subscribe();
-
+  it('passes auth endpoints through (still credentialed, no refresh loop)', () => {
+    httpClient.post('/api/login_check', {}).subscribe();
     const req = httpMock.expectOne('/api/login_check');
+    expect(req.request.withCredentials).toBe(true);
     expect(req.request.headers.has('Authorization')).toBe(false);
-    req.flush({});
+    req.flush({}, { status: 204, statusText: 'No Content' });
   });
 
-  it('should not add Authorization header for token refresh endpoint', () => {
-    const token = 'test-token-123';
-    authService.getToken.and.returnValue(token);
-
-    httpClient.post('/api/token/refresh', { refresh_token: 'refresh' }).subscribe();
-
-    const req = httpMock.expectOne('/api/token/refresh');
-    expect(req.request.headers.has('Authorization')).toBe(false);
-    req.flush({});
-  });
-
-  it('should handle 401 error and attempt token refresh', (done) => {
-    authService.getToken.and.returnValue('expired-token');
-    // Token refresh fails
-    tokenRefreshService.refreshToken.and.returnValue(throwError(() => new Error('Refresh failed')));
+  it('on 401 attempts a cookie refresh and replays the request', (done) => {
+    tokenRefreshService.refreshToken.and.returnValue(of({}));
 
     httpClient.get('/api/protected').subscribe({
-      next: () => fail('Should not succeed'),
-      error: () => {
+      next: data => {
+        expect(data).toEqual({ ok: true });
         expect(tokenRefreshService.refreshToken).toHaveBeenCalled();
+        done();
+      },
+      error: () => fail('should not error')
+    });
+
+    httpMock.expectOne('/api/protected').flush({}, { status: 401, statusText: 'Unauthorized' });
+    // Replayed request (no token header — auth is via the rotated cookie)
+    const retry = httpMock.expectOne('/api/protected');
+    expect(retry.request.withCredentials).toBe(true);
+    expect(retry.request.headers.has('Authorization')).toBe(false);
+    retry.flush({ ok: true });
+  });
+
+  it('on refresh failure logs out and redirects to /login', (done) => {
+    tokenRefreshService.refreshToken.and.returnValue(throwError(() => new Error('refresh failed')));
+
+    httpClient.get('/api/protected').subscribe({
+      next: () => fail('should not succeed'),
+      error: () => {
         expect(authService.logout).toHaveBeenCalled();
         expect(router.navigate).toHaveBeenCalledWith(['/login']);
         done();
       }
     });
 
-    const req = httpMock.expectOne('/api/protected');
-    req.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    httpMock.expectOne('/api/protected').flush({}, { status: 401, statusText: 'Unauthorized' });
   });
 
-  it('should retry request with new token after successful refresh', (done) => {
-    const originalToken = 'expired-token';
-    const newToken = 'new-token';
-
-    authService.getToken.and.returnValue(originalToken);
-    tokenRefreshService.refreshToken.and.returnValue(of({ token: newToken, refresh_token: 'new-refresh' }));
-
-    const mockData = { success: true };
-
-    httpClient.get('/api/protected').subscribe({
-      next: (data) => {
-        expect(data).toEqual(mockData);
-        expect(tokenRefreshService.refreshToken).toHaveBeenCalled();
-        done();
-      },
-      error: () => fail('Should not error')
-    });
-
-    // First request returns 401
-    const req1 = httpMock.expectOne('/api/protected');
-    req1.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
-
-    // Retry request with new token
-    const req2 = httpMock.expectOne('/api/protected');
-    expect(req2.request.headers.get('Authorization')).toBe(`Bearer ${newToken}`);
-    req2.flush(mockData);
-  });
-
-  it('should pass through non-401 errors without logout', (done) => {
-    authService.getToken.and.returnValue('valid-token');
-
+  it('passes non-401 errors through without logout', (done) => {
     httpClient.get('/api/server-error').subscribe({
-      next: () => fail('Should not succeed'),
-      error: (error) => {
+      next: () => fail('should not succeed'),
+      error: error => {
         expect(error.status).toBe(500);
         expect(authService.logout).not.toHaveBeenCalled();
         expect(router.navigate).not.toHaveBeenCalled();
@@ -148,25 +100,14 @@ describe('AuthInterceptor', () => {
       }
     });
 
-    const req = httpMock.expectOne('/api/server-error');
-    req.flush({ message: 'Server Error' }, { status: 500, statusText: 'Internal Server Error' });
+    httpMock.expectOne('/api/server-error').flush({}, { status: 500, statusText: 'Server Error' });
   });
 
-  it('should pass through successful requests', (done) => {
-    authService.getToken.and.returnValue('valid-token');
-
-    const mockData = { id: 1, name: 'Test' };
-
+  it('passes successful requests through', (done) => {
     httpClient.get('/api/data').subscribe({
-      next: (data) => {
-        expect(data).toEqual(mockData);
-        done();
-      },
-      error: () => fail('Should not error')
+      next: data => { expect(data).toEqual({ id: 1 }); done(); },
+      error: () => fail('should not error')
     });
-
-    const req = httpMock.expectOne('/api/data');
-    expect(req.request.headers.get('Authorization')).toBe('Bearer valid-token');
-    req.flush(mockData);
+    httpMock.expectOne('/api/data').flush({ id: 1 });
   });
 });

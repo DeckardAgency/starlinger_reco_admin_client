@@ -1,7 +1,8 @@
 // text-editor.component.ts
-import { Component, ElementRef, EventEmitter, Input, OnInit, OnChanges, SimpleChanges, Output, ViewChild, HostListener } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnInit, OnChanges, SecurityContext, SimpleChanges, Output, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
     selector: 'app-text-editor',
@@ -45,14 +46,20 @@ export class TextEditorComponent implements OnInit, OnChanges {
 
     private initialized = false;
 
-    constructor() {}
+    constructor(private sanitizer: DomSanitizer) {}
+
+    /** Strip dangerous markup (scripts, event handlers, etc.) from stored rich text
+     *  before it is written to the DOM via innerHTML, keeping only safe formatting. */
+    private sanitizeHtml(html: string | null | undefined): string {
+        return this.sanitizer.sanitize(SecurityContext.HTML, html ?? '') ?? '';
+    }
 
     ngOnChanges(changes: SimpleChanges): void {
         if (changes['initialContent'] && this.initialized && !changes['initialContent'].firstChange) {
             const newContent = changes['initialContent'].currentValue || '';
             const currentContent = this.editorElement.nativeElement.innerHTML;
             if (newContent && !currentContent) {
-                this.editorElement.nativeElement.innerHTML = newContent;
+                this.editorElement.nativeElement.innerHTML = this.sanitizeHtml(newContent);
             }
         }
     }
@@ -60,7 +67,7 @@ export class TextEditorComponent implements OnInit, OnChanges {
     ngOnInit(): void {
         this.initialized = true;
         if (this.initialContent) {
-            this.editorElement.nativeElement.innerHTML = this.initialContent;
+            this.editorElement.nativeElement.innerHTML = this.sanitizeHtml(this.initialContent);
         }
         this.editorElement.nativeElement.addEventListener('input', () => {
             this.emitContentChange();
@@ -207,7 +214,7 @@ export class TextEditorComponent implements OnInit, OnChanges {
     }
 
     setContent(html: string): void {
-        this.editorElement.nativeElement.innerHTML = html;
+        this.editorElement.nativeElement.innerHTML = this.sanitizeHtml(html);
         this.emitContentChange();
     }
 }
