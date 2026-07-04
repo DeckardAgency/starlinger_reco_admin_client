@@ -1,10 +1,21 @@
 import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, fromEvent, takeUntil } from 'rxjs';
 import { PerformanceOverviewComponent } from '@shared/components/performance-overview/performance-overview.component';
 import { IconComponent } from '@app/ui-kit';
 import { DashboardService, DashboardOrder, StatusDistribution } from '@core/services/http/dashboard.service';
+
+/** Precomputed display row so the template avoids per-row method calls. */
+interface DashboardOrderRow {
+    order: DashboardOrder;
+    title: string;
+    initials: string;
+    amountLabel: string;
+    statusLabel: string;
+    statusClass: string;
+    dateLabel: string;
+}
 
 @Component({
     selector: 'app-admin-dashboard',
@@ -27,7 +38,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     isLoadingOrders = true;
     isLoadingDistribution = true;
 
-    recentOrders: DashboardOrder[] = [];
+    recentOrders: DashboardOrderRow[] = [];
     orderDistribution: StatusDistribution[] = [];
     totalOrders = 0;
 
@@ -62,20 +73,27 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         }
     ];
 
+    // Keep in sync with the status badge palette in the shop-orders list/edit views
     statusColors: Record<string, string> = {
         'draft': '#9ca3af',
-        'new': '#3b82f6',
-        'in_process': '#f59e0b',
-        'waiting_for_payment': '#8b5cf6',
-        'ready_for_shipment': '#06b6d4',
-        'shipped': '#6366f1',
-        'delivered': '#10b981',
-        'canceled': '#ef4444',
-        'reversal': '#dc2626'
+        'new': '#3B0075',
+        'in_process': '#AD7F00',
+        'waiting_for_payment': '#C2410C',
+        'ready_for_shipment': '#0F766E',
+        'shipped': '#1D4ED8',
+        'delivered': '#237804',
+        'canceled': '#DC2626',
+        'reversal': '#18181B'
     };
 
     ngOnInit(): void {
         this.loadDashboardData();
+
+        // Data is only fetched on route entry; refetch when the tab/window regains
+        // focus so status changes made elsewhere show up without a manual reload.
+        fromEvent(window, 'focus')
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(() => this.loadDashboardData());
     }
 
     ngOnDestroy(): void {
@@ -88,7 +106,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this.destroy$))
             .subscribe({
                 next: (orders) => {
-                    this.recentOrders = orders;
+                    this.recentOrders = orders.map(order => this.mapOrderToRow(order));
                     this.isLoadingOrders = false;
                     this.cdr.markForCheck();
                 },
@@ -118,16 +136,20 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         this.router.navigate([route]);
     }
 
-    viewOrder(order: DashboardOrder): void {
-        this.router.navigate(['/admin/shop-orders', order.id, 'edit']);
+    viewOrder(row: DashboardOrderRow): void {
+        this.router.navigate(['/admin/shop-orders', row.order.id, 'edit']);
     }
 
-    getStatusLabel(status: string): string {
-        return this.dashboardService.getStatusLabel(status);
-    }
-
-    getStatusClass(status: string): string {
-        return this.dashboardService.getStatusClass(status);
+    private mapOrderToRow(order: DashboardOrder): DashboardOrderRow {
+        return {
+            order,
+            title: order.orderNumber || String(order.id),
+            initials: this.getInitials(order),
+            amountLabel: this.formatCurrency(order.totalAmount || 0),
+            statusLabel: this.dashboardService.getStatusLabel(order.status),
+            statusClass: this.dashboardService.getStatusClass(order.status),
+            dateLabel: this.formatDate(order.createdAt)
+        };
     }
 
     getStatusColor(status: string): string {

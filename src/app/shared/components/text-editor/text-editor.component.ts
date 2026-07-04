@@ -1,5 +1,5 @@
 // text-editor.component.ts
-import { Component, ElementRef, EventEmitter, Input, OnInit, OnChanges, SecurityContext, SimpleChanges, Output, ViewChild, HostListener } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, EventEmitter, Input, NgZone, OnDestroy, OnInit, OnChanges, SecurityContext, SimpleChanges, Output, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -8,9 +8,10 @@ import { DomSanitizer } from '@angular/platform-browser';
     selector: 'app-text-editor',
     imports: [CommonModule, FormsModule],
     templateUrl: './text-editor.component.html',
-    styleUrls: ['./text-editor.component.scss']
+    styleUrls: ['./text-editor.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TextEditorComponent implements OnInit, OnChanges {
+export class TextEditorComponent implements OnInit, OnChanges, OnDestroy {
     @Input() placeholder: string = 'Start typing.';
     @Input() initialContent: string | null = '';
     @Output() contentChange = new EventEmitter<string>();
@@ -45,8 +46,13 @@ export class TextEditorComponent implements OnInit, OnChanges {
     currentAlignment: string = 'left';
 
     private initialized = false;
+    private selectionChangeHandler = () => this.onSelectionChange();
 
-    constructor(private sanitizer: DomSanitizer) {}
+    constructor(
+        private sanitizer: DomSanitizer,
+        private zone: NgZone,
+        private cdr: ChangeDetectorRef
+    ) {}
 
     /** Strip dangerous markup (scripts, event handlers, etc.) from stored rich text
      *  before it is written to the DOM via innerHTML, keeping only safe formatting. */
@@ -77,10 +83,20 @@ export class TextEditorComponent implements OnInit, OnChanges {
         this.editorElement.nativeElement.addEventListener('mouseup', this.updateFormatState.bind(this));
         this.editorElement.nativeElement.addEventListener('keyup', this.updateFormatState.bind(this));
         this.editorElement.nativeElement.addEventListener('click', this.updateFormatState.bind(this));
+
+        // document:selectionchange fires for selections anywhere on the page.
+        // Listen outside Angular so it doesn't trigger zone change detection;
+        // updateFormatState() re-enters the zone only when state actually changed.
+        this.zone.runOutsideAngular(() => {
+            document.addEventListener('selectionchange', this.selectionChangeHandler);
+        });
     }
 
-    @HostListener('document:selectionchange', ['$event'])
-    onSelectionChange(event: Event): void {
+    ngOnDestroy(): void {
+        document.removeEventListener('selectionchange', this.selectionChangeHandler);
+    }
+
+    onSelectionChange(): void {
         // Only update if our editor has focus
         if (document.activeElement === this.editorElement.nativeElement ||
             this.editorElement.nativeElement.contains(document.activeElement)) {
@@ -89,41 +105,62 @@ export class TextEditorComponent implements OnInit, OnChanges {
     }
 
     updateFormatState(): void {
-        // Check for bold
-        this.isBold = document.queryCommandState('bold');
-
-        // Check for italic
-        this.isItalic = document.queryCommandState('italic');
-
-        // Check for underline
-        this.isUnderline = document.queryCommandState('underline');
+        const isBold = document.queryCommandState('bold');
+        const isItalic = document.queryCommandState('italic');
+        const isUnderline = document.queryCommandState('underline');
 
         // Check for alignment
+        let currentAlignment = this.currentAlignment;
         if (document.queryCommandState('justifyLeft')) {
-            this.currentAlignment = 'left';
+            currentAlignment = 'left';
         } else if (document.queryCommandState('justifyCenter')) {
-            this.currentAlignment = 'center';
+            currentAlignment = 'center';
         } else if (document.queryCommandState('justifyRight')) {
-            this.currentAlignment = 'right';
+            currentAlignment = 'right';
         } else if (document.queryCommandState('justifyFull')) {
-            this.currentAlignment = 'full';
+            currentAlignment = 'full';
         }
 
         // Check current block format
+        let selectedStyle = this.selectedStyle;
         const formatBlock = document.queryCommandValue('formatBlock').toLowerCase();
         if (formatBlock) {
             // Remove the < > if they exist (browsers can return values differently)
             const cleanFormat = formatBlock.replace(/[<>]/g, '');
-            this.selectedStyle = this.textStyles.find(style => style.value === cleanFormat)
+            selectedStyle = this.textStyles.find(style => style.value === cleanFormat)
                 ? cleanFormat
                 : 'normal';
         }
 
         // Check current font size
+        let selectedSize = this.selectedSize;
         const fontSize = document.queryCommandValue('fontSize');
         if (fontSize) {
-            this.selectedSize = fontSize;
+            selectedSize = fontSize;
         }
+
+        const changed =
+            isBold !== this.isBold ||
+            isItalic !== this.isItalic ||
+            isUnderline !== this.isUnderline ||
+            currentAlignment !== this.currentAlignment ||
+            selectedStyle !== this.selectedStyle ||
+            selectedSize !== this.selectedSize;
+
+        if (!changed) {
+            return;
+        }
+
+        this.isBold = isBold;
+        this.isItalic = isItalic;
+        this.isUnderline = isUnderline;
+        this.currentAlignment = currentAlignment;
+        this.selectedStyle = selectedStyle;
+        this.selectedSize = selectedSize;
+
+        // May be called from a listener registered outside Angular, so re-enter
+        // the zone to schedule change detection for this OnPush component.
+        this.zone.run(() => this.cdr.markForCheck());
     }
 
     execCommand(command: string, value: string | undefined = undefined): void {

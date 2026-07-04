@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { SearchComponent, SearchSuggestion } from '@app/ui-kit/molecules/search/search.component';
@@ -10,7 +10,8 @@ import { Subject } from 'rxjs';
     selector: 'app-top-bar',
     imports: [CommonModule, SearchComponent],
     templateUrl: './top-bar.component.html',
-    styleUrls: ['./top-bar.component.scss']
+    styleUrls: ['./top-bar.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TopBarComponent implements OnInit, OnDestroy {
     showMobileSearch = false;
@@ -22,7 +23,8 @@ export class TopBarComponent implements OnInit, OnDestroy {
     constructor(
         private mobileMenuService: MobileMenuService,
         private router: Router,
-        public authService: AuthService
+        public authService: AuthService,
+        private cdr: ChangeDetectorRef
     ) {}
 
     ngOnInit(): void {}
@@ -61,6 +63,7 @@ export class TopBarComponent implements OnInit, OnDestroy {
                 { id: '3', label: 'Search Users', description: 'Find users', type: 'Users' },
             ].filter(s => s.label.toLowerCase().includes(query.toLowerCase()));
             this.searchLoading = false;
+            this.cdr.markForCheck();
         }, 300);
     }
 

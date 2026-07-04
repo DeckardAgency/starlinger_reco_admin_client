@@ -49,7 +49,7 @@ export class ActiveOrdersComponent implements OnInit {
         type: 'order' as const,
         internalReference: order.orderNumber || order.id.slice(0, 8),
         dateCreated: this.formatDate(order.createdAt),
-        partsOrdered: 0,
+        partsOrdered: order.itemsCount ?? 0,
         status: this.normalizeStatus(order.status)
       }));
 

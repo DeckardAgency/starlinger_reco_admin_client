@@ -128,7 +128,7 @@
             <div class="role-list">
               <div
                 class="role-item"
-                *ngFor="let role of roleOptions"
+                *ngFor="let role of roleOptions; trackBy: trackByRoleId"
                 (click)="selectRole(role.id)"
                 [class.role-item--selected]="isRoleSelected(role.id)"
               >

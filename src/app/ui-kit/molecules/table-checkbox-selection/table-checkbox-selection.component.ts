@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, HostListener, ElementRef, inject, booleanAttribute } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, ElementRef, inject, booleanAttribute, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IconComponent } from '../../atoms/icon/icon.component';
 
@@ -10,7 +10,7 @@ import { IconComponent } from '../../atoms/icon/icon.component';
   styleUrls: ['./table-checkbox-selection.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TableCheckboxSelectionComponent {
+export class TableCheckboxSelectionComponent implements OnChanges, OnDestroy {
   private elementRef = inject(ElementRef);
 
   /**
@@ -39,10 +39,40 @@ export class TableCheckboxSelectionComponent {
   @Output() selectNone = new EventEmitter<void>();
   @Output() dropdownToggle = new EventEmitter<boolean>();
 
-  @HostListener('document:click', ['$event'])
-  handleClickOutside(event: Event): void {
-    if (this.isHeader && this.isDropdownOpen && !this.elementRef.nativeElement.contains(event.target)) {
+  // Outside-click listener is attached only while the header dropdown is open,
+  // instead of a permanent document-level HostListener per checkbox.
+  private documentClickListenerAttached = false;
+  private readonly documentClickHandler = (event: Event): void => {
+    if (!this.elementRef.nativeElement.contains(event.target)) {
       this.dropdownToggle.emit(false);
+    }
+  };
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isDropdownOpen'] || changes['isHeader']) {
+      if (this.isHeader && this.isDropdownOpen) {
+        this.attachDocumentClickListener();
+      } else {
+        this.detachDocumentClickListener();
+      }
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.detachDocumentClickListener();
+  }
+
+  private attachDocumentClickListener(): void {
+    if (!this.documentClickListenerAttached) {
+      document.addEventListener('click', this.documentClickHandler);
+      this.documentClickListenerAttached = true;
+    }
+  }
+
+  private detachDocumentClickListener(): void {
+    if (this.documentClickListenerAttached) {
+      document.removeEventListener('click', this.documentClickHandler);
+      this.documentClickListenerAttached = false;
     }
   }
 

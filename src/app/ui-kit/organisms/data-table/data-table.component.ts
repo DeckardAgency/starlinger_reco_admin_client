@@ -47,6 +47,7 @@ export class DataTableComponent implements OnDestroy {
   @Input() sortDirection: 'asc' | 'desc' | null = null;
   @Input() showHeaders: boolean = true;
   @Input() emptyMessage: string = 'No results';
+  @Input() trackByKey: string = 'id';
 
   // Styling inputs - these set CSS custom properties on the host element
   @Input() border?: string;
@@ -159,5 +160,13 @@ export class DataTableComponent implements OnDestroy {
 
   getCellValue(row: any, column: TableColumn): any {
     return row[column.key];
+  }
+
+  trackByRow = (index: number, row: any): any => {
+    return row?.[this.trackByKey] ?? index;
+  };
+
+  trackByColumn(index: number, column: TableColumn): string {
+    return column.key;
   }
 }

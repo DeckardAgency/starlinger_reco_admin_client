@@ -31,6 +31,7 @@ interface DeliveryTypeDetail {
   name: string;
   isActive: boolean;
   useAsDefault: boolean;
+  carrierCode: string | null;
   grossFactor: number;
   sortOrder: number;
   shortDescription: string;
@@ -42,6 +43,7 @@ const EMPTY_DELIVERY_TYPE: DeliveryTypeDetail = {
   name: '',
   isActive: false,
   useAsDefault: false,
+  carrierCode: null,
   grossFactor: 1.0,
   sortOrder: 0,
   shortDescription: '',
@@ -184,6 +186,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
           name: deliveryType.name || '',
           isActive: deliveryType.isActive ?? false,
           useAsDefault: deliveryType.useAsDefault ?? false,
+          carrierCode: (deliveryType as any).carrierCode ?? null,
           grossFactor: deliveryType.grossFactor ? Number(deliveryType.grossFactor) : 1.0,
           sortOrder: deliveryType.sortOrder || 0,
           shortDescription: deliveryType.shortDescription || '',
@@ -261,6 +264,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
       name: detail.name,
       isActive: detail.isActive,
       useAsDefault: detail.useAsDefault,
+      carrierCode: detail.carrierCode,
       grossFactor: String(detail.grossFactor),
       sortOrder: detail.sortOrder,
       shortDescription: detail.shortDescription,
@@ -299,6 +303,22 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
 
   toggleUseAsDefault(): void {
     this.deliveryType.update(d => ({ ...d, useAsDefault: !d.useAsDefault }));
+  }
+
+  carrierOptions = [
+    { value: 'DHL', label: 'DHL' },
+    { value: 'DPD', label: 'DPD' },
+    { value: 'GLS', label: 'GLS' },
+    { value: 'UPS', label: 'UPS' },
+    { value: 'OTHER', label: 'Other' }
+  ];
+
+  onCarrierCodeChange(value: string | number): void {
+    this.deliveryType.update(d => ({ ...d, carrierCode: String(value) }));
+  }
+
+  clearCarrierCode(): void {
+    this.deliveryType.update(d => ({ ...d, carrierCode: null }));
   }
 
   // Input handlers

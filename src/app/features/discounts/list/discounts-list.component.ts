@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, of, switchMap, catchError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
@@ -56,6 +56,7 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
   private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
+  private loadRequest$ = new Subject<void>();
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -123,6 +124,35 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
       this.currentPage.set(1);
       this.loadDiscounts();
     });
+
+    // Single request pipeline: switchMap cancels any in-flight request when a
+    // new load is triggered, so stale responses can never overwrite newer ones.
+    this.loadRequest$.pipe(
+      switchMap(() => this.discountService.getDiscounts(this.buildLoadParams()).pipe(
+        catchError(error => {
+          console.error('Error loading discounts:', error);
+          return of(null);
+        })
+      )),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(response => {
+      if (response) {
+        const discountRows: DiscountRow[] = (response.member || []).map(d => ({
+          ...d,
+          dateValidFrom: this.formatDate(d.dateValidFrom),
+          dateValidTo: this.formatDate(d.dateValidTo),
+          status: d.isActive ? 'active' as const : 'inactive' as const,
+          selected: false
+        }));
+        this.discounts.set(discountRows);
+        this.totalItems.set(response.totalItems || 0);
+      } else {
+        this.discounts.set([]);
+        this.totalItems.set(0);
+      }
+      this.isLoading.set(false);
+      this.cdr.detectChanges();
+    });
   }
 
   ngOnInit(): void {
@@ -136,7 +166,10 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
 
   private loadDiscounts(): void {
     this.isLoading.set(true);
+    this.loadRequest$.next();
+  }
 
+  private buildLoadParams(): Record<string, string | number | boolean> {
     const params: Record<string, string | number | boolean> = {
       page: this.currentPage(),
       itemsPerPage: this.itemsPerPage()
@@ -153,28 +186,7 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
       params[`order[${sortCol}]`] = sortDir;
     }
 
-    this.discountService.getDiscounts(params).subscribe({
-      next: (response) => {
-        const discountRows: DiscountRow[] = (response.member || []).map(d => ({
-          ...d,
-          dateValidFrom: this.formatDate(d.dateValidFrom),
-          dateValidTo: this.formatDate(d.dateValidTo),
-          status: d.isActive ? 'active' as const : 'inactive' as const,
-          selected: false
-        }));
-        this.discounts.set(discountRows);
-        this.totalItems.set(response.totalItems || 0);
-        this.isLoading.set(false);
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        console.error('Error loading discounts:', error);
-        this.discounts.set([]);
-        this.totalItems.set(0);
-        this.isLoading.set(false);
-        this.cdr.detectChanges();
-      }
-    });
+    return params;
   }
 
   private formatDate(dateString: string | null): string {

@@ -111,10 +111,12 @@
           <ui-form-field label="Client" layout="horizontal" [required]="true" [error]="getError('account')">
             <ui-select
               variant="pill"
+              [searchable]="true"
               [options]="accountOptions()"
               [value]="selectedAccount()"
               placeholder="Select account"
               (selectChange)="onAccountChange($event)"
+              (searchChange)="onAccountSearch($event)"
               (cleared)="clearAccount()">
             </ui-select>
           </ui-form-field>
@@ -163,6 +165,19 @@
             </ui-select>
           </ui-form-field>
 
+          <ui-form-field
+            *ngIf="order().status === 'canceled'"
+            label="Cancellation reason"
+            layout="horizontal"
+            [required]="true"
+            [error]="getError('cancellationReason')">
+            <textarea
+              rows="3"
+              [value]="order().cancellationReason"
+              (input)="onCancellationReasonChange($event)"
+              placeholder="Why is this order being canceled?"></textarea>
+          </ui-form-field>
+
           <ui-form-field label="Date" layout="horizontal">
             <input type="text" [value]="order().date" disabled class="input--disabled">
           </ui-form-field>
@@ -196,6 +211,25 @@
             </ui-select>
           </ui-form-field>
 
+          <!-- Tracking section: shown when status is shipped/delivered or when a tracking number already exists -->
+          <ng-container *ngIf="showTrackingFields()">
+            <ui-form-field label="Tracking number" layout="horizontal" [required]="order().status === 'shipped'">
+              <input type="text" [value]="order().trackingNumber" (input)="onTrackingNumberChange($event)" placeholder="e.g. 00340434292135100068">
+            </ui-form-field>
+
+            <ui-form-field label="Tracking carrier" layout="horizontal">
+              <input type="text" [value]="order().trackingCarrier || derivedCarrier()" (input)="onTrackingCarrierChange($event)" placeholder="Auto-derived from delivery type">
+            </ui-form-field>
+
+            <ui-form-field label="Tracking URL" layout="horizontal">
+              <input type="text" [value]="order().trackingUrl" (input)="onTrackingUrlChange($event)" placeholder="Auto-generated on save">
+            </ui-form-field>
+
+            <ui-form-field *ngIf="order().dispatchedAt" label="Dispatched at" layout="horizontal">
+              <input type="text" [value]="formatDate(order().dispatchedAt)" disabled class="input--disabled">
+            </ui-form-field>
+          </ng-container>
+
           <ui-form-field label="Price without tax" layout="horizontal">
             <input type="text" [value]="formatCurrency(order().priceWithoutTax)" disabled class="input--disabled">
           </ui-form-field>
@@ -209,6 +243,44 @@
           </ui-form-field>
         </div>
       </div>
+    </div>
+
+    <!-- Tracking timeline (full-width section, shown when tracking is active) -->
+    <div class="tracking-section" *ngIf="showTrackingFields()">
+      <div class="tracking-section__header">
+        <div class="tracking-section__title-group">
+          <ui-icon name="package" size="md" color="#71717A"></ui-icon>
+          <h2 class="tracking-section__title">Tracking timeline</h2>
+        </div>
+        <button
+          class="btn btn--outline"
+          [disabled]="isRefreshingTracking() || !order().trackingNumber"
+          (click)="onRefreshTracking()">
+          <ui-icon name="refresh" size="sm"></ui-icon>
+          <span>{{ isRefreshingTracking() ? 'Refreshing…' : 'Refresh tracking' }}</span>
+        </button>
+      </div>
+
+      <div class="tracking-timeline" *ngIf="trackingEvents().length > 0; else noEvents">
+        <div class="tracking-event" *ngFor="let event of trackingEvents(); trackBy: trackByEventId">
+          <div class="tracking-event__marker"></div>
+          <div class="tracking-event__body">
+            <div class="tracking-event__head">
+              <ui-badge variant="primary">{{ formatTrackingStatus(event.status) }}</ui-badge>
+              <span class="tracking-event__date">{{ formatDate(event.occurredAt) }}</span>
+              <ui-badge [variant]="event.source === 'dhl_api' ? 'success' : 'default'">
+                {{ event.source === 'dhl_api' ? 'DHL API' : 'Manual' }}
+              </ui-badge>
+            </div>
+            <div class="tracking-event__location" *ngIf="event.location">{{ event.location }}</div>
+            <div class="tracking-event__description" *ngIf="event.description">{{ event.description }}</div>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noEvents>
+        <p class="tracking-empty">No tracking events yet. Click "Refresh tracking" to fetch from DHL.</p>
+      </ng-template>
     </div>
 
     <!-- Products Ordered Section -->
@@ -228,7 +300,7 @@
               <span class="client-group__code" *ngIf="clientGroup.clientCode">({{ clientGroup.clientCode }})</span>
             </div>
             <div class="product-groups">
-              <ng-container *ngFor="let group of clientGroup.productGroups">
+              <ng-container *ngFor="let group of clientGroup.productGroups; trackBy: trackByGroupId">
                 <ng-container *ngTemplateOutlet="productGroupTpl; context: { $implicit: group }"></ng-container>
               </ng-container>
             </div>
@@ -237,7 +309,7 @@
       } @else {
         <!-- Regular order: flat product list -->
         <div class="product-groups">
-          <ng-container *ngFor="let group of order().productGroups">
+          <ng-container *ngFor="let group of order().productGroups; trackBy: trackByGroupId">
             <ng-container *ngTemplateOutlet="productGroupTpl; context: { $implicit: group }"></ng-container>
           </ng-container>
         </div>

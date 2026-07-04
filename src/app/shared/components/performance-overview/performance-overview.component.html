@@ -23,7 +23,7 @@
         </div>
         <div class="performance-overview__presets">
             <button
-                *ngFor="let preset of datePresets"
+                *ngFor="let preset of datePresets; trackBy: trackByPresetLabel"
                 class="performance-overview__preset-btn"
                 [class.performance-overview__preset-btn--active]="activePreset === preset.label"
                 (click)="applyPreset(preset)"
@@ -35,7 +35,7 @@
 
     <!-- Loading state with shimmer -->
     <div class="performance-overview__grid performance-overview__grid--loading" *ngIf="isLoading">
-        <div class="performance-overview__card performance-overview__card--skeleton" *ngFor="let i of [1,2,3,4,5]">
+        <div class="performance-overview__card performance-overview__card--skeleton" *ngFor="let i of [1,2,3,4,5]; trackBy: trackByIndex">
             <div class="performance-overview__card-header">
                 <div class="skeleton skeleton--text skeleton--label"></div>
                 <div class="skeleton skeleton--icon"></div>
@@ -58,7 +58,7 @@
 
     <!-- Metrics grid -->
     <div class="performance-overview__grid" *ngIf="!isLoading && !error">
-        <div class="performance-overview__card" *ngFor="let metric of metrics">
+        <div class="performance-overview__card" *ngFor="let metric of metrics; trackBy: trackByMetricLabel">
             <div class="performance-overview__card-header">
                 <span class="performance-overview__card-label">{{ metric.label }}</span>
                 <span class="performance-overview__info-icon" [title]="metric.infoTooltip">ⓘ</span>

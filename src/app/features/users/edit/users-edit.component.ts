@@ -207,6 +207,10 @@ export class UsersEditComponent implements OnInit {
     return this.user().role === roleId;
   }
 
+  trackByRoleId(_index: number, role: AdminUserRoleOption): AdminUserRoleType {
+    return role.id;
+  }
+
   selectRole(roleId: AdminUserRoleType): void {
     this.user.update(u => ({ ...u, role: roleId }));
   }

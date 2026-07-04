@@ -192,6 +192,16 @@ export class OrderService {
     }
 
     /**
+     * Trigger a fresh DHL API call for the order's tracking number; persists new events.
+     */
+    refreshTracking(orderId: string): Observable<{ created: number; events: any[] }> {
+        return this.http.post<{ created: number; events: any[] }>(
+            `${this.apiUrl}/${orderId}/tracking/refresh`,
+            {}
+        );
+    }
+
+    /**
      * Export order to PDF
      */
     exportOrderPdf(orderId: string): Observable<Blob> {

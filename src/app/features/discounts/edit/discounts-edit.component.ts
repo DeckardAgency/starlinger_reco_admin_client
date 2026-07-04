@@ -134,6 +134,10 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   // Account options (loaded from API)
   accountGroupOptions = signal<{ value: string; label: string }[]>([]);
   accountOptions = signal<{ value: string; label: string }[]>([]);
+  // Server-side client typeahead state
+  private clientSearch$ = new Subject<string>();
+  private clientSearchResults: { value: string; label: string }[] = [];
+  private knownClientLabels = new Map<string, string>();
 
   productTypeOptions: { value: string; label: string }[] = [
     { value: 'VT', label: 'VT' },
@@ -165,6 +169,28 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   ) {}
 
   ngOnInit(): void {
+    // Server-side client typeahead for the Clients select (instead of loading
+    // 500 clients up front). switchMap cancels in-flight lookups.
+    this.clientSearch$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap(term => this.clientService.getClients({
+        page: 1,
+        itemsPerPage: 20,
+        'order[name]': 'asc',
+        ...(term.trim() ? { search: term.trim() } : {})
+      })),
+      takeUntil(this.destroy$)
+    ).subscribe(response => {
+      this.clientSearchResults = (response.clients || []).map(c => {
+        const option = { value: String(c.id), label: c.name };
+        this.knownClientLabels.set(option.value, option.label);
+        return option;
+      });
+      this.updateAccountOptions();
+      this.cdr.markForCheck();
+    });
+
     this.loadDropdownOptions();
 
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
@@ -255,6 +281,8 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
         });
         this.dateFromDate.set(this.parseDateString(discount.dateValidFrom || ''));
         this.dateToDate.set(this.parseDateString(discount.dateValidTo || ''));
+        // Make sure the selected clients have labelled options in the typeahead
+        this.ensureSelectedClientOptions();
         // Load linked products
         this.loadProducts();
         this.isLoading.set(false);
@@ -309,7 +337,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private loadDropdownOptions(): void {
-    this.accountGroupService.getAccountGroups({ itemsPerPage: 100 }).subscribe({
+    this.accountGroupService.getAllAccountGroups().subscribe({
       next: (response) => {
         this.accountGroupOptions.set(
           (response.member || []).map(g => ({ value: String(g.id), label: g.name }))
@@ -319,14 +347,45 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
       error: (err) => console.error('Error loading account groups:', err)
     });
 
-    this.clientService.getClients({ page: 1, itemsPerPage: 500, 'order[name]': 'asc' }).subscribe({
-      next: (response) => {
-        this.accountOptions.set(
-          (response.clients || []).map(c => ({ value: String(c.id), label: c.name }))
-        );
+    // Initial page of clients for the typeahead select
+    this.clientSearch$.next('');
+  }
+
+  onAccountSearch(term: string): void {
+    this.clientSearch$.next(term);
+  }
+
+  /** Options = latest search results plus any selected clients not in them. */
+  private updateAccountOptions(): void {
+    const options = [...this.clientSearchResults];
+    for (const id of this.discount().accounts) {
+      if (!options.some(o => o.value === id)) {
+        options.unshift({ value: id, label: this.knownClientLabels.get(id) ?? id });
+      }
+    }
+    this.accountOptions.set(options);
+  }
+
+  /** Resolve labels for selected client ids that the typeahead hasn't seen. */
+  private ensureSelectedClientOptions(): void {
+    const missing = this.discount().accounts.filter(id => !this.knownClientLabels.has(id));
+    if (missing.length === 0) {
+      this.updateAccountOptions();
+      return;
+    }
+    forkJoin(missing.map(id => this.clientService.getClient(id))).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (clients) => {
+        clients.forEach(c => this.knownClientLabels.set(String(c.id), c.name ?? String(c.id)));
+        this.updateAccountOptions();
         this.cdr.markForCheck();
       },
-      error: (err) => console.error('Error loading accounts:', err)
+      error: (err) => {
+        console.error('Error loading selected clients:', err);
+        this.updateAccountOptions();
+        this.cdr.markForCheck();
+      }
     });
   }
 
@@ -437,6 +496,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
 
   onAccountsChange(values: (string | number)[]): void {
     this.discount.update(d => ({ ...d, accounts: values.map(String) }));
+    this.updateAccountOptions();
   }
 
   onProductTypesChange(values: (string | number)[]): void {

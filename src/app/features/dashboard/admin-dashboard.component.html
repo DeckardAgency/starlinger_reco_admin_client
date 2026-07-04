@@ -55,22 +55,22 @@
                         </div>
                     } @else {
                         <div class="dashboard__list">
-                            @for (order of recentOrders; track order.id) {
-                                <div class="dashboard__list-item" (click)="viewOrder(order)">
+                            @for (row of recentOrders; track row.order.id) {
+                                <div class="dashboard__list-item" (click)="viewOrder(row)">
                                     <div class="dashboard__list-item-avatar dashboard__list-item-avatar--order">
-                                        {{ getInitials(order) }}
+                                        {{ row.initials }}
                                     </div>
                                     <div class="dashboard__list-item-content">
                                         <div class="dashboard__list-item-header">
-                                            <span class="dashboard__list-item-title">{{ order.orderNumber || order.id }}</span>
-                                            <span class="dashboard__list-item-amount">{{ formatCurrency(order.totalAmount || 0) }}</span>
+                                            <span class="dashboard__list-item-title">{{ row.title }}</span>
+                                            <span class="dashboard__list-item-amount">{{ row.amountLabel }}</span>
                                         </div>
                                         <div class="dashboard__list-item-meta">
-                                            <span class="dashboard__list-item-status dashboard__list-item-status--inline" [ngClass]="getStatusClass(order.status)">
-                                                {{ getStatusLabel(order.status) }}
+                                            <span class="dashboard__list-item-status dashboard__list-item-status--inline" [ngClass]="row.statusClass">
+                                                {{ row.statusLabel }}
                                             </span>
                                             <span class="dashboard__list-item-separator">&bull;</span>
-                                            <span>{{ formatDate(order.createdAt) }}</span>
+                                            <span>{{ row.dateLabel }}</span>
                                         </div>
                                     </div>
                                 </div>

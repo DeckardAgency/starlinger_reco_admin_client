@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { SidebarService } from '@services/sidebar.service';
@@ -26,7 +26,8 @@ import { MobileMenuComponent } from "./mobile-menu/mobile-menu.component";
         </main>
     </div>
   `,
-    styleUrls: ['./main-layout.component.scss']
+    styleUrls: ['./main-layout.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MainLayoutComponent {
     sidebarService = inject(SidebarService);

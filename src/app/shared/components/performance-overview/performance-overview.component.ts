@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, ViewChild, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Input, OnInit, ViewChild, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DatePickerComponent } from "@shared/components/date-picker/date-picker.component";
 import { ReactiveFormsModule, FormGroup, FormBuilder } from "@angular/forms";
@@ -47,7 +47,8 @@ interface DashboardResponse {
     selector: 'app-performance-overview',
     imports: [CommonModule, DatePickerComponent, ReactiveFormsModule],
     templateUrl: './performance-overview.component.html',
-    styleUrls: ['./performance-overview.component.scss']
+    styleUrls: ['./performance-overview.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDestroy {
     @Input() startDate: string = '';
@@ -170,6 +171,18 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
         }
     }
 
+    trackByPresetLabel(_index: number, preset: DateRangePreset): string {
+        return preset.label;
+    }
+
+    trackByMetricLabel(_index: number, metric: PerformanceMetric): string {
+        return metric.label;
+    }
+
+    trackByIndex(index: number): number {
+        return index;
+    }
+
     applyPreset(preset: DateRangePreset): void {
         const range = preset.getValue();
         this.activePreset = preset.label;
@@ -183,6 +196,9 @@ export class PerformanceOverviewComponent implements OnInit, AfterViewInit, OnDe
         const requestId = ++this.currentRequestId;
         this.isLoading = true;
         this.error = null;
+        // Loading state can be set from a form valueChanges subscription,
+        // so explicitly mark this OnPush component dirty.
+        this.cdr.markForCheck();
 
         let url = this.apiUrl;
         if (this.startDate && this.endDate) {

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, takeUntil, finalize } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil, finalize, of, switchMap, catchError } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { DocumentationService } from '@core/services/http/documentation.service';
@@ -10,6 +10,13 @@ import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-contai
 import { AlertService } from '@services/alert.service';
 import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
 import { ColumnSettingsService } from '@core/services/column-settings.service';
+
+/** Documentation plus precomputed display fields (avoids per-row method calls in the template). */
+type DocumentationRow = Documentation & {
+  statusClass: string;
+  statusText: string;
+  updatedAtLabel: string;
+};
 
 @Component({
   selector: 'app-documentation-list',
@@ -33,7 +40,7 @@ export class DocumentationListComponent implements OnInit, OnDestroy {
   readonly COLUMN_STORAGE_KEY = 'documentation';
   columnDefs: ColumnDefinition[] = [];
 
-  docs = signal<Documentation[]>([]);
+  docs = signal<DocumentationRow[]>([]);
   isLoading = signal(false);
   error = signal<string | null>(null);
   totalItems = signal(0);
@@ -59,6 +66,7 @@ export class DocumentationListComponent implements OnInit, OnDestroy {
   });
 
   private searchSubject = new Subject<string>();
+  private loadRequest$ = new Subject<void>();
   private destroy$ = new Subject<void>();
 
   ngOnInit(): void {
@@ -74,6 +82,32 @@ export class DocumentationListComponent implements OnInit, OnDestroy {
       this.loadDocs();
     });
 
+    // Single request pipeline: switchMap cancels any in-flight request when a
+    // new load is triggered, so stale responses can never overwrite newer ones.
+    this.loadRequest$.pipe(
+      switchMap(() => this.documentationService.getDocumentations(
+        this.currentPage(),
+        this.searchTerm() || undefined,
+        this.sortField(),
+        this.sortDirection()
+      ).pipe(
+        catchError(err => {
+          console.error('Error loading documentation:', err);
+          return of(null);
+        })
+      )),
+      takeUntil(this.destroy$)
+    ).subscribe(data => {
+      if (data) {
+        this.docs.set((data.documentations || []).map(doc => this.mapDocToRow(doc)));
+        this.totalItems.set(data.totalItems || 0);
+        this.totalPages.set(data.totalPages || 1);
+      } else {
+        this.error.set('Failed to load documentation.');
+      }
+      this.isLoading.set(false);
+    });
+
     this.loadDocs();
   }
 
@@ -85,25 +119,7 @@ export class DocumentationListComponent implements OnInit, OnDestroy {
   loadDocs(): void {
     this.isLoading.set(true);
     this.error.set(null);
-
-    this.documentationService.getDocumentations(
-      this.currentPage(),
-      this.searchTerm() || undefined,
-      this.sortField(),
-      this.sortDirection()
-    ).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (data) => {
-        this.docs.set(data.documentations || []);
-        this.totalItems.set(data.totalItems || 0);
-        this.totalPages.set(data.totalPages || 1);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error loading documentation:', err);
-        this.error.set('Failed to load documentation.');
-        this.isLoading.set(false);
-      }
-    });
+    this.loadRequest$.next();
   }
 
   onSearchInput(term: string): void {
@@ -232,15 +248,16 @@ export class DocumentationListComponent implements OnInit, OnDestroy {
     return col ? col.visible : true;
   }
 
-  getStatusClass(isPublished: boolean): string {
-    return isPublished ? 'doc-list__status--published' : 'doc-list__status--draft';
+  private mapDocToRow(doc: Documentation): DocumentationRow {
+    return {
+      ...doc,
+      statusClass: doc.isPublished ? 'doc-list__status--published' : 'doc-list__status--draft',
+      statusText: doc.isPublished ? 'Published' : 'Draft',
+      updatedAtLabel: this.formatDate(doc.updatedAt)
+    };
   }
 
-  getStatusText(isPublished: boolean): string {
-    return isPublished ? 'Published' : 'Draft';
-  }
-
-  formatDate(dateStr: string): string {
+  private formatDate(dateStr: string): string {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });

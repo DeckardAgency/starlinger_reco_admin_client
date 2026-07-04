@@ -150,8 +150,14 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Addresses data - starts empty, loaded in edit mode
   addresses = signal<Address[]>([]);
 
-  // Shop orders data - starts empty, loaded in edit mode
+  // Shop orders data - starts empty, loaded in edit mode (server-side paginated)
   shopOrders = signal<ShopOrder[]>([]);
+  ordersPage = signal(1);
+  readonly ordersItemsPerPage = 30;
+  ordersTotalItems = signal(0);
+  ordersShowingFrom = computed(() => this.ordersTotalItems() === 0 ? 0 : (this.ordersPage() - 1) * this.ordersItemsPerPage + 1);
+  ordersShowingTo = computed(() => Math.min(this.ordersPage() * this.ordersItemsPerPage, this.ordersTotalItems()));
+  private ordersClientCode: string | null = null;
 
   // Manual entries data - starts empty, loaded in edit mode
   manualEntries = signal<ShopOrder[]>([]);
@@ -340,6 +346,9 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.clientUsers.set([]);
     this.addresses.set([]);
     this.shopOrders.set([]);
+    this.ordersPage.set(1);
+    this.ordersTotalItems.set(0);
+    this.ordersClientCode = null;
     this.manualEntries.set([]);
     this.isActive.set(true);
     this.isClientAgent.set(false);
@@ -350,7 +359,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadAccountGroups(): void {
-    this.accountGroupService.getAccountGroups({ itemsPerPage: 100 }).subscribe({
+    this.accountGroupService.getAllAccountGroups().subscribe({
       next: (response) => {
         this.accountGroupOptions.set(
           (response.member || []).map(g => ({ value: String(g.id), label: g.name }))
@@ -362,7 +371,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadCountries(): void {
-    this.countryService.getCountries({ itemsPerPage: 300, 'order[name]': 'asc' }).subscribe({
+    this.countryService.getAllCountries().subscribe({
       next: (response) => {
         this.countries.set(
           (response.member || []).map(c => ({ id: c.id, name: c.name, code: c.code }))
@@ -376,6 +385,13 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isLoading.set(true);
     this.loadError.set(null);
     this.touched.set({});
+    this.ordersPage.set(1);
+
+    // Users and addresses only depend on the route id, so load them in
+    // parallel with the client itself instead of waiting for it.
+    this.loadClientUsers(id);
+    this.loadClientAddresses(id);
+
     this.clientService.getClient(id).subscribe({
       next: (client) => {
         this.account.set(this.mapClientToAccount(client));
@@ -386,13 +402,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.isLoading.set(false);
         this.cdr.markForCheck();
 
-        // Load users for this client
-        this.loadClientUsers(id);
-
-        // Load addresses for this client
-        this.loadClientAddresses(id);
-
-        // Load orders for this client
+        // Load orders for this client (needs the client code from the response)
         if (client.code) {
           this.loadClientOrders(client.code);
         }
@@ -455,16 +465,32 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadClientOrders(clientCode: string): void {
-    this.orderService.getOrders({ page: 1, itemsPerPage: 500, 'order[createdAt]': 'desc', 'user.client.code': clientCode }).subscribe({
+    this.ordersClientCode = clientCode;
+    this.orderService.getOrders({
+      page: this.ordersPage(),
+      itemsPerPage: this.ordersItemsPerPage,
+      'order[createdAt]': 'desc',
+      'user.client.code': clientCode
+    }).subscribe({
       next: (response) => {
         this.shopOrders.set(this.mapOrdersToShopOrders(response.orders));
+        this.ordersTotalItems.set(response.totalOrders || 0);
         this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Error loading orders:', err);
         this.shopOrders.set([]);
+        this.ordersTotalItems.set(0);
+        this.cdr.markForCheck();
       }
     });
+  }
+
+  onOrdersPageChange(page: number): void {
+    this.ordersPage.set(page);
+    if (this.ordersClientCode) {
+      this.loadClientOrders(this.ordersClientCode);
+    }
   }
 
   private mapOrdersToShopOrders(orders: Order[]): ShopOrder[] {
@@ -481,7 +507,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         name: order.user ? `${order.user.firstName ?? ''} ${order.user.lastName ?? ''}`.trim() || order.user.email : 'Unknown',
         initials: order.user ? this.getInitials(order.user.firstName, order.user.lastName) : '??'
       },
-      partsOrdered: order.items?.length ?? 0,
+      partsOrdered: order.itemsCount ?? 0,
       status: this.mapOrderStatus(order.status)
     }));
   }
@@ -529,7 +555,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Computed values
   totalUsers = computed(() => this.clientUsers().length);
   totalAddresses = computed(() => this.addresses().length);
-  totalShopOrders = computed(() => this.shopOrders().length);
+  totalShopOrders = computed(() => this.ordersTotalItems());
   totalManualEntries = computed(() => this.manualEntries().length);
   totalManagedClients = computed(() => this.managedClients().length);
   // Get current tab count

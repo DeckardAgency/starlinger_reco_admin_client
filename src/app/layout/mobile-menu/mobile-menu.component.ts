@@ -1,4 +1,5 @@
-import { Component, OnInit, ElementRef, HostListener } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, ElementRef, HostListener, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AuthService } from '@core/auth/auth.service';
@@ -14,6 +15,7 @@ import { signal } from '@angular/core';
     imports: [CommonModule, RouterModule],
     templateUrl: './mobile-menu.component.html',
     styleUrls: ['./mobile-menu.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     animations: [
         trigger('slideIn', [
             transition(':enter', [
@@ -58,29 +60,40 @@ export class MobileMenuComponent implements OnInit {
     userRole: string = '';
     userInitials: string = '';
 
+    private destroyRef = inject(DestroyRef);
+
     constructor(
         public authService: AuthService,
         private router: Router,
         private elementRef: ElementRef,
-        public mobileMenuService: MobileMenuService
+        public mobileMenuService: MobileMenuService,
+        private cdr: ChangeDetectorRef
     ) {}
 
     ngOnInit(): void {
         // Subscribe to user changes
-        this.authService.currentUser$.subscribe(user => {
-            this.currentUser = user;
-            this.updateUserDisplay();
-        });
+        this.authService.currentUser$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(user => {
+                this.currentUser = user;
+                this.updateUserDisplay();
+                this.cdr.markForCheck();
+            });
 
         // Initialize with current user
         this.currentUser = this.authService.getCurrentUser();
         this.updateUserDisplay();
 
-        // Close menu on navigation
+        // Close menu on navigation. Also re-check this OnPush component, since
+        // active-link classes are computed from router.url in the template.
         this.router.events
-            .pipe(filter(event => event instanceof NavigationEnd))
+            .pipe(
+                filter(event => event instanceof NavigationEnd),
+                takeUntilDestroyed(this.destroyRef)
+            )
             .subscribe(() => {
                 this.mobileMenuService.close();
+                this.cdr.markForCheck();
             });
     }
 

@@ -85,7 +85,12 @@ export interface Order {
     updatedAt: string;
     isDraft?: boolean;
     lastSavedAt: string;
-    items: OrderItem[];
+    /** Full line items — present on detail (GET by id) and write responses only, NOT on list responses. */
+    items?: OrderItem[];
+    /** Number of line items — present on list responses. */
+    itemsCount?: number;
+    /** Sum of item quantities — present on list responses. */
+    totalQuantity?: number;
     user: User;
     onBehalfOfClient?: OrderClientRef | null;
     logs?: OrderLog[];

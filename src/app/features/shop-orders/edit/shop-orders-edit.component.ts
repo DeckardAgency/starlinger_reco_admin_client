@@ -2,10 +2,10 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 
 import { BreadcrumbsComponent, BreadcrumbItem } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
-import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
+import { BadgeComponent, BadgeVariant } from '@app/ui-kit/atoms/badge/badge.component';
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
@@ -18,7 +18,7 @@ import { UserService } from '@core/services/http/user.service';
 import { ClientService } from '@core/services/http/client.service';
 import { AddressService } from '@core/services/http/address.service';
 import { Order } from '@core/models/order.model';
-import { ClientAddress } from '@core/models/client.model';
+import { Client, ClientAddress } from '@core/models/client.model';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { AlertService } from '@services/alert.service';
 
@@ -73,6 +73,11 @@ interface ShopOrderDetail {
   date: string;
   paymentType: string;
   deliveryType: string;
+  trackingNumber: string;
+  trackingCarrier: string;
+  trackingUrl: string;
+  cancellationReason: string;
+  dispatchedAt: string;
   priceWithoutTax: number;
   totalPrice: number;
   priceTax: number;
@@ -105,6 +110,11 @@ const EMPTY_ORDER: ShopOrderDetail = {
   date: '',
   paymentType: '',
   deliveryType: '',
+  trackingNumber: '',
+  trackingCarrier: '',
+  trackingUrl: '',
+  cancellationReason: '',
+  dispatchedAt: '',
   priceWithoutTax: 0,
   totalPrice: 0,
   priceTax: 0,
@@ -185,6 +195,9 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
 
   // Store loaded clients to look up client code when account changes
   private loadedClients: Array<{ id: number; code: string }> = [];
+  // Server-side client typeahead state
+  private clientSearch$ = new Subject<string>();
+  private initialClientsLoaded = false;
   // Store loaded users to look up addresses when contact changes
   private loadedUsers: Array<{ id: number; address?: string }> = [];
 
@@ -227,6 +240,9 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     if (!this.selectedBillingAddress()) errs['billingAddress'] = 'Billing address is required';
     if (!this.selectedShippingAddress()) errs['shippingAddress'] = 'Shipping address is required';
     if (!this.selectedStatus()) errs['status'] = 'Status is required';
+    if (this.order().status === 'canceled' && !this.order().cancellationReason.trim()) {
+      errs['cancellationReason'] = 'Cancellation reason is required when canceling an order';
+    }
     return errs;
   });
   isValid = computed(() => Object.keys(this.errors()).length === 0);
@@ -245,13 +261,14 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       contact: true,
       billingAddress: true,
       shippingAddress: true,
-      status: true
+      status: true,
+      cancellationReason: true
     });
   }
 
   ngOnInit(): void {
     // Load dropdown options from backend
-    this.loadClients();
+    this.setupClientSearch();
     this.loadDeliveryTypes();
     this.loadPaymentTypes();
 
@@ -266,7 +283,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   private loadDeliveryTypes(): void {
-    this.deliveryTypeService.getDeliveryTypes({ itemsPerPage: 100 })
+    this.deliveryTypeService.getAllDeliveryTypes()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -281,7 +298,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   private loadPaymentTypes(): void {
-    this.paymentTypeService.getPaymentTypes({ itemsPerPage: 100 })
+    this.paymentTypeService.getAllPaymentTypes()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -295,41 +312,65 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       });
   }
 
-  private loadClients(): void {
-    this.clientService.getClients({ page: 1, itemsPerPage: 500 })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          // Store clients for code lookup when account changes
-          this.loadedClients = response.clients
-            .filter(c => c.isActive)
-            .map(c => ({ id: c.id, code: c.code }));
+  private setupClientSearch(): void {
+    // Server-side client typeahead (instead of fetching 500 clients up front).
+    // switchMap cancels in-flight lookups when the user keeps typing.
+    this.clientSearch$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      switchMap(term => this.clientService.getClients({
+        page: 1,
+        itemsPerPage: 20,
+        'order[name]': 'asc',
+        ...(term.trim() ? { search: term.trim() } : {})
+      })),
+      takeUntil(this.destroy$)
+    ).subscribe(response => this.applyClientSearchResults(response.clients));
 
-          // Map clients to account options
-          const options = this.loadedClients.map(c => {
-            const client = response.clients.find(cl => cl.id === c.id);
-            return {
-              value: c.id,
-              label: client?.name || c.code
-            };
-          });
-          this.accountOptions.set(options);
+    // Load the initial page of clients
+    this.clientSearch$.next('');
+  }
 
-          // If order is already loaded with an accountId, ensure it's properly selected
-          // and load addresses for that client
-          const currentOrder = this.order();
-          if (currentOrder.accountId) {
-            this.selectedAccount.set(currentOrder.accountId);
-            const client = this.loadedClients.find(c => String(c.id) === currentOrder.accountId);
-            if (client?.code) {
-              this.loadContactsAndAddresses(client.code, String(client.id));
-            }
-          }
+  onAccountSearch(term: string): void {
+    this.clientSearch$.next(term);
+  }
 
-          this.cdr.markForCheck();
-        },
-        error: (err) => console.error('[ShopOrdersEdit] Error loading clients:', err)
-      });
+  private applyClientSearchResults(clients: Client[]): void {
+    const activeClients = (clients || []).filter(c => c.isActive);
+
+    // Remember client codes so contacts/addresses can be loaded on selection
+    activeClients.forEach(c => {
+      if (!this.loadedClients.some(lc => String(lc.id) === String(c.id))) {
+        this.loadedClients.push({ id: c.id, code: c.code });
+      }
+    });
+
+    const options: SelectOption[] = activeClients.map(c => ({
+      value: c.id,
+      label: c.name || c.code
+    }));
+
+    // Keep the currently selected account present in the options
+    const currentOrder = this.order();
+    if (currentOrder.accountId && !options.some(o => String(o.value) === currentOrder.accountId)) {
+      options.unshift({ value: currentOrder.accountId, label: currentOrder.account || currentOrder.accountId });
+    }
+    this.accountOptions.set(options);
+
+    // On the first response only: if the order was already loaded, ensure its
+    // account is selected and its contacts/addresses are loaded.
+    if (!this.initialClientsLoaded) {
+      this.initialClientsLoaded = true;
+      if (currentOrder.accountId) {
+        this.selectedAccount.set(currentOrder.accountId);
+        const client = this.loadedClients.find(c => String(c.id) === currentOrder.accountId);
+        if (client?.code) {
+          this.loadContactsAndAddresses(client.code, String(client.id));
+        }
+      }
+    }
+
+    this.cdr.markForCheck();
   }
 
   private loadContactsAndAddresses(clientCode: string, clientId?: string): void {
@@ -493,9 +534,30 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       next: (order) => {
         const detail = this.mapOrderToDetail(order);
         this.applyOrderDetail(detail);
+        // Populate tracking events from the order response
+        const events = ((order as any).trackingEvents || []) as Array<any>;
+        this.trackingEvents.set(events.map(e => ({
+          id: e.id,
+          status: e.status,
+          location: e.location ?? null,
+          description: e.description ?? null,
+          occurredAt: e.occurredAt,
+          source: e.source ?? 'manual',
+        })));
         // Load contacts and addresses based on client
         const clientCode = (order.user as { client?: { code?: string } })?.client?.code;
         const clientId = (order.user as { client?: { id?: number } })?.client?.id;
+        // Register the order's client for code lookups and make sure it is
+        // present in the (typeahead-driven) account options.
+        if (clientId != null && clientCode && !this.loadedClients.some(c => String(c.id) === String(clientId))) {
+          this.loadedClients.push({ id: clientId, code: clientCode });
+        }
+        if (detail.accountId && !this.accountOptions().some(o => String(o.value) === detail.accountId)) {
+          this.accountOptions.set([
+            { value: detail.accountId, label: detail.account || detail.accountId },
+            ...this.accountOptions()
+          ]);
+        }
         if (clientCode) {
           this.loadContactsAndAddresses(clientCode, clientId != null ? String(clientId) : undefined);
         }
@@ -577,6 +639,11 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       date: this.formatDate(o.createdAt),
       paymentType: o.paymentType && typeof o.paymentType === 'object' ? String(o.paymentType.id) : '',
       deliveryType: o.deliveryType && typeof o.deliveryType === 'object' ? String(o.deliveryType.id) : '',
+      trackingNumber: (o as any).trackingNumber ?? '',
+      trackingCarrier: (o as any).trackingCarrier ?? '',
+      trackingUrl: (o as any).trackingUrl ?? '',
+      cancellationReason: (o as any).cancellationReason ?? '',
+      dispatchedAt: (o as any).dispatchedAt ?? '',
       priceWithoutTax: o.totalAmount ?? 0,
       totalPrice: (o.totalAmount ?? 0) + (o.totalTax ?? 0),
       priceTax: o.totalTax ?? 0,
@@ -692,8 +759,10 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   onStatusChange(value: string | number): void {
-    this.selectedStatus.set(String(value));
-    this.order.update(o => ({ ...o, status: String(value) }));
+    const status = String(value);
+    this.selectedStatus.set(status);
+    // "Enable sale" is the inverse of draft — keep the toggle in sync
+    this.order.update(o => ({ ...o, status, enableSale: status !== 'draft' }));
     this.touched.update(t => ({ ...t, status: true }));
   }
 
@@ -736,9 +805,96 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.order.update(o => ({ ...o, deliveryType: '' }));
   }
 
+  // Tracking handlers
+  onTrackingNumberChange(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.order.update(o => ({ ...o, trackingNumber: value }));
+  }
+
+  onTrackingCarrierChange(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.order.update(o => ({ ...o, trackingCarrier: value }));
+  }
+
+  onTrackingUrlChange(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.order.update(o => ({ ...o, trackingUrl: value }));
+  }
+
+  // Tracking events list + refresh
+  trackingEvents = signal<Array<{ id: number; status: string; location: string | null; description: string | null; occurredAt: string; source: string }>>([]);
+  isRefreshingTracking = signal(false);
+
+  onRefreshTracking(): void {
+    const id = this.order().id;
+    if (!id) return;
+    this.isRefreshingTracking.set(true);
+    this.orderService.refreshTracking(String(id)).subscribe({
+      next: (response) => {
+        this.trackingEvents.set((response.events || []).map((e: any) => ({
+          id: e.id,
+          status: e.status,
+          location: e.location ?? null,
+          description: e.description ?? null,
+          occurredAt: e.occurredAt,
+          source: e.source ?? 'dhl_api',
+        })));
+        this.toastService.success(response.created > 0
+          ? `${response.created} new tracking event(s) recorded.`
+          : 'Tracking is up to date.');
+        this.isRefreshingTracking.set(false);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('[Tracking] refresh failed', err);
+        this.toastService.error('Failed to refresh tracking.');
+        this.isRefreshingTracking.set(false);
+      }
+    });
+  }
+
+  // Show tracking fields when order is shipped/delivered or has a tracking number
+  showTrackingFields = computed(() => {
+    const o = this.order();
+    return o.status === 'shipped' || o.status === 'delivered' || !!o.trackingNumber;
+  });
+
+  formatTrackingStatus(status: string): string {
+    return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  trackByEventId(_index: number, event: { id: number }): number {
+    return event.id;
+  }
+
+  trackByGroupId(_index: number, group: ProductGroup): number | string {
+    return group.id;
+  }
+
+  // Derive carrier label from selected delivery type's carrierCode (read-only fallback)
+  derivedCarrier = computed(() => {
+    const id = this.selectedDeliveryType();
+    if (!id) return '';
+    const dt = this.deliveryTypeOptions().find(o => String(o.value) === String(id));
+    return (dt as any)?.carrierCode ?? '';
+  });
+
   // Event handlers
   onEnableSaleChange(value: boolean): void {
-    this.order.update(o => ({ ...o, enableSale: value }));
+    // The toggle and the Draft status are the same concept — keep them in sync
+    this.order.update(o => {
+      const status = value
+        ? (o.status === 'draft' ? 'new' : o.status)
+        : 'draft';
+      this.selectedStatus.set(status);
+      return { ...o, enableSale: value, status };
+    });
+  }
+
+  onCancellationReasonChange(event: Event): void {
+    const value = (event.target as HTMLTextAreaElement).value;
+    this.order.update(o => ({ ...o, cancellationReason: value }));
+    this.touched.update(t => ({ ...t, cancellationReason: true }));
   }
 
   toggleProductGroup(groupId: number | string): void {
@@ -820,15 +976,20 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     }
 
     // Save as order - build payload with all changed fields
+    // Note: isDraft is deliberately NOT sent — the backend derives it from status,
+    // and sending both lets setIsDraft() overwrite an explicit "draft" status.
     const updatePayload: Record<string, any> = {
       status: orderData.status,
       billingAddress: orderData.billingAddress,
       shippingAddress: orderData.shippingAddress,
-      isDraft: !orderData.enableSale,
+      cancellationReason: orderData.cancellationReason || null,
       // User reference - this determines the account (user's client)
       user: `/api/v1/users/${this.selectedContact()}`,
       paymentType: this.selectedPaymentType() ? `/api/v1/payment_types/${this.selectedPaymentType()}` : null,
       deliveryType: this.selectedDeliveryType() ? `/api/v1/delivery_types/${this.selectedDeliveryType()}` : null,
+      trackingNumber: orderData.trackingNumber || null,
+      trackingCarrier: orderData.trackingCarrier || null,
+      trackingUrl: orderData.trackingUrl || null,
     };
 
     console.log('[ShopOrdersEdit] Saving order ID:', orderData.id);
@@ -846,17 +1007,17 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     });
   }
 
-  getStatusBadgeVariant(status: string): 'success' | 'warning' | 'danger' | 'info' | 'secondary' {
-    const variants: Record<string, 'success' | 'warning' | 'danger' | 'info' | 'secondary'> = {
+  getStatusBadgeVariant(status: string): BadgeVariant {
+    const variants: Record<string, BadgeVariant> = {
       'draft': 'secondary',
       'new': 'info',
       'in_process': 'warning',
-      'waiting_for_payment': 'warning',
-      'ready_for_shipment': 'info',
-      'shipped': 'info',
+      'waiting_for_payment': 'orange',
+      'ready_for_shipment': 'teal',
+      'shipped': 'blue',
       'delivered': 'success',
       'canceled': 'danger',
-      'reversal': 'danger'
+      'reversal': 'dark'
     };
     return variants[status.toLowerCase()] || 'secondary';
   }

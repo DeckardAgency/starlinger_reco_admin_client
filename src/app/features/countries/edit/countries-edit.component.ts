@@ -173,7 +173,7 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
   }
 
   private loadTaxTypes(): void {
-    this.taxTypeService.getTaxTypes({ itemsPerPage: 100 }).subscribe({
+    this.taxTypeService.getAllTaxTypes().subscribe({
       next: (response) => {
         this.taxTypes = response.member;
         this.taxTypeOptions = response.member.map(tt => ({

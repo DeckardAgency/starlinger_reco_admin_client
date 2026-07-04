@@ -25,7 +25,6 @@ import { ProductProductLinkService } from '@core/services/http/product-product-l
 import { Product, MediaItem } from '@core/models';
 import { MediaService } from '@core/services/http/media.service';
 import { environment } from '@env/environment';
-import JSZip from 'jszip';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface ProductDetail {
@@ -298,7 +297,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loadProductCategories(): void {
-    this.productCategoryService.getProductCategories({ page: 1, itemsPerPage: 100 })
+    this.productCategoryService.getAllProductCategories()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -983,6 +982,10 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // Gallery methods
+  trackByImageId(_index: number, image: GalleryImage): number {
+    return image.id;
+  }
+
   toggleImageDropdown(imageId: number, event: Event): void {
     event.stopPropagation();
     if (this.activeImageDropdown() === imageId) {
@@ -1109,10 +1112,13 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     input.value = '';
   }
 
-  downloadAllImages(): void {
+  async downloadAllImages(): Promise<void> {
     const images = this.galleryImages().filter(img => img.url);
     if (images.length === 0) return;
 
+    // Load jszip lazily: it is only needed for this rarely-used ZIP download,
+    // so keep it out of the main bundle.
+    const { default: JSZip } = await import('jszip');
     const zip = new JSZip();
     let fetched = 0;
 

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, signal, HostListener, ElementRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, signal, effect, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ColumnDefinition } from './column-selector.model';
@@ -10,7 +10,8 @@ export type { ColumnDefinition } from './column-selector.model';
     standalone: true,
     imports: [CommonModule, FormsModule],
     templateUrl: './column-selector.component.html',
-    styleUrls: ['./column-selector.component.scss']
+    styleUrls: ['./column-selector.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ColumnSelectorComponent {
     @Input() columns: ColumnDefinition[] = [];
@@ -19,13 +20,21 @@ export class ColumnSelectorComponent {
 
     isOpen = signal(false);
 
-    constructor(private elementRef: ElementRef) {}
-
-    @HostListener('document:click', ['$event'])
-    onDocumentClick(event: Event): void {
-        if (!this.elementRef.nativeElement.contains(event.target)) {
-            this.isOpen.set(false);
-        }
+    constructor(private elementRef: ElementRef) {
+        // Attach the outside-click listener only while the dropdown is open,
+        // instead of a permanent document-level HostListener.
+        effect((onCleanup) => {
+            if (!this.isOpen()) {
+                return;
+            }
+            const handler = (event: Event) => {
+                if (!this.elementRef.nativeElement.contains(event.target)) {
+                    this.isOpen.set(false);
+                }
+            };
+            document.addEventListener('click', handler);
+            onCleanup(() => document.removeEventListener('click', handler));
+        });
     }
 
     toggleDropdown(event: Event): void {

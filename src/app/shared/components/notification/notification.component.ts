@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { trigger, state, style, transition, animate } from '@angular/animations';
@@ -9,6 +9,7 @@ import {NotificationService, Notification } from "@services/notification.service
     imports: [CommonModule],
     templateUrl: './notification.component.html',
     styleUrls: ['./notification.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     animations: [
         trigger('toastAnimation', [
             // Toast enters from the right
@@ -28,7 +29,10 @@ export class NotificationComponent implements OnInit, OnDestroy {
     private subscription!: Subscription;
     private lastId = 0;
 
-    constructor(private notificationService: NotificationService) {}
+    constructor(
+        private notificationService: NotificationService,
+        private cdr: ChangeDetectorRef
+    ) {}
 
     ngOnInit(): void {
         this.subscription = this.notificationService.notifications$.subscribe(notification => {
@@ -47,6 +51,7 @@ export class NotificationComponent implements OnInit, OnDestroy {
 
         // Add the notification to the active list
         this.activeNotifications.push({ id, notification });
+        this.cdr.markForCheck();
 
         // Remove the notification after the specified duration
         setTimeout(() => {
@@ -58,6 +63,7 @@ export class NotificationComponent implements OnInit, OnDestroy {
         const index = this.activeNotifications.findIndex(item => item.id === id);
         if (index !== -1) {
             this.activeNotifications.splice(index, 1);
+            this.cdr.markForCheck();
         }
     }
 

@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges, Output, EventEmitter, inject, DestroyRef } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnInit, OnChanges, SimpleChanges, Output, EventEmitter, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MediaItem } from '@models/media.model';
 import { MediaService } from '@services/http/media.service';
@@ -34,13 +34,15 @@ interface ConfirmDialog {
     standalone: true,
     imports: [CommonModule],
     templateUrl: './product-document.component.html',
-    styleUrls: ['./product-document.component.scss']
+    styleUrls: ['./product-document.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductDocumentComponent implements OnInit, OnChanges {
     @Input() documents: MediaItem[] = [];
     @Output() documentsChange = new EventEmitter<MediaItem[]>();
 
     private readonly destroyRef = inject(DestroyRef);
+    private readonly cdr = inject(ChangeDetectorRef);
 
     // Internal documents array that we'll manipulate
     internalDocuments: DocumentFile[] = [];
@@ -210,18 +212,21 @@ export class ProductDocumentComponent implements OnInit, OnChanges {
         const error = this.validateFile(file);
         if (error) {
             this.uploadError = error;
+            this.cdr.markForCheck();
             return;
         }
 
         this.isUploading = true;
         this.uploadProgress = 0;
         this.uploadError = null;
+        this.cdr.markForCheck();
 
         this.mediaService.uploadFile(file)
             .pipe(
                 finalize(() => {
                     this.isUploading = false;
                     this.uploadProgress = 0;
+                    this.cdr.markForCheck();
                 }),
                 takeUntilDestroyed(this.destroyRef)
             )
@@ -229,14 +234,17 @@ export class ProductDocumentComponent implements OnInit, OnChanges {
                 next: (event) => {
                     if (event.type === HttpEventType.UploadProgress) {
                         this.uploadProgress = Math.round(100 * (event.loaded / (event.total || 1)));
+                        this.cdr.markForCheck();
                     } else if (event.type === HttpEventType.Response && event.body) {
                         const uploadedMediaItem = event.body as MediaItem;
                         this.addDocumentToList(uploadedMediaItem);
+                        this.cdr.markForCheck();
                     }
                 },
                 error: (err) => {
                     console.error('Upload failed:', err);
                     this.uploadError = `Failed to upload ${file.name}. Please try again.`;
+                    this.cdr.markForCheck();
                 }
             });
     }

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { trigger, style, transition, animate } from '@angular/animations';
@@ -10,6 +10,7 @@ import { AlertService, AlertEvent, AlertButton } from '@services/alert.service';
     imports: [CommonModule],
     templateUrl: './alert.component.html',
     styleUrls: ['./alert.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     animations: [
         trigger('overlayAnimation', [
             transition(':enter', [
@@ -35,11 +36,15 @@ export class AlertComponent implements OnInit, OnDestroy {
     currentAlert: AlertEvent | null = null;
     private subscription!: Subscription;
 
-    constructor(private alertService: AlertService) {}
+    constructor(
+        private alertService: AlertService,
+        private cdr: ChangeDetectorRef
+    ) {}
 
     ngOnInit(): void {
         this.subscription = this.alertService.alert$.subscribe(alert => {
             this.currentAlert = alert;
+            this.cdr.markForCheck();
         });
     }
 
@@ -67,6 +72,9 @@ export class AlertComponent implements OnInit, OnDestroy {
         if (this.currentAlert) {
             this.currentAlert.resolve(null);
             this.currentAlert = null;
+            // close() can be triggered from a document-level key listener,
+            // which does not mark this OnPush component dirty by itself.
+            this.cdr.markForCheck();
         }
     }
 

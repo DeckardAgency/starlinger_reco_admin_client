@@ -76,6 +76,27 @@
     font-weight: 600;
   }
 
+  &--blue {
+    background-color: #1D4ED8;
+    color: #EFF6FF;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 600;
+  }
+
+  &--teal {
+    background-color: #0F766E;
+    color: #F0FDFA;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 600;
+  }
+
+  &--orange {
+    background-color: #C2410C;
+    color: #FFF7ED;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 600;
+  }
+
   &--dark {
     background-color: #18181B;
     color: #FAFAFA;
@@ -114,6 +135,10 @@
 
     &.ui-badge--info .ui-badge__dot {
       background-color: #2563EB;
+    }
+
+    &.ui-badge--blue .ui-badge__dot {
+      background-color: #93C5FD;
     }
   }
 }

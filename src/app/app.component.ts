@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, DestroyRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, inject, DestroyRef } from '@angular/core';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SidebarComponent } from './layout/sidebar/sidebar.component';
@@ -23,7 +23,8 @@ import { AlertComponent } from './shared/components/alert/alert.component';
       AlertComponent
     ],
     templateUrl: './app.component.html',
-    styleUrls: ['./app.component.scss']
+    styleUrls: ['./app.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppComponent implements OnInit {
   title = 'starlinger_reco_admin_client';
@@ -35,6 +36,7 @@ export class AppComponent implements OnInit {
   private readonly authRoutes = ['/login', '/forgot-password'];
 
   private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
 
   constructor(
     public sidebarService: SidebarService,
@@ -46,9 +48,11 @@ export class AppComponent implements OnInit {
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe((event: NavigationEnd) => {
-      this.currentRoute = event.url;
-      this.isAuthPage = this.authRoutes.some(route => event.url.startsWith(route));
-      this.is404Page = event.url === '/404' || event.url.startsWith('/404?');
+      const url = event.urlAfterRedirects;
+      this.currentRoute = url;
+      this.isAuthPage = this.authRoutes.some(route => url.startsWith(route));
+      this.is404Page = url === '/404' || url.startsWith('/404?');
+      this.cdr.markForCheck();
     });
 
     // Initialize current route
@@ -61,6 +65,7 @@ export class AppComponent implements OnInit {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(isAuth => {
       this.isAuthenticated = isAuth;
+      this.cdr.markForCheck();
     });
   }
 

@@ -8,8 +8,7 @@ import {
   output,
   effect,
   ElementRef,
-  inject,
-  HostListener
+  inject
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
@@ -80,6 +79,8 @@ export class SelectComponent implements ControlValueAccessor {
   // Signal outputs
   selectChange = output<string | number>();
   cleared = output<void>();
+  /** Emits the raw search text so parents can do server-side lookups. */
+  searchChange = output<string>();
 
   // Internal state
   protected _value = signal<string | number>('');
@@ -98,6 +99,21 @@ export class SelectComponent implements ControlValueAccessor {
 
     effect(() => {
       this._disabled.set(this.disabled());
+    });
+
+    // Attach the outside-click listener only while the dropdown is open,
+    // instead of a permanent document-level HostListener per select.
+    effect((onCleanup) => {
+      if (!this.isOpen()) {
+        return;
+      }
+      const handler = (event: Event) => {
+        if (!this.elementRef.nativeElement.contains(event.target)) {
+          this.isOpen.set(false);
+        }
+      };
+      document.addEventListener('click', handler);
+      onCleanup(() => document.removeEventListener('click', handler));
     });
   }
 
@@ -165,26 +181,25 @@ export class SelectComponent implements ControlValueAccessor {
     this._disabled.set(isDisabled);
   }
 
-  @HostListener('document:click', ['$event'])
-  onClickOutside(event: MouseEvent): void {
-    if (!this.elementRef.nativeElement.contains(event.target) && this.isOpen()) {
-      this.isOpen.set(false);
-    }
-  }
-
   toggleDropdown(): void {
     if (this._disabled()) return;
     const willOpen = !this.isOpen();
     this.isOpen.set(willOpen);
     if (willOpen) {
       this.searchText.set('');
+      if (this.searchable()) {
+        // Keep server-side lookups in sync with the cleared search box.
+        this.searchChange.emit('');
+      }
     } else {
       this.onTouched();
     }
   }
 
   onSearch(event: Event): void {
-    this.searchText.set((event.target as HTMLInputElement).value);
+    const value = (event.target as HTMLInputElement).value;
+    this.searchText.set(value);
+    this.searchChange.emit(value);
   }
 
   selectOption(option: SelectOption): void {

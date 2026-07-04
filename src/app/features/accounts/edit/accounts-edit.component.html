@@ -202,11 +202,23 @@
     </div>
 
     <!-- Footer -->
-    <ui-table-footer
-      [showingFrom]="1"
-      [showingTo]="currentTabCount()"
-      [totalItems]="currentTabCount()"
-    ></ui-table-footer>
+    @if (activeTab() === 'shop-orders') {
+      <ui-table-footer
+        [showingFrom]="ordersShowingFrom()"
+        [showingTo]="ordersShowingTo()"
+        [totalItems]="ordersTotalItems()"
+        [showPagination]="true"
+        [currentPage]="ordersPage()"
+        [itemsPerPage]="ordersItemsPerPage"
+        (pageChange)="onOrdersPageChange($event)"
+      ></ui-table-footer>
+    } @else {
+      <ui-table-footer
+        [showingFrom]="1"
+        [showingTo]="currentTabCount()"
+        [totalItems]="currentTabCount()"
+      ></ui-table-footer>
+    }
   </div>
 
   <!-- Mobile Sticky Footer -->

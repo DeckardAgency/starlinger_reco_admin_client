@@ -3,7 +3,7 @@
     <thead class="data-table__header" *ngIf="showHeaders">
       <tr class="data-table__header-row">
         <th
-          *ngFor="let column of columns"
+          *ngFor="let column of columns; trackBy: trackByColumn"
           class="data-table__header-cell"
           [class.data-table__header-cell--sortable]="column.sortable"
           [style.width]="column.width"
@@ -28,9 +28,9 @@
           {{ emptyMessage }}
         </td>
       </tr>
-      <tr *ngFor="let row of data" class="data-table__row">
+      <tr *ngFor="let row of data; trackBy: trackByRow" class="data-table__row">
         <td
-          *ngFor="let column of columns"
+          *ngFor="let column of columns; trackBy: trackByColumn"
           class="data-table__cell"
           [style.width]="column.width">
           <ng-container *ngIf="column.template; else defaultCell">

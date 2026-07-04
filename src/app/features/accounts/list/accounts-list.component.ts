@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, inject, signal, 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, of, switchMap, catchError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
@@ -49,6 +49,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
+  private loadRequest$ = new Subject<void>();
 
   @ViewChild('statusTemplate') statusTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
@@ -90,6 +91,29 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
       this.searchQuery.set(query);
       this.currentPage.set(1);
       this.loadClients();
+    });
+
+    // Single request pipeline: switchMap cancels any in-flight request when a
+    // new load is triggered, so stale responses can never overwrite newer ones.
+    this.loadRequest$.pipe(
+      switchMap(() => this.clientService.getClients(this.buildLoadParams()).pipe(
+        catchError(error => {
+          console.error('Failed to load clients:', error);
+          return of(null);
+        })
+      )),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(response => {
+      if (response) {
+        const clients = response.clients.map(client => this.mapClientToAccount(client));
+        this.clients.set(clients);
+        this.totalItems.set(response.totalClients || 0);
+      } else {
+        this.clients.set([]);
+        this.totalItems.set(0);
+      }
+      this.isLoading.set(false);
+      this.cdr.markForCheck();
     });
   }
 
@@ -147,7 +171,10 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
 
   private loadClients(): void {
     this.isLoading.set(true);
+    this.loadRequest$.next();
+  }
 
+  private buildLoadParams(): Record<string, string | number | boolean> {
     const params: Record<string, string | number | boolean> = {
       page: this.currentPage(),
       itemsPerPage: this.itemsPerPage()
@@ -164,22 +191,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
       params[`order[${sortCol}]`] = sortDir;
     }
 
-    this.clientService.getClients(params).subscribe({
-      next: (response) => {
-        const clients = response.clients.map(client => this.mapClientToAccount(client));
-        this.clients.set(clients);
-        this.totalItems.set(response.totalClients || 0);
-        this.isLoading.set(false);
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        console.error('Failed to load clients:', error);
-        this.clients.set([]);
-        this.totalItems.set(0);
-        this.isLoading.set(false);
-        this.cdr.markForCheck();
-      }
-    });
+    return params;
   }
 
   private mapClientToAccount(client: Client): Account {

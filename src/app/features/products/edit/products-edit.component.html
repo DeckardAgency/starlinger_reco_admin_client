@@ -183,7 +183,7 @@
           </button>
         </div>
         <div class="gallery-grid" *ngIf="galleryImages().length > 0">
-          <div class="gallery-item" *ngFor="let image of galleryImages()">
+          <div class="gallery-item" *ngFor="let image of galleryImages(); trackBy: trackByImageId">
             <div class="gallery-item__header">
               <span class="gallery-item__name">{{ image.name }}</span>
               <button class="gallery-item__menu-btn" (click)="toggleImageDropdown(image.id, $event)">

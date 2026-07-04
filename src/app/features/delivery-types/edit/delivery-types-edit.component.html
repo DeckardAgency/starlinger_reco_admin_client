@@ -46,6 +46,18 @@
           <input type="text" [value]="deliveryType().name" (input)="onNameChange($event)" placeholder="Enter name">
         </ui-form-field>
 
+        <ui-form-field label="Carrier" layout="horizontal">
+          <ui-select
+            variant="pill"
+            [options]="carrierOptions"
+            [value]="deliveryType().carrierCode || ''"
+            [clearable]="true"
+            placeholder="Select carrier"
+            (selectChange)="onCarrierCodeChange($event)"
+            (cleared)="clearCarrierCode()">
+          </ui-select>
+        </ui-form-field>
+
         <ui-form-field label="Gross factor" layout="horizontal">
           <input type="text" [value]="deliveryType().grossFactor || ''" (input)="onGrossFactorChange($event)" placeholder="1.00">
         </ui-form-field>

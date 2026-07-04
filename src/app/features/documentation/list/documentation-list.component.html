@@ -102,11 +102,11 @@
                 }
                 @if (isColumnVisible('status')) {
                   <td class="doc-list__table-cell">
-                    <span class="doc-list__status" [ngClass]="getStatusClass(doc.isPublished)">{{ getStatusText(doc.isPublished) }}</span>
+                    <span class="doc-list__status" [ngClass]="doc.statusClass">{{ doc.statusText }}</span>
                   </td>
                 }
                 @if (isColumnVisible('updatedAt')) {
-                  <td class="doc-list__table-cell">{{ formatDate(doc.updatedAt) }}</td>
+                  <td class="doc-list__table-cell">{{ doc.updatedAtLabel }}</td>
                 }
                 <td class="doc-list__table-cell doc-list__table-cell--actions" (click)="$event.stopPropagation()">
                   <button class="doc-list__action-btn" (click)="editDocumentation(doc.id)">Edit</button>

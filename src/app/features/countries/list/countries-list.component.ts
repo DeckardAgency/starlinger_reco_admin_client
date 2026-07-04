@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, of, switchMap, catchError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
@@ -50,6 +50,7 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
   private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
+  private loadRequest$ = new Subject<void>();
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -116,6 +117,29 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
       this.currentPage.set(1);
       this.loadCountries();
     });
+
+    // Single request pipeline: switchMap cancels any in-flight request when a
+    // new load is triggered, so stale responses can never overwrite newer ones.
+    this.loadRequest$.pipe(
+      switchMap(() => this.countryService.getCountries(this.buildLoadParams()).pipe(
+        catchError(error => {
+          console.error('Failed to load countries:', error);
+          return of(null);
+        })
+      )),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(response => {
+      if (response) {
+        const items = (response.member || []).map(c => ({ ...c, selected: false }));
+        this.countries.set(items);
+        this.totalItems.set(response.totalItems || 0);
+      } else {
+        this.countries.set([]);
+        this.totalItems.set(0);
+      }
+      this.isLoading.set(false);
+      this.cdr.markForCheck();
+    });
   }
 
   ngOnInit(): void {
@@ -124,7 +148,10 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
 
   private loadCountries(): void {
     this.isLoading.set(true);
+    this.loadRequest$.next();
+  }
 
+  private buildLoadParams(): Record<string, string | number | boolean> {
     const params: Record<string, string | number | boolean> = {
       page: this.currentPage(),
       itemsPerPage: this.itemsPerPage()
@@ -141,22 +168,7 @@ export class CountriesListComponent implements OnInit, AfterViewInit {
       params[`order[${sortCol}]`] = sortDir;
     }
 
-    this.countryService.getCountries(params).subscribe({
-      next: (response) => {
-        const items = (response.member || []).map(c => ({ ...c, selected: false }));
-        this.countries.set(items);
-        this.totalItems.set(response.totalItems || 0);
-        this.isLoading.set(false);
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        console.error('Failed to load countries:', error);
-        this.countries.set([]);
-        this.totalItems.set(0);
-        this.isLoading.set(false);
-        this.cdr.markForCheck();
-      }
-    });
+    return params;
   }
 
   ngAfterViewInit(): void {

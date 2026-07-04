@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, catchError, shareReplay, tap, throwError } from 'rxjs';
 import { HttpParams } from '@angular/common/http';
 import { ProductCategory, ProductCategoriesCollection } from '@core/models';
 import { BaseHttpService } from './base-http.service';
@@ -11,12 +11,39 @@ export class ProductCategoryService extends BaseHttpService {
 
   private readonly endpoint = `${this.apiUrl}/product_groups`;
 
+  // Cache observable to avoid repeated API calls for reference data
+  private allProductCategories$: Observable<ProductCategoriesCollection> | null = null;
+
   /**
    * Get all product categories with optional pagination
    */
   getProductCategories(params: Record<string, string | number | boolean> = {}): Observable<ProductCategoriesCollection> {
     const httpParams = this.buildParams({ page: 1, itemsPerPage: 30, ...params });
     return this.getWithJsonLd<ProductCategoriesCollection>(this.endpoint, httpParams);
+  }
+
+  /**
+   * Get all product categories for dropdowns (cached).
+   * Cache is invalidated on create/update/delete.
+   */
+  getAllProductCategories(): Observable<ProductCategoriesCollection> {
+    if (!this.allProductCategories$) {
+      this.allProductCategories$ = this.getProductCategories({ page: 1, itemsPerPage: 100 }).pipe(
+        catchError(error => {
+          this.allProductCategories$ = null;
+          return throwError(() => error);
+        }),
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    }
+    return this.allProductCategories$;
+  }
+
+  /**
+   * Clear cached data (call when you need fresh data)
+   */
+  clearCache(): void {
+    this.allProductCategories$ = null;
   }
 
   /**
@@ -77,20 +104,26 @@ export class ProductCategoryService extends BaseHttpService {
    * Create a new product category
    */
   createProductCategory(data: Partial<ProductCategory>): Observable<ProductCategory> {
-    return this.postWithJsonLd<ProductCategory>(this.endpoint, data);
+    return this.postWithJsonLd<ProductCategory>(this.endpoint, data).pipe(
+      tap(() => this.clearCache())
+    );
   }
 
   /**
    * Update an existing product category
    */
   updateProductCategory(id: string, data: Partial<ProductCategory>): Observable<ProductCategory> {
-    return this.patchWithJsonLd<ProductCategory>(`${this.endpoint}/${id}`, data);
+    return this.patchWithJsonLd<ProductCategory>(`${this.endpoint}/${id}`, data).pipe(
+      tap(() => this.clearCache())
+    );
   }
 
   /**
    * Delete a product category
    */
   deleteProductCategory(id: string): Observable<void> {
-    return this.deleteWithJsonLd<void>(`${this.endpoint}/${id}`);
+    return this.deleteWithJsonLd<void>(`${this.endpoint}/${id}`).pipe(
+      tap(() => this.clearCache())
+    );
   }
 }

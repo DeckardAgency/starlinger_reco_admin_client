@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, of, switchMap, catchError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
@@ -59,6 +59,7 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
   // Search state
   searchQuery = signal('');
   private searchSubject = new Subject<string>();
+  private loadRequest$ = new Subject<void>();
 
   // Pagination state
   currentPage = signal(1);
@@ -115,6 +116,29 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
       this.currentPage.set(1);
       this.loadPackagingPrices();
     });
+
+    // Single request pipeline: switchMap cancels any in-flight request when a
+    // new load is triggered, so stale responses can never overwrite newer ones.
+    this.loadRequest$.pipe(
+      switchMap(() => this.packagingPriceService.getPackagingPrices(this.buildLoadParams()).pipe(
+        catchError(error => {
+          console.error('Error loading packaging prices:', error);
+          return of(null);
+        })
+      )),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(response => {
+      if (response) {
+        const prices = (response.member || []).map((pp: PackagingPrice) => ({
+          ...pp,
+          selected: false
+        }));
+        this.packagingPrices.set(prices);
+        this.totalItems.set(response.totalItems || 0);
+      }
+      this.isLoading.set(false);
+      this.cdr.markForCheck();
+    });
   }
 
   ngOnInit(): void {
@@ -123,7 +147,10 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
 
   private loadPackagingPrices(): void {
     this.isLoading.set(true);
+    this.loadRequest$.next();
+  }
 
+  private buildLoadParams(): Record<string, string | number | boolean> {
     const params: Record<string, string | number | boolean> = {
       page: this.currentPage(),
       itemsPerPage: this.itemsPerPage(),
@@ -140,23 +167,7 @@ export class PackagingPricesListComponent implements AfterViewInit, OnInit {
       params[`order[${sortCol}]`] = sortDir;
     }
 
-    this.packagingPriceService.getPackagingPrices(params).subscribe({
-      next: (response) => {
-        const prices = (response.member || []).map((pp: PackagingPrice) => ({
-          ...pp,
-          selected: false
-        }));
-        this.packagingPrices.set(prices);
-        this.totalItems.set(response.totalItems || 0);
-        this.isLoading.set(false);
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        console.error('Error loading packaging prices:', error);
-        this.isLoading.set(false);
-        this.cdr.markForCheck();
-      }
-    });
+    return params;
   }
 
   ngAfterViewInit(): void {

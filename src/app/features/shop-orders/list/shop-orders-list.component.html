@@ -70,7 +70,7 @@
 
 <!-- Type Template -->
 <ng-template #typeTemplate let-row>
-  <ui-badge variant="success">{{ getTypeLabel(row.type) }}</ui-badge>
+  <ui-badge variant="success">{{ row.typeLabel }}</ui-badge>
 </ng-template>
 
 <!-- Customer Template -->
@@ -87,7 +87,7 @@
 
 <!-- Status Template -->
 <ng-template #statusTemplate let-row>
-  <ui-badge [variant]="getStatusVariant(row.status)">{{ getStatusLabel(row.status) }}</ui-badge>
+  <ui-badge [variant]="row.statusVariant">{{ row.statusLabel }}</ui-badge>
 </ng-template>
 
 <!-- Actions Template -->

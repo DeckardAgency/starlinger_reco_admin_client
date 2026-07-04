@@ -108,6 +108,7 @@
             [options]="accountOptions()"
             [ngModel]="discount().accounts"
             (ngModelChange)="onAccountsChange($event)"
+            (searchChange)="onAccountSearch($event)"
             placeholder="Select accounts">
           </ui-select>
         </ui-form-field>

@@ -5,9 +5,9 @@ import {
   Output,
   EventEmitter,
   ElementRef,
-  HostListener,
   signal,
-  computed
+  computed,
+  effect
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { animate, style, transition, trigger } from '@angular/animations';
@@ -62,7 +62,31 @@ export class DropdownComponent {
     ];
   });
 
-  constructor(private elementRef: ElementRef) {}
+  constructor(private elementRef: ElementRef) {
+    // Attach document-level listeners only while the dropdown is open, instead
+    // of permanent HostListeners that tick change detection on every click/key.
+    effect((onCleanup) => {
+      if (!this.isOpen()) {
+        return;
+      }
+      const clickHandler = (event: Event) => {
+        if (!this.elementRef.nativeElement.contains(event.target)) {
+          this.close();
+        }
+      };
+      const keydownHandler = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          this.close();
+        }
+      };
+      document.addEventListener('click', clickHandler);
+      document.addEventListener('keydown', keydownHandler);
+      onCleanup(() => {
+        document.removeEventListener('click', clickHandler);
+        document.removeEventListener('keydown', keydownHandler);
+      });
+    });
+  }
 
   toggle(): void {
     this.isOpen.update(v => !v);
@@ -80,18 +104,6 @@ export class DropdownComponent {
     if (item.disabled || item.divider) return;
 
     this.itemSelect.emit(item);
-    this.close();
-  }
-
-  @HostListener('document:click', ['$event'])
-  handleClickOutside(event: Event): void {
-    if (!this.elementRef.nativeElement.contains(event.target)) {
-      this.close();
-    }
-  }
-
-  @HostListener('document:keydown.escape')
-  handleEscape(): void {
     this.close();
   }
 

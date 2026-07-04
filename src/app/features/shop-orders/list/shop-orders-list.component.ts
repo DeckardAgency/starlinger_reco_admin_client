@@ -2,11 +2,11 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, of, switchMap, catchError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
-import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
+import { BadgeComponent, BadgeVariant } from '@app/ui-kit/atoms/badge/badge.component';
 import { AvatarComponent } from '@app/ui-kit/atoms/avatar/avatar.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { TabsComponent, TabItem } from '@app/ui-kit/molecules/tabs/tabs.component';
@@ -34,6 +34,10 @@ interface ShopOrder {
   };
   partsOrdered: number;
   status: OrderStatus;
+  // Precomputed display fields (avoid per-row method calls in the template)
+  typeLabel: string;
+  statusLabel: string;
+  statusVariant: BadgeVariant;
 }
 
 @Component({
@@ -67,6 +71,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
+  private loadRequest$ = new Subject<void>();
 
   @ViewChild('typeTemplate') typeTemplate!: TemplateRef<any>;
   @ViewChild('customerTemplate') customerTemplate!: TemplateRef<any>;
@@ -93,7 +98,8 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   tabs: TabItem[] = [
     { id: 'latest', label: 'Latest' },
     { id: 'delivered', label: 'Delivered' },
-    { id: 'cancelled', label: 'Cancelled' }
+    { id: 'cancelled', label: 'Cancelled' },
+    { id: 'drafts', label: 'Drafts' }
   ];
 
   readonly COLUMN_STORAGE_KEY = 'shop-orders';
@@ -129,6 +135,29 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
       this.currentPage.set(1);
       this.loadData();
     });
+
+    // Single request pipeline: switchMap cancels any in-flight request when a
+    // new load is triggered, so stale responses can never overwrite newer ones.
+    this.loadRequest$.pipe(
+      switchMap(() => this.orderService.getOrders(this.buildLoadParams()).pipe(
+        catchError(error => {
+          console.error('Failed to load shop orders:', error);
+          return of(null);
+        })
+      )),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(response => {
+      if (response) {
+        const orderItems = response.orders.map(o => this.mapOrderToShopOrder(o));
+        this.orders.set(orderItems);
+        this.totalItems.set(response.totalOrders || 0);
+      } else {
+        this.orders.set([]);
+        this.totalItems.set(0);
+      }
+      this.isLoading.set(false);
+      this.cdr.markForCheck();
+    });
   }
 
   ngOnInit(): void {
@@ -142,11 +171,16 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
 
   private loadData(): void {
     this.isLoading.set(true);
+    this.loadRequest$.next();
+  }
+
+  private buildLoadParams(): Record<string, string | number | boolean> {
+    const tab = this.activeTab();
 
     const params: Record<string, string | number | boolean> = {
       page: this.currentPage(),
       itemsPerPage: this.itemsPerPage(),
-      isDraft: false
+      isDraft: tab === 'drafts'
     };
 
     // Apply search
@@ -156,7 +190,6 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
     }
 
     // Apply tab-based status filter
-    const tab = this.activeTab();
     if (tab === 'delivered') {
       params['status'] = 'delivered';
     } else if (tab === 'cancelled') {
@@ -174,34 +207,23 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
       params['order[createdAt]'] = 'desc';
     }
 
-    this.orderService.getOrders(params).subscribe({
-      next: (response) => {
-        const orderItems = response.orders.map(o => this.mapOrderToShopOrder(o));
-        this.orders.set(orderItems);
-        this.totalItems.set(response.totalOrders || 0);
-        this.isLoading.set(false);
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        console.error('Failed to load shop orders:', error);
-        this.orders.set([]);
-        this.totalItems.set(0);
-        this.isLoading.set(false);
-        this.cdr.markForCheck();
-      }
-    });
+    return params;
   }
 
   private mapOrderToShopOrder(order: Order): ShopOrder {
     const userName = order.user ? `${order.user.firstName || ''} ${order.user.lastName || ''}`.trim() || 'Unknown' : 'Unknown';
+    const status = this.mapStatus(order.status);
     return {
       id: order.id,
       type: 'order',
       dateCreated: this.formatDate(order.createdAt),
       internalRef: order.orderNumber || String(order.id),
       customer: { name: userName, initials: this.getInitials(userName) },
-      partsOrdered: order.items?.length || 0,
-      status: this.mapStatus(order.status)
+      partsOrdered: order.itemsCount ?? 0,
+      status,
+      typeLabel: this.getTypeLabel('order'),
+      statusLabel: this.getStatusLabel(status),
+      statusVariant: this.getStatusVariant(status)
     };
   }
 
@@ -286,8 +308,8 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   }
 
   onExport(): void {
-    const filters: { status?: string[]; isDraft?: boolean } = { isDraft: false };
     const tab = this.activeTab();
+    const filters: { status?: string[]; isDraft?: boolean } = { isDraft: tab === 'drafts' };
     if (tab === 'delivered') {
       filters.status = ['delivered'];
     } else if (tab === 'cancelled') {
@@ -385,11 +407,11 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
     this.loadData();
   }
 
-  getTypeLabel(type: string): string {
+  private getTypeLabel(type: string): string {
     return 'Order';
   }
 
-  getStatusLabel(status: string): string {
+  private getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
       'draft': 'Draft',
       'new': 'New',
@@ -404,17 +426,17 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
     return labels[status] || status;
   }
 
-  getStatusVariant(status: string): 'success' | 'danger' | 'warning' | 'info' | 'secondary' {
-    const variants: Record<string, 'success' | 'danger' | 'warning' | 'info' | 'secondary'> = {
+  private getStatusVariant(status: string): BadgeVariant {
+    const variants: Record<string, BadgeVariant> = {
       'draft': 'secondary',
       'new': 'info',
       'in_process': 'warning',
-      'waiting_for_payment': 'warning',
-      'ready_for_shipment': 'info',
-      'shipped': 'info',
+      'waiting_for_payment': 'orange',
+      'ready_for_shipment': 'teal',
+      'shipped': 'blue',
       'delivered': 'success',
       'canceled': 'danger',
-      'reversal': 'danger'
+      'reversal': 'dark'
     };
     return variants[status] || 'secondary';
   }

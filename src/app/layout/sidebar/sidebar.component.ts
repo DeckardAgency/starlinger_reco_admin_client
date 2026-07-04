@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, OnDestroy, ElementRef, HostListener, HostBinding } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, effect, OnInit, OnDestroy, ElementRef, HostBinding } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { SidebarService } from '@services/sidebar.service';
@@ -15,6 +15,7 @@ type SectionKey = 'customer' | 'actions' | 'product' | 'ecommerce' | 'user' | 's
     imports: [CommonModule, RouterModule],
     templateUrl: './sidebar.component.html',
     styleUrls: ['./sidebar.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
     animations: [
         trigger('fadeInOut', [
             transition(':enter', [
@@ -64,36 +65,50 @@ export class SidebarComponent implements OnInit, OnDestroy {
     public authService: AuthService,
     private router: Router,
     private elementRef: ElementRef,
-  ) {}
+    private cdr: ChangeDetectorRef,
+  ) {
+    // Attach the outside-click listener only while the user dropdown is open,
+    // instead of a permanent document-level HostListener.
+    effect((onCleanup) => {
+      if (!this.isUserDropdownOpen()) {
+        return;
+      }
+      const handler = (event: Event) => {
+        const userElement = this.elementRef.nativeElement.querySelector('.sidebar__user');
+        if (userElement && !userElement.contains(event.target)) {
+          this.isUserDropdownOpen.set(false);
+        }
+      };
+      document.addEventListener('click', handler);
+      onCleanup(() => document.removeEventListener('click', handler));
+    });
+  }
 
   ngOnInit(): void {
     // Subscribe to user changes
-    this.authService.currentUser$.subscribe(user => {
-      this.currentUser = user;
-      this.updateUserDisplay();
-    });
+    this.authService.currentUser$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        this.currentUser = user;
+        this.updateUserDisplay();
+        this.cdr.markForCheck();
+      });
 
     // Initialize with current user
     this.currentUser = this.authService.getCurrentUser();
     this.updateUserDisplay();
+
+    // Active-link classes are computed from router.url in the template,
+    // so re-check this OnPush component after each navigation.
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.cdr.markForCheck());
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-  }
-
-  @HostListener('document:click', ['$event'])
-  clickOutside(event: Event) {
-    // Check if the click was outside the user dropdown area
-    const userElement = this.elementRef.nativeElement.querySelector('.sidebar__user');
-    if (
-      this.isUserDropdownOpen() &&
-      userElement &&
-      !userElement.contains(event.target)
-    ) {
-      this.isUserDropdownOpen.set(false);
-    }
   }
 
   toggleSection(section: SectionKey): void {

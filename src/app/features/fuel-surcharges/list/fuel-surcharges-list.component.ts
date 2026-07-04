@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, forkJoin } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, forkJoin, of, switchMap, catchError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
@@ -52,6 +52,7 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
   private columnSettingsService = inject(ColumnSettingsService);
 
   private searchSubject = new Subject<string>();
+  private loadRequest$ = new Subject<void>();
 
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
@@ -117,6 +118,45 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
       this.currentPage.set(1);
       this.loadFuelSurcharges();
     });
+
+    // Single request pipeline: switchMap cancels any in-flight request when a
+    // new load is triggered, so stale responses can never overwrite newer ones.
+    this.loadRequest$.pipe(
+      switchMap(() => forkJoin({
+        surcharges: this.fuelSurchargeService.getFuelSurcharges(this.buildLoadParams()),
+        deliveryTypes: this.deliveryTypeService.getDeliveryTypes({ itemsPerPage: 100 })
+      }).pipe(
+        catchError(error => {
+          console.error('Error loading fuel surcharges:', error);
+          return of(null);
+        })
+      )),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(response => {
+      if (response) {
+        const { surcharges, deliveryTypes } = response;
+        // Build a map of delivery type IRI → name
+        const dtMap = new Map<string, string>();
+        for (const dt of deliveryTypes.member || []) {
+          dtMap.set(`/api/v1/delivery_types/${dt.id}`, dt.name || `Type ${dt.id}`);
+        }
+
+        this.fuelSurcharges.set(surcharges.member.map((fs: FuelSurcharge) => {
+          // Resolve IRI string to object with name
+          let resolvedDt = fs.deliveryType;
+          if (typeof fs.deliveryType === 'string') {
+            resolvedDt = { id: 0, name: dtMap.get(fs.deliveryType) || '-' };
+          }
+          return { ...fs, deliveryType: resolvedDt, selected: false };
+        }));
+        this.totalItems.set(surcharges.totalItems || 0);
+      } else {
+        this.fuelSurcharges.set([]);
+        this.totalItems.set(0);
+      }
+      this.isLoading.set(false);
+      this.cdr.markForCheck();
+    });
   }
 
   ngOnInit(): void {
@@ -125,7 +165,10 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
 
   private loadFuelSurcharges(): void {
     this.isLoading.set(true);
+    this.loadRequest$.next();
+  }
 
+  private buildLoadParams(): Record<string, string | number | boolean> {
     const params: Record<string, string | number | boolean> = {
       page: this.currentPage(),
       itemsPerPage: this.itemsPerPage()
@@ -142,37 +185,7 @@ export class FuelSurchargesListComponent implements OnInit, AfterViewInit {
       params[`order[${sortCol}]`] = sortDir;
     }
 
-    forkJoin({
-      surcharges: this.fuelSurchargeService.getFuelSurcharges(params),
-      deliveryTypes: this.deliveryTypeService.getDeliveryTypes({ itemsPerPage: 100 })
-    }).subscribe({
-      next: ({ surcharges, deliveryTypes }) => {
-        // Build a map of delivery type IRI → name
-        const dtMap = new Map<string, string>();
-        for (const dt of deliveryTypes.member || []) {
-          dtMap.set(`/api/v1/delivery_types/${dt.id}`, dt.name || `Type ${dt.id}`);
-        }
-
-        this.fuelSurcharges.set(surcharges.member.map((fs: FuelSurcharge) => {
-          // Resolve IRI string to object with name
-          let resolvedDt = fs.deliveryType;
-          if (typeof fs.deliveryType === 'string') {
-            resolvedDt = { id: 0, name: dtMap.get(fs.deliveryType) || '-' };
-          }
-          return { ...fs, deliveryType: resolvedDt, selected: false };
-        }));
-        this.totalItems.set(surcharges.totalItems || 0);
-        this.isLoading.set(false);
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        console.error('Error loading fuel surcharges:', error);
-        this.fuelSurcharges.set([]);
-        this.totalItems.set(0);
-        this.isLoading.set(false);
-        this.cdr.markForCheck();
-      }
-    });
+    return params;
   }
 
   ngAfterViewInit(): void {

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil, of, switchMap, catchError } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { SupportTicketService } from '@core/services/http/support-ticket.service';
@@ -84,6 +84,7 @@ export class SupportTicketsListComponent implements OnInit, OnDestroy {
   });
 
   private searchSubject = new Subject<string>();
+  private loadRequest$ = new Subject<void>();
   private destroy$ = new Subject<void>();
 
   ngOnInit(): void {
@@ -99,6 +100,39 @@ export class SupportTicketsListComponent implements OnInit, OnDestroy {
       this.loadTickets();
     });
 
+    // Single request pipeline: switchMap cancels any in-flight request when a
+    // new load is triggered, so stale responses can never overwrite newer ones.
+    this.loadRequest$.pipe(
+      switchMap(() => {
+        const filters = this.statusFilters[this.activeTab()];
+        const searchParams: Record<string, string> = {};
+        if (this.searchTerm()) searchParams['query'] = this.searchTerm();
+
+        return this.supportTicketService.getSupportTickets(
+          this.currentPage(),
+          this.sortField(),
+          this.sortDirection(),
+          searchParams,
+          { status: filters.length > 0 ? filters : undefined }
+        ).pipe(
+          catchError(err => {
+            console.error('Error loading support tickets:', err);
+            return of(null);
+          })
+        );
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe(response => {
+      if (response) {
+        this.tickets.set(response.tickets);
+        this.totalTickets.set(response.totalTickets);
+        this.totalPages.set(response.totalPages);
+      } else {
+        this.error.set('Failed to load support tickets.');
+      }
+      this.isLoading.set(false);
+    });
+
     this.loadTickets();
   }
 
@@ -110,30 +144,7 @@ export class SupportTicketsListComponent implements OnInit, OnDestroy {
   loadTickets(): void {
     this.isLoading.set(true);
     this.error.set(null);
-
-    const filters = this.statusFilters[this.activeTab()];
-    const searchParams: Record<string, string> = {};
-    if (this.searchTerm()) searchParams['query'] = this.searchTerm();
-
-    this.supportTicketService.getSupportTickets(
-      this.currentPage(),
-      this.sortField(),
-      this.sortDirection(),
-      searchParams,
-      { status: filters.length > 0 ? filters : undefined }
-    ).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (response) => {
-        this.tickets.set(response.tickets);
-        this.totalTickets.set(response.totalTickets);
-        this.totalPages.set(response.totalPages);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error loading support tickets:', err);
-        this.error.set('Failed to load support tickets.');
-        this.isLoading.set(false);
-      }
-    });
+    this.loadRequest$.next();
   }
 
   onSearchInput(term: string): void {
