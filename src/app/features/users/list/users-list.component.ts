@@ -227,6 +227,9 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     if (!roles || roles.length === 0) return null;
     if (roles.includes('ROLE_ADMIN')) return 'admin';
     if (roles.includes('ROLE_CLIENT_ADMIN')) return 'client_admin';
+    // Finance before client: finance accounts are notification-only and must
+    // not read as regular webshop clients in the list.
+    if (roles.includes('ROLE_FINANCE')) return 'finance';
     if (roles.includes('ROLE_CLIENT')) return 'client';
     return 'client';
   }
