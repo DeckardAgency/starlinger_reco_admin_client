@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://phpstack-675879-6201972.cloudwaysapps.com/api/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "https://phpstack-675879-6201972.cloudwaysapps.com/uploads/:path*"
+    }
+  ]
+}
