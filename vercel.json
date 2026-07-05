@@ -7,6 +7,10 @@
     {
       "source": "/uploads/:path*",
       "destination": "https://phpstack-675879-6201972.cloudwaysapps.com/uploads/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.csr.html"
     }
   ]
 }
