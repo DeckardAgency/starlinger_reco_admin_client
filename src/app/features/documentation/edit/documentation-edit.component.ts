@@ -9,6 +9,7 @@ import { of, Subject } from 'rxjs';
 import { Documentation, DocumentationRevision, DocumentationMedia } from '@core/models/documentation.model';
 import { environment } from '@env/environment';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
+import { AlertService } from '@services/alert.service';
 
 @Component({
   selector: 'app-documentation-edit',
@@ -24,6 +25,7 @@ export class DocumentationEditComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private documentationService = inject(DocumentationService);
   private toastService = inject(ToastService);
+  private alertService = inject(AlertService);
   private cdr = inject(ChangeDetectorRef);
 
   breadcrumbs = [
@@ -216,9 +218,10 @@ export class DocumentationEditComponent implements OnInit, OnDestroy {
     this.revisionViewMode = 'list';
   }
 
-  restoreRevision(revision: DocumentationRevision): void {
+  async restoreRevision(revision: DocumentationRevision): Promise<void> {
     if (!this.currentDocumentation) return;
-    if (!confirm(`Restore to revision ${revision.revisionNumber}?`)) return;
+    const confirmed = await this.alertService.confirm(`Restore to revision ${revision.revisionNumber}?`, 'Restore revision');
+    if (!confirmed) return;
 
     this.documentationService.restoreFromRevision(String(this.currentDocumentation.id), String(revision.id)).subscribe({
       next: () => {
@@ -289,8 +292,10 @@ export class DocumentationEditComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteMedia(media: DocumentationMedia): void {
-    if (!this.currentDocumentation || !confirm(`Delete "${media.filename}"?`)) return;
+  async deleteMedia(media: DocumentationMedia): Promise<void> {
+    if (!this.currentDocumentation) return;
+    const confirmed = await this.alertService.confirm(`Delete "${media.filename}"?`, 'Delete');
+    if (!confirmed) return;
     this.documentationService.deleteMedia(String(this.currentDocumentation.id), String(media.id)).subscribe({
       next: () => {
         this.mediaItems = this.mediaItems.filter(m => m.id !== media.id);

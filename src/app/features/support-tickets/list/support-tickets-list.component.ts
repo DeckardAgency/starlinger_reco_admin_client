@@ -1,9 +1,16 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy, ViewChild, TemplateRef, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil, of, switchMap, catchError } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
+import { TabsComponent, TabItem } from '@app/ui-kit/molecules/tabs/tabs.component';
+import { ListHeaderComponent } from '@app/ui-kit/molecules/list-header/list-header.component';
+import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
+import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-footer.component';
+import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
+import { BadgeComponent, BadgeVariant } from '@app/ui-kit/atoms/badge/badge.component';
+import { AvatarComponent } from '@app/ui-kit/atoms/avatar/avatar.component';
 import { SupportTicketService } from '@core/services/http/support-ticket.service';
 import { SupportTicket } from '@core/models/support-ticket.model';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
@@ -15,17 +22,29 @@ type TicketTab = 'all' | 'open' | 'in_progress' | 'resolved' | 'closed';
 @Component({
   selector: 'app-support-tickets-list',
   standalone: true,
-  imports: [CommonModule, BreadcrumbsComponent, FormsModule, ColumnSelectorComponent],
+  imports: [CommonModule, BreadcrumbsComponent, TabsComponent, ListHeaderComponent, DataTableComponent, TableFooterComponent, TableActionsDropdownComponent, BadgeComponent, AvatarComponent, FormsModule, ColumnSelectorComponent],
   templateUrl: './support-tickets-list.component.html',
   styleUrls: ['./support-tickets-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SupportTicketsListComponent implements OnInit, OnDestroy {
+export class SupportTicketsListComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('idTemplate') idTemplate!: TemplateRef<any>;
+  @ViewChild('subjectTemplate') subjectTemplate!: TemplateRef<any>;
+  @ViewChild('customerTemplate') customerTemplate!: TemplateRef<any>;
+  @ViewChild('urgencyTemplate') urgencyTemplate!: TemplateRef<any>;
+  @ViewChild('statusTemplate') statusTemplate!: TemplateRef<any>;
+  @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
+
+  tableColumns: TableColumn[] = [];
+  readonly itemsPerPage = 30;
+  openDropdownId = signal<string | null>(null);
+
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private supportTicketService = inject(SupportTicketService);
   private toastService = inject(ToastService);
   private columnSettingsService = inject(ColumnSettingsService);
+  private cdr = inject(ChangeDetectorRef);
 
   Math = Math;
 
@@ -46,6 +65,14 @@ export class SupportTicketsListComponent implements OnInit, OnDestroy {
   sortField = signal<string>('createdAt');
   sortDirection = signal<'asc' | 'desc'>('desc');
   activeTab = signal<TicketTab>('all');
+
+  tabItems: TabItem[] = [
+    { id: 'all', label: 'All' },
+    { id: 'open', label: 'Open' },
+    { id: 'in_progress', label: 'In Progress' },
+    { id: 'resolved', label: 'Resolved' },
+    { id: 'closed', label: 'Closed' }
+  ];
 
   statusDisplayMap: Record<string, string> = {
     'open': 'Open',
@@ -197,7 +224,7 @@ export class SupportTicketsListComponent implements OnInit, OnDestroy {
   }
 
   viewTicket(ticketId: number): void {
-    this.router.navigate(['/admin/support-tickets/view', ticketId]);
+    this.router.navigate(['/admin/support-tickets', ticketId, 'view']);
   }
 
   updateStatus(ticketId: number, newStatus: 'open' | 'in_progress' | 'resolved' | 'closed'): void {
@@ -253,5 +280,98 @@ export class SupportTicketsListComponent implements OnInit, OnDestroy {
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
     const year = d.getFullYear();
     return `${day}.${month}.${year}`;
+  }
+
+  ngAfterViewInit(): void {
+    this.rebuildTableColumns();
+    this.cdr.detectChanges();
+  }
+
+  showingFrom = computed(() => this.totalTickets() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage + 1);
+  showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage, this.totalTickets()));
+
+  /** Rows with precomputed display fields for the data table. */
+  ticketRows = computed(() => this.tickets().map(ticket => ({
+    ...ticket,
+    shortId: String(ticket.id).slice(0, 8),
+    customerName: this.getUserFullName(ticket),
+    customerInitials: `${ticket.user?.firstName?.[0] || 'U'}${ticket.user?.lastName?.[0] || ''}`.toUpperCase(),
+    createdAtLabel: this.formatDate(ticket.createdAt),
+    urgencyLabel: this.urgencyDisplayMap[ticket.urgency]?.label || ticket.urgency,
+    urgencyColor: this.getUrgencyColor(ticket.urgency),
+    statusLabel: this.statusDisplayMap[ticket.status] || ticket.status,
+    statusVariant: this.ticketStatusVariant(ticket.status)
+  })));
+
+  private ticketStatusVariant(status: string): BadgeVariant {
+    const variants: Record<string, BadgeVariant> = {
+      'open': 'blue',
+      'in_progress': 'warning',
+      'resolved': 'success',
+      'closed': 'secondary'
+    };
+    return variants[status] || 'secondary';
+  }
+
+  private rebuildTableColumns(): void {
+    const all: TableColumn[] = [
+      { key: 'id', label: 'Ticket ID', sortable: false, width: '120px', template: this.idTemplate },
+      { key: 'subject', label: 'Subject', sortable: true, template: this.subjectTemplate },
+      { key: 'createdAt', label: 'Date Created', sortable: true, width: '140px' },
+      { key: 'customer', label: 'Customer', sortable: false, width: '200px', template: this.customerTemplate },
+      { key: 'urgency', label: 'Urgency', sortable: false, width: '110px', template: this.urgencyTemplate },
+      { key: 'status', label: 'Status', sortable: false, width: '130px', template: this.statusTemplate },
+      { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
+    ];
+    this.tableColumns = all
+      .filter(c => c.key === 'actions' || this.isColumnVisible(c.key))
+      .map(c => c.key === 'createdAt' ? { ...c, key: 'createdAtLabel' } : c);
+  }
+
+  onTableSort(event: SortEvent): void {
+    if (!event.direction) {
+      this.sortField.set('createdAt');
+      this.sortDirection.set('desc');
+    } else {
+      this.sortField.set(event.column === 'createdAtLabel' ? 'createdAt' : event.column);
+      this.sortDirection.set(event.direction);
+    }
+    this.currentPage.set(1);
+    this.loadTickets();
+  }
+
+  getRowActions(row: { status: string }): TableAction[] {
+    const actions: TableAction[] = [{ id: 'view', label: 'View', icon: 'eye' }];
+    if (row.status !== 'in_progress') actions.push({ id: 'mark_in_progress', label: 'Mark In Progress', icon: 'refresh' });
+    if (row.status !== 'resolved') actions.push({ id: 'mark_resolved', label: 'Mark Resolved', icon: 'check' });
+    if (row.status !== 'closed') actions.push({ id: 'mark_closed', label: 'Mark Closed', icon: 'x' });
+    return actions;
+  }
+
+  toggleDropdown(id: string): void {
+    this.openDropdownId.set(this.openDropdownId() === id ? null : id);
+  }
+
+  closeDropdown(): void {
+    this.openDropdownId.set(null);
+  }
+
+  onActionClick(event: ActionClickEvent): void {
+    const row = event.row as SupportTicket;
+    this.closeDropdown();
+    switch (event.action.id) {
+      case 'view':
+        this.viewTicket(row.id);
+        break;
+      case 'mark_in_progress':
+        this.updateStatus(row.id as any, 'in_progress');
+        break;
+      case 'mark_resolved':
+        this.updateStatus(row.id as any, 'resolved');
+        break;
+      case 'mark_closed':
+        this.updateStatus(row.id as any, 'closed');
+        break;
+    }
   }
 }

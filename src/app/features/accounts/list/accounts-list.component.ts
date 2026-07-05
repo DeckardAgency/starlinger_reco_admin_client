@@ -189,6 +189,9 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     const sortDir = this.sortDirection();
     if (sortCol && sortDir) {
       params[`order[${sortCol}]`] = sortDir;
+    } else {
+      // Default: newest clients first
+      params['order[id]'] = 'desc';
     }
 
     return params;

@@ -29,7 +29,7 @@
           <ui-icon name="file-text" size="md" color="#71717A" class="section-header__icon"></ui-icon>
           <h1 class="section-header__title">Order ID: #{{ order().internalRef || order().id }}</h1>
           <ui-badge [variant]="getStatusBadgeVariant(order().status)">
-            {{ order().status === 'new' ? 'New' : order().status }}
+            {{ statusLabelFor(order().status) }}
           </ui-badge>
         </div>
       </div>
@@ -213,16 +213,41 @@
 
           <!-- Tracking section: shown when status is shipped/delivered or when a tracking number already exists -->
           <ng-container *ngIf="showTrackingFields()">
-            <ui-form-field label="Tracking number" layout="horizontal" [required]="order().status === 'shipped'">
-              <input type="text" [value]="order().trackingNumber" (input)="onTrackingNumberChange($event)" placeholder="e.g. 00340434292135100068">
+            <ui-form-field label="Tracking number" layout="horizontal">
+              <div class="input-with-warning">
+                <input type="text" [value]="order().trackingNumber" (input)="onTrackingNumberChange($event)" placeholder="e.g. 00340434292135100068">
+                @if (!order().trackingNumber && (order().status === 'shipped' || order().status === 'delivered')) {
+                  <span class="input-warning-icon" tabindex="0">⚠
+                    <span class="input-warning-tooltip" role="tooltip">
+                      This order is {{ statusLabelFor(order().status).toLowerCase() }} without a tracking number —
+                      the customer cannot follow the parcel and DHL tracking is disabled until a number is added.
+                    </span>
+                  </span>
+                }
+              </div>
             </ui-form-field>
 
             <ui-form-field label="Tracking carrier" layout="horizontal">
-              <input type="text" [value]="order().trackingCarrier || derivedCarrier()" (input)="onTrackingCarrierChange($event)" placeholder="Auto-derived from delivery type">
-            </ui-form-field>
-
-            <ui-form-field label="Tracking URL" layout="horizontal">
-              <input type="text" [value]="order().trackingUrl" (input)="onTrackingUrlChange($event)" placeholder="Auto-generated on save">
+              <div class="carrier-field" *ngIf="!carrierOverride(); else carrierSelect">
+                <input type="text" [value]="effectiveCarrier().toUpperCase()" disabled class="input--disabled"
+                       placeholder="Set automatically from delivery type">
+                <button type="button" class="btn btn--outline" (click)="carrierOverride.set(true)"
+                        title="Only needed when the parcel physically ships with a different carrier than the delivery type">
+                  Override
+                </button>
+              </div>
+              <ng-template #carrierSelect>
+                <div class="carrier-field">
+                  <ui-select
+                    variant="pill"
+                    [options]="carrierOptions"
+                    [value]="order().trackingCarrier"
+                    placeholder="Select carrier"
+                    (selectChange)="onTrackingCarrierSelect($event)">
+                  </ui-select>
+                  <button type="button" class="btn btn--outline" (click)="resetCarrierOverride()">Auto</button>
+                </div>
+              </ng-template>
             </ui-form-field>
 
             <ui-form-field *ngIf="order().dispatchedAt" label="Dispatched at" layout="horizontal">
@@ -251,10 +276,17 @@
         <div class="tracking-section__title-group">
           <ui-icon name="package" size="md" color="#71717A"></ui-icon>
           <h2 class="tracking-section__title">Tracking timeline</h2>
+          <a *ngIf="order().trackingUrl"
+             [href]="order().trackingUrl"
+             target="_blank"
+             rel="noopener noreferrer"
+             class="tracking-section__carrier-link">
+            Track on carrier site ↗
+          </a>
         </div>
         <button
           class="btn btn--outline"
-          [disabled]="isRefreshingTracking() || !order().trackingNumber"
+          [disabled]="isRefreshingTracking()"
           (click)="onRefreshTracking()">
           <ui-icon name="refresh" size="sm"></ui-icon>
           <span>{{ isRefreshingTracking() ? 'Refreshing…' : 'Refresh tracking' }}</span>

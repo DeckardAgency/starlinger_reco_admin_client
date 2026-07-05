@@ -33,6 +33,7 @@ interface ShopOrder {
     avatar?: string;
   };
   partsOrdered: number;
+  amount: string;
   status: OrderStatus;
   // Precomputed display fields (avoid per-row method calls in the template)
   typeLabel: string;
@@ -219,7 +220,8 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
       dateCreated: this.formatDate(order.createdAt),
       internalRef: order.orderNumber || String(order.id),
       customer: { name: userName, initials: this.getInitials(userName) },
-      partsOrdered: order.itemsCount ?? 0,
+      partsOrdered: order.totalQuantity ?? order.itemsCount ?? 0,
+      amount: new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(order.totalAmount ?? 0),
       status,
       typeLabel: this.getTypeLabel('order'),
       statusLabel: this.getStatusLabel(status),
@@ -252,11 +254,11 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   private initColumns(): void {
     const defaultColumnDefs: ColumnDefinition[] = [
       { key: 'id', label: 'Order ID', visible: true, locked: true },
-      { key: 'type', label: 'Type', visible: true },
       { key: 'dateCreated', label: 'Date Created', visible: true },
       { key: 'internalRef', label: 'Internal reference', visible: true },
       { key: 'customer', label: 'Customer', visible: true },
       { key: 'partsOrdered', label: 'Parts ordered', visible: true },
+      { key: 'amount', label: 'Amount', visible: true },
       { key: 'status', label: 'Status', visible: true, locked: true }
     ];
 
@@ -264,11 +266,11 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
 
     this.allColumns = [
       { key: 'id', label: 'Order ID', sortable: true, width: '112px' },
-      { key: 'type', label: 'Type', sortable: false, width: '128px', template: this.typeTemplate },
       { key: 'dateCreated', label: 'Date Created', sortable: true, width: '190px' },
       { key: 'internalRef', label: 'Internal reference number', sortable: true },
       { key: 'customer', label: 'Customer', sortable: false, template: this.customerTemplate },
       { key: 'partsOrdered', label: 'Parts ordered', sortable: false, width: '128px' },
+      { key: 'amount', label: 'Amount', sortable: false, width: '120px' },
       { key: 'status', label: 'Status', sortable: true, width: '128px', template: this.statusTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
@@ -376,23 +378,18 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   }
 
   async onDelete(order: ShopOrder): Promise<void> {
-    const reason = window.prompt(
-      `Cancel order "${order.internalRef}". Please enter a reason for cancellation:`,
-      ''
+    this.closeDropdown();
+    const reason = await this.alertService.prompt(
+      `Cancel order "${order.internalRef}"? Please enter a reason for the cancellation — the customer will be notified.`,
+      'Cancel order',
+      { placeholder: 'Reason for cancellation…', confirmText: 'Cancel order' }
     );
     if (reason === null) {
-      this.closeDropdown();
-      return;
-    }
-    const trimmed = reason.trim();
-    if (!trimmed) {
-      this.alertService.error('A cancellation reason is required.');
-      this.closeDropdown();
       return;
     }
     this.orderService.updateOrder(
       String(order.id),
-      { status: 'canceled', cancellationReason: trimmed } as Partial<Order>
+      { status: 'canceled', cancellationReason: reason } as Partial<Order>
     ).subscribe({
       next: () => {
         this.loadData();

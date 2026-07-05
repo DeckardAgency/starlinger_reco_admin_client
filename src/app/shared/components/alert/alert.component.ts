@@ -1,13 +1,14 @@
 import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { trigger, style, transition, animate } from '@angular/animations';
-import { AlertService, AlertEvent, AlertButton } from '@services/alert.service';
+import { AlertService, AlertEvent, AlertButton, ALERT_INPUT_VALUE } from '@services/alert.service';
 
 @Component({
     selector: 'app-alert',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, FormsModule],
     templateUrl: './alert.component.html',
     styleUrls: ['./alert.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +35,7 @@ import { AlertService, AlertEvent, AlertButton } from '@services/alert.service';
 })
 export class AlertComponent implements OnInit, OnDestroy {
     currentAlert: AlertEvent | null = null;
+    inputValue = '';
     private subscription!: Subscription;
 
     constructor(
@@ -44,6 +46,7 @@ export class AlertComponent implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.subscription = this.alertService.alert$.subscribe(alert => {
             this.currentAlert = alert;
+            this.inputValue = '';
             this.cdr.markForCheck();
         });
     }
@@ -62,10 +65,21 @@ export class AlertComponent implements OnInit, OnDestroy {
     }
 
     onButtonClick(button: AlertButton): void {
-        if (this.currentAlert) {
-            this.currentAlert.resolve(button.value);
+        if (!this.currentAlert) return;
+
+        // Prompt dialogs: the confirm button resolves with the entered text.
+        if (button.value === ALERT_INPUT_VALUE) {
+            const value = this.inputValue.trim();
+            if (this.currentAlert.config.input?.required && !value) {
+                return; // keep the dialog open until something is entered
+            }
+            this.currentAlert.resolve(value);
             this.currentAlert = null;
+            return;
         }
+
+        this.currentAlert.resolve(button.value);
+        this.currentAlert = null;
     }
 
     close(): void {

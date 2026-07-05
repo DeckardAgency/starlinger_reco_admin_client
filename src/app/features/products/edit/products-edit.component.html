@@ -117,7 +117,8 @@
           <ui-form-field label="Quote item limit" layout="horizontal">
             <input type="number" [value]="product().quoteItemLimit" placeholder="0" (input)="updateProductNumber('quoteItemLimit', $event)">
           </ui-form-field>
-          <ui-form-field label="Fixed quantity" layout="horizontal">
+          <ui-form-field label="Fixed quantity" layout="horizontal"
+                         hint="If set, customers can only order exactly this quantity. 0 = no restriction.">
             <input type="number" [value]="product().fixedQuantity" placeholder="0" (input)="updateProductNumber('fixedQuantity', $event)">
           </ui-form-field>
           <ui-form-field label="Weight" layout="horizontal">

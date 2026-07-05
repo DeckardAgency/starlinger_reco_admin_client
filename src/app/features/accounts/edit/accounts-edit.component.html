@@ -292,8 +292,8 @@
 </ng-template>
 
 <ng-template #orderStatusTemplate let-row>
-  <ui-badge [variant]="getStatusVariant(row.status)">
-    {{ getStatusLabel(row.status) }}
+  <ui-badge [variant]="row.statusVariant">
+    {{ row.statusLabel }}
   </ui-badge>
 </ng-template>
 

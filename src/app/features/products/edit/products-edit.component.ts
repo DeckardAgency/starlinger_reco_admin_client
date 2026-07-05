@@ -234,7 +234,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     { id: 'shortDescription', label: 'Short description' },
     { id: 'gallery', label: 'Gallery' },
     { id: 'documents', label: 'Product documents' },
-    { id: 'relatedProducts', label: 'Related products' }
+    { id: 'relatedProducts', label: 'Alternative and replacement parts' }
   ];
 
   // Table columns

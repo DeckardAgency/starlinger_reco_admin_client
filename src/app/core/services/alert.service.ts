@@ -15,7 +15,12 @@ export interface AlertConfig {
     type?: AlertType;
     buttons?: AlertButton[];
     showCloseButton?: boolean;
+    /** When set, the dialog renders a text input; the confirm button resolves with its value. */
+    input?: { placeholder?: string; required?: boolean };
 }
+
+/** Sentinel button value: resolve the dialog with the entered input text. */
+export const ALERT_INPUT_VALUE = '__ALERT_INPUT__';
 
 export interface AlertEvent {
     config: AlertConfig;
@@ -101,6 +106,23 @@ export class AlertService {
      * Show a confirmation dialog
      * Returns true if confirmed, false if cancelled
      */
+    /**
+     * Prompt-style dialog with a text input. Resolves with the entered string,
+     * or null when cancelled/dismissed.
+     */
+    prompt(message: string, title?: string, options?: { placeholder?: string; required?: boolean; confirmText?: string }): Promise<string | null> {
+        return this.show({
+            title: title || 'Input required',
+            message,
+            type: 'confirm',
+            input: { placeholder: options?.placeholder, required: options?.required ?? true },
+            buttons: [
+                { text: 'Cancel', type: 'secondary', value: null },
+                { text: options?.confirmText || 'Confirm', type: 'primary', value: ALERT_INPUT_VALUE }
+            ]
+        });
+    }
+
     confirm(message: string, title?: string): Promise<boolean> {
         return this.show({
             title: title || 'Confirm',

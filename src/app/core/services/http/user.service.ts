@@ -91,6 +91,14 @@ export class UserService extends BaseHttpService {
   }
 
   /**
+   * Invite a user by email instead of creating them directly: the backend emails
+   * an invitation link and the user sets their own password.
+   */
+  inviteUser(invitation: { email: string; firstName: string; lastName: string; roles?: string[]; client?: string }): Observable<unknown> {
+    return this.postWithJsonLd<unknown>(this.buildUrl('user_invitations'), invitation);
+  }
+
+  /**
    * Update an existing user
    * @param id User UUID
    * @param userData Partial user data to update

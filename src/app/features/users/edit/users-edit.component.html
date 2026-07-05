@@ -87,7 +87,8 @@
           <h2 class="form-card__title">Password</h2>
           <div class="form-card__content">
             <!-- Password -->
-            <ui-form-field label="Password" layout="horizontal" [required]="!isEditMode()" [error]="getError('password')">
+            <ui-form-field label="Password" layout="horizontal" [error]="getError('password')"
+                           [hint]="isEditMode() ? '' : 'Leave empty to email the user an invitation — they set their own password.'">
               <div class="input-with-icon">
                 <input
                   [type]="showPassword() ? 'text' : 'password'"

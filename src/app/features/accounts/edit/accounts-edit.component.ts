@@ -7,7 +7,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { TabsComponent, TabItem } from '@app/ui-kit/molecules/tabs/tabs.component';
-import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
+import { BadgeComponent, BadgeVariant } from '@app/ui-kit/atoms/badge/badge.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { AvatarComponent } from '@app/ui-kit/atoms/avatar/avatar.component';
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
@@ -44,17 +44,20 @@ interface Address {
 }
 
 interface ShopOrder {
-  orderId: string;
+  orderId: number;
   type: 'order' | 'manual';
   dateCreated: string;
-  internalRef: number;
+  internalRef: string;
   customer: {
     name: string;
     initials: string;
     avatar?: string;
   };
   partsOrdered: number;
-  status: 'completed' | 'delayed' | 'failed' | 'in-review' | 'archived';
+  amount: string;
+  status: string;
+  statusLabel: string;
+  statusVariant: BadgeVariant;
 }
 
 // Default empty account for new mode
@@ -305,11 +308,11 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     // Shop orders columns
     this.shopOrdersColumns = [
       { key: 'orderId', label: 'Order ID', width: '100px' },
-      { key: 'type', label: 'Type', width: '80px', template: this.orderTypeTemplate },
       { key: 'dateCreated', label: 'Date Created', width: '140px' },
       { key: 'internalRef', label: 'Internal reference number' },
       { key: 'customer', label: 'Customer', width: '200px', template: this.orderCustomerTemplate },
       { key: 'partsOrdered', label: 'Parts ordered', width: '120px' },
+      { key: 'amount', label: 'Amount', width: '120px' },
       { key: 'status', label: 'Status', width: '120px', template: this.orderStatusTemplate },
       { key: 'actions', label: '', width: '64px', template: this.orderActionsTemplate }
     ];
@@ -325,7 +328,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     // Manual entries columns (same as shop orders)
     this.manualEntriesColumns = [
       { key: 'orderId', label: 'Order ID', width: '100px' },
-      { key: 'type', label: 'Type', width: '80px', template: this.orderTypeTemplate },
       { key: 'dateCreated', label: 'Date Created', width: '140px' },
       { key: 'internalRef', label: 'Internal reference number' },
       { key: 'customer', label: 'Customer', width: '200px', template: this.orderCustomerTemplate },
@@ -495,20 +497,25 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private mapOrdersToShopOrders(orders: Order[]): ShopOrder[] {
     return orders.map(order => ({
-      orderId: order.orderNumber,
+      // Same column semantics as the main shop-orders list: numeric id first,
+      // ORD-… number as the internal reference.
+      orderId: order.id,
       type: order.isDraft ? 'manual' : 'order',
       dateCreated: new Date(order.createdAt).toLocaleDateString('en-GB', {
         day: '2-digit',
         month: 'short',
         year: 'numeric'
       }),
-      internalRef: order.id,
+      internalRef: order.orderNumber,
       customer: {
         name: order.user ? `${order.user.firstName ?? ''} ${order.user.lastName ?? ''}`.trim() || order.user.email : 'Unknown',
         initials: order.user ? this.getInitials(order.user.firstName, order.user.lastName) : '??'
       },
-      partsOrdered: order.itemsCount ?? 0,
-      status: this.mapOrderStatus(order.status)
+      partsOrdered: order.totalQuantity ?? order.itemsCount ?? 0,
+      amount: new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(order.totalAmount ?? 0),
+      status: order.status,
+      statusLabel: this.orderStatusLabel(order.status),
+      statusVariant: this.orderStatusVariant(order.status)
     }));
   }
 
@@ -518,17 +525,35 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     return first + last || '??';
   }
 
-  private mapOrderStatus(status: string): 'completed' | 'delayed' | 'failed' | 'in-review' | 'archived' {
-    switch (status?.toLowerCase()) {
-      case 'completed': return 'completed';
-      case 'dispatched': return 'completed';
-      case 'processing': return 'in-review';
-      case 'confirmed': return 'in-review';
-      case 'pending': return 'delayed';
-      case 'cancelled': return 'failed';
-      case 'draft': return 'archived';
-      default: return 'in-review';
-    }
+  // Canonical order status labels/colors — keep in sync with shop-orders list.
+  private orderStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      'draft': 'Draft',
+      'new': 'New',
+      'in_process': 'In process',
+      'waiting_for_payment': 'Waiting for payment',
+      'ready_for_shipment': 'Ready for shipment',
+      'shipped': 'Shipped',
+      'delivered': 'Delivered',
+      'canceled': 'Canceled',
+      'reversal': 'Reversal'
+    };
+    return labels[status] || status;
+  }
+
+  private orderStatusVariant(status: string): BadgeVariant {
+    const variants: Record<string, BadgeVariant> = {
+      'draft': 'secondary',
+      'new': 'info',
+      'in_process': 'warning',
+      'waiting_for_payment': 'orange',
+      'ready_for_shipment': 'teal',
+      'shipped': 'blue',
+      'delivered': 'success',
+      'canceled': 'danger',
+      'reversal': 'dark'
+    };
+    return variants[status] || 'secondary';
   }
 
   private mapClientToAccount(c: ClientDetail): Account {
@@ -541,7 +566,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       status: c.isActive ? 'active' : 'inactive',
       isActive: c.isActive,
       accountGroupId: c.accountGroup?.id ?? undefined,
-      phone: c.phoneNumber,
+      phone: c.phoneNumber ?? '',
       otherPhone: c.otherPhone ?? '',
       otherEmail: c.otherEmail ?? '',
       fax: c.fax ?? '',
@@ -581,30 +606,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       default: return 'Add';
     }
   });
-
-  // Get status badge variant
-  getStatusVariant(status: string): 'success' | 'warning' | 'danger' | 'secondary' | 'info' {
-    switch (status) {
-      case 'completed': return 'success';
-      case 'delayed': return 'warning';
-      case 'failed': return 'danger';
-      case 'in-review': return 'secondary';
-      case 'archived': return 'secondary';
-      default: return 'secondary';
-    }
-  }
-
-  // Get status label
-  getStatusLabel(status: string): string {
-    switch (status) {
-      case 'completed': return 'Completed';
-      case 'delayed': return 'Delayed';
-      case 'failed': return 'Failed';
-      case 'in-review': return 'In Review';
-      case 'archived': return 'Archived';
-      default: return status;
-    }
-  }
 
   onActiveChange(value: boolean): void {
     this.isActive.set(value);
@@ -700,7 +701,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     switch (event.actionId) {
       case 'view':
       case 'edit':
-        this.router.navigate(['/admin/shop-orders', order.internalRef, 'edit']);
+        this.router.navigate(['/admin/shop-orders', order.orderId, 'edit']);
         break;
     }
   }

@@ -14,7 +14,7 @@ import {
   TableCheckboxSelectionComponent,
   TableAction
 } from '@app/ui-kit/molecules';
-import { AdminUser, AdminUserRoleType } from '@core/models/admin-user.model';
+import { AdminUser, AdminUserRoleType, ADMIN_USER_ROLE_OPTIONS } from '@core/models/admin-user.model';
 import { UserService } from '@core/services/http/user.service';
 import { AlertService } from '@services/alert.service';
 import { User, USER_ROLES } from '@core/models';
@@ -400,7 +400,9 @@ export class UsersListComponent implements OnInit, AfterViewInit {
 
   formatRole(role: string | null): string {
     if (!role) return '-';
-    return role.charAt(0).toUpperCase() + role.slice(1);
+    // Single source of truth for role display names (also drives the role selects).
+    return ADMIN_USER_ROLE_OPTIONS.find(o => o.id === role)?.name
+      ?? role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   }
 
   onExport(): void {

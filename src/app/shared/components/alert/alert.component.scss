@@ -170,3 +170,20 @@ $transition-duration: 0.2s;
         }
     }
 }
+
+.alert__input {
+  width: 100%;
+  margin: 4px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #d4d4d8;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: #dc2626;
+  }
+}

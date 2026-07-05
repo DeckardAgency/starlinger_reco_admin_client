@@ -1,9 +1,14 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy, ViewChild, TemplateRef, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil, finalize, of, switchMap, catchError } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
+import { ListHeaderComponent } from '@app/ui-kit/molecules/list-header/list-header.component';
+import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
+import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-footer.component';
+import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
+import { BadgeComponent, BadgeVariant } from '@app/ui-kit/atoms/badge/badge.component';
 import { DocumentationService } from '@core/services/http/documentation.service';
 import { Documentation } from '@core/models/documentation.model';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
@@ -15,24 +20,41 @@ import { ColumnSettingsService } from '@core/services/column-settings.service';
 type DocumentationRow = Documentation & {
   statusClass: string;
   statusText: string;
+  statusVariant: BadgeVariant;
   updatedAtLabel: string;
 };
 
 @Component({
   selector: 'app-documentation-list',
   standalone: true,
-  imports: [CommonModule, BreadcrumbsComponent, FormsModule, ColumnSelectorComponent],
+  imports: [CommonModule, BreadcrumbsComponent, ListHeaderComponent, DataTableComponent, TableFooterComponent, TableActionsDropdownComponent, BadgeComponent, FormsModule, ColumnSelectorComponent],
   templateUrl: './documentation-list.component.html',
   styleUrls: ['./documentation-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DocumentationListComponent implements OnInit, OnDestroy {
+export class DocumentationListComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
+  @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
+  @ViewChild('titleTemplate') titleTemplate!: TemplateRef<any>;
+  @ViewChild('statusTemplate') statusTemplate!: TemplateRef<any>;
+  @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
+
+  tableColumns: TableColumn[] = [];
+  readonly itemsPerPage = 30;
+  openDropdownId = signal<number | null>(null);
+
+  tableActions: TableAction[] = [
+    { id: 'edit', label: 'Edit', icon: 'eye' },
+    { id: 'delete', label: 'Delete', icon: 'trash', variant: 'danger' }
+  ];
+
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private documentationService = inject(DocumentationService);
   private toastService = inject(ToastService);
   private alertService = inject(AlertService);
   private columnSettingsService = inject(ColumnSettingsService);
+  private cdr = inject(ChangeDetectorRef);
 
   breadcrumbs = [{ label: 'Documentation' }];
 
@@ -241,6 +263,7 @@ export class DocumentationListComponent implements OnInit, OnDestroy {
   onColumnsChange(columns: ColumnDefinition[]): void {
     this.columnDefs = columns;
     this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.rebuildTableColumns();
   }
 
   isColumnVisible(key: string): boolean {
@@ -253,6 +276,7 @@ export class DocumentationListComponent implements OnInit, OnDestroy {
       ...doc,
       statusClass: doc.isPublished ? 'doc-list__status--published' : 'doc-list__status--draft',
       statusText: doc.isPublished ? 'Published' : 'Draft',
+      statusVariant: (doc.isPublished ? 'success' : 'secondary') as BadgeVariant,
       updatedAtLabel: this.formatDate(doc.updatedAt)
     };
   }
@@ -269,5 +293,66 @@ export class DocumentationListComponent implements OnInit, OnDestroy {
     const start = (page - 1) * 30 + 1;
     const end = Math.min(page * 30, total);
     return `Showing ${start} to ${end} of ${total} results`;
+  }
+
+  ngAfterViewInit(): void {
+    this.rebuildTableColumns();
+    this.cdr.detectChanges();
+  }
+
+  showingFrom = computed(() => this.totalItems() === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage + 1);
+  showingTo = computed(() => Math.min(this.currentPage() * this.itemsPerPage, this.totalItems()));
+
+  private rebuildTableColumns(): void {
+    const all: TableColumn[] = [
+      { key: 'checkbox', label: '', sortable: false, width: '56px', template: this.checkboxTemplate, headerTemplate: this.checkboxHeaderTemplate },
+      { key: 'title', label: 'Title', sortable: true, template: this.titleTemplate },
+      { key: 'slug', label: 'Slug', sortable: false },
+      { key: 'category', label: 'Category', sortable: false, width: '140px' },
+      { key: 'sortOrder', label: 'Order', sortable: true, width: '100px' },
+      { key: 'status', label: 'Status', sortable: false, width: '120px', template: this.statusTemplate },
+      { key: 'updatedAtLabel', label: 'Updated', sortable: true, width: '140px' },
+      { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
+    ];
+    this.tableColumns = all.filter(c =>
+      c.key === 'checkbox' || c.key === 'actions' || this.isColumnVisible(this.tableSortKeyToDefKey(c.key))
+    );
+  }
+
+  private tableSortKeyToDefKey(key: string): string {
+    return key === 'updatedAtLabel' ? 'updatedAt' : key;
+  }
+
+  onTableSort(event: SortEvent): void {
+    if (!event.direction) {
+      this.sortField.set('sortOrder');
+      this.sortDirection.set('asc');
+    } else {
+      this.sortField.set(this.tableSortKeyToDefKey(event.column));
+      this.sortDirection.set(event.direction);
+    }
+    this.currentPage.set(1);
+    this.loadDocs();
+  }
+
+  toggleDropdown(id: number): void {
+    this.openDropdownId.set(this.openDropdownId() === id ? null : id);
+  }
+
+  closeDropdown(): void {
+    this.openDropdownId.set(null);
+  }
+
+  onActionClick(event: ActionClickEvent): void {
+    const row = event.row as DocumentationRow;
+    this.closeDropdown();
+    switch (event.action.id) {
+      case 'edit':
+        this.editDocumentation(row.id);
+        break;
+      case 'delete':
+        this.deleteDocumentation(row.id);
+        break;
+    }
   }
 }

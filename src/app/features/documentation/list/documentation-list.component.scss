@@ -118,3 +118,48 @@
     &--active { background: #0074d9; color: white; border-color: #0074d9; }
   }
 }
+
+// Standard admin list layout (mirrors users/products lists)
+.page-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.table-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  --data-table-background: #f4f4f5;
+}
+
+.empty-state {
+  padding: 24px;
+  text-align: center;
+  color: #71717a;
+  font-size: 14px;
+}
+
+.doc-title-link {
+  color: #18181b;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.doc-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #dc2626;
+  cursor: pointer;
+}

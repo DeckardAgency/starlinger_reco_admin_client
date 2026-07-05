@@ -50,6 +50,14 @@
             {{ currentAlert.config.message }}
         </p>
 
+        <!-- Optional input (prompt-style dialogs) -->
+        <textarea
+            *ngIf="currentAlert.config.input"
+            class="alert__input"
+            rows="3"
+            [placeholder]="currentAlert.config.input.placeholder || ''"
+            [(ngModel)]="inputValue"></textarea>
+
         <!-- Buttons -->
         <div class="alert__buttons">
             <button

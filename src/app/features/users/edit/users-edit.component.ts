@@ -71,8 +71,8 @@ export class UsersEditComponent implements OnInit {
     if (!user.lastName?.trim()) errs['lastName'] = 'Last name is required';
     if (!user.email?.trim()) errs['email'] = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) errs['email'] = 'Invalid email format';
-    // Password required only for new users
-    if (!this.isEditMode() && !this.password()?.trim()) errs['password'] = 'Password is required';
+    // Password is optional on create: leaving it empty sends an invitation email
+    // and the user sets their own password via the emailed link.
     if (this.password() && this.repeatPassword() && this.password() !== this.repeatPassword()) {
       errs['repeatPassword'] = 'Passwords do not match';
     }
@@ -223,6 +223,28 @@ export class UsersEditComponent implements OnInit {
     }
 
     const user = this.user();
+
+    // New user without a password: send an invitation email instead of creating
+    // the account directly — the user picks their own password via the link.
+    if (!this.isEditMode() && !this.password()) {
+      this.userService.inviteUser({
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles: this.mapAdminRoleToRoles(user.role)
+      }).subscribe({
+        next: () => {
+          this.toastService.success(`Invitation email sent to ${user.email}`);
+          this.router.navigate(['/admin/users/list']);
+        },
+        error: (error) => {
+          console.error('Error sending invitation:', error);
+          this.toastService.error('Failed to send invitation: ' + (error?.error?.detail || 'Unknown error'));
+        }
+      });
+      return;
+    }
+
     const data: Record<string, unknown> = {
       firstName: user.firstName,
       lastName: user.lastName,
@@ -259,6 +281,14 @@ export class UsersEditComponent implements OnInit {
     }
 
     const user = this.user();
+
+    // Invitation path: there is no user entity to continue editing yet,
+    // so behave like a plain save.
+    if (!this.isEditMode() && !this.password()) {
+      this.onSave();
+      return;
+    }
+
     const data: Record<string, unknown> = {
       firstName: user.firstName,
       lastName: user.lastName,

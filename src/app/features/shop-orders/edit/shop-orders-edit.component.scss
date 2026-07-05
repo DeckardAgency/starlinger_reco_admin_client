@@ -217,6 +217,7 @@
 // =============================================================================
 .order-summary {
   margin-top: 16px;
+  border-top: 1px solid #e4e4e7;
 
   &__row {
     display: flex;
@@ -274,11 +275,14 @@
 // Log Table (using ui-data-table)
 // =============================================================================
 .log-table {
-  --data-table-border: none;
-  --data-table-border-radius: 0;
-  --data-table-background: transparent;
+  // Card look: the section title sits above, the table itself is a bordered box.
+  --data-table-border: 1px solid #e4e4e7;
+  --data-table-border-radius: 8px;
+  --data-table-background: #ffffff;
   --data-table-header-background: transparent;
   --data-table-row-background: transparent;
+  display: block;
+  margin-top: 12px;
 }
 
 // =============================================================================
@@ -429,4 +433,79 @@
   font-size: 14px;
   color: #71717a;
   font-style: italic;
+}
+
+.carrier-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+
+  > input,
+  > ui-select {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.tracking-section__carrier-link {
+  margin-left: 12px;
+  font-size: 13px;
+  color: #1D4ED8;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.input-with-warning {
+  position: relative;
+  width: 100%;
+
+  > input {
+    width: 100%;
+    padding-right: 36px;
+  }
+}
+
+.input-warning-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #d97706;
+  font-size: 15px;
+  cursor: help;
+  line-height: 1;
+
+  .input-warning-tooltip {
+    display: none;
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 8px);
+    width: 280px;
+    padding: 10px 12px;
+    background: #27272a;
+    color: #fafafa;
+    font-size: 12px;
+    line-height: 1.5;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 20;
+
+    &::after {
+      content: '';
+      position: absolute;
+      right: 10px;
+      top: 100%;
+      border: 6px solid transparent;
+      border-top-color: #27272a;
+    }
+  }
+
+  &:hover .input-warning-tooltip,
+  &:focus .input-warning-tooltip {
+    display: block;
+  }
 }

@@ -157,6 +157,7 @@ ui-form-field .ui-form-field--vertical .ui-form-field__label {
 ui-form-field .ui-form-field--horizontal {
   flex-direction: row;
   align-items: center;
+  flex-wrap: wrap;
   gap: 16px;
   min-height: 40px;
   position: relative;
@@ -174,11 +175,11 @@ ui-form-field .ui-form-field--horizontal .ui-form-field__wrapper {
 }
 
 ui-form-field .ui-form-field--horizontal .ui-form-field__messages {
-  position: absolute;
-  left: 0;
-  top: 100%;
-  margin-top: 2px;
-  white-space: nowrap;
+  // Full-width row under label+input (the container wraps). Takes real layout
+  // space so long hints wrap instead of being clipped or overlapping fields.
+  flex-basis: 100%;
+  margin-top: -10px;
+  white-space: normal;
 }
 
 // Error state

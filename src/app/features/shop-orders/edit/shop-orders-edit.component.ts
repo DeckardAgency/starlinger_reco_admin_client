@@ -50,7 +50,7 @@ interface ClientGroup {
 
 interface LogMessage {
   status: string;
-  statusVariant: 'success' | 'warning' | 'info' | 'secondary';
+  statusVariant: BadgeVariant;
   dateTime: string;
   user: string;
   message: string;
@@ -289,7 +289,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
         next: (response) => {
           const options = response.member
             .filter(dt => dt.isActive)
-            .map(dt => ({ value: dt.id, label: dt.name }));
+            .map(dt => ({ value: dt.id, label: dt.name, carrierCode: (dt as any).carrierCode ?? '' }));
           this.deliveryTypeOptions.set(options);
           this.cdr.markForCheck();
         },
@@ -613,14 +613,20 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     const isAgentOrder = (o.items || []).some(i => !!i.onBehalfOfClient);
     const clientGroups = Array.from(clientGroupMap.values());
     const logMessages: LogMessage[] = (o.logs || []).map(log => ({
-      status: log.newStatus,
-      statusVariant: 'info',
-      dateTime: log.createdAt,
+      status: this.statusLabelFor(log.newStatus),
+      statusVariant: this.getStatusBadgeVariant(log.newStatus),
+      dateTime: this.formatDateTime(log.createdAt),
       user: '',
       message: log.comment || ''
     }));
     if (logMessages.length === 0 && o.status) {
-      logMessages.push({ status: o.status, statusVariant: 'info', dateTime: o.createdAt, user: userName, message: '' });
+      logMessages.push({
+        status: this.statusLabelFor(o.status),
+        statusVariant: this.getStatusBadgeVariant(o.status),
+        dateTime: this.formatDateTime(o.createdAt),
+        user: userName,
+        message: ''
+      });
     }
     return {
       id: o.id,
@@ -666,6 +672,18 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
     const year = d.getFullYear();
     return `${day}-${month}-${year}`;
+  }
+
+  formatDateTime(dateStr: string): string {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const hours = d.getHours().toString().padStart(2, '0');
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    return `${this.formatDate(dateStr)} ${hours}:${minutes}`;
+  }
+
+  statusLabelFor(status: string): string {
+    return this.orderStatusOptions.find(o => o.value === status)?.label ?? status;
   }
 
   private applyOrderDetail(orderData: ShopOrderDetail): void {
@@ -811,15 +829,30 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.order.update(o => ({ ...o, trackingNumber: value }));
   }
 
-  onTrackingCarrierChange(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.order.update(o => ({ ...o, trackingCarrier: value }));
+  // Carrier is derived from the delivery type; the select is only shown on explicit override.
+  carrierOverride = signal(false);
+
+  carrierOptions: SelectOption[] = [
+    { value: 'dhl', label: 'DHL' },
+    { value: 'ups', label: 'UPS' },
+    { value: 'fedex', label: 'FedEx' },
+    { value: 'dpd', label: 'DPD' },
+    { value: 'gls', label: 'GLS' },
+    { value: 'other', label: 'Other' }
+  ];
+
+  effectiveCarrier = computed(() => this.order().trackingCarrier || this.derivedCarrier() || '');
+
+  onTrackingCarrierSelect(value: string | number): void {
+    this.order.update(o => ({ ...o, trackingCarrier: String(value) }));
   }
 
-  onTrackingUrlChange(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.order.update(o => ({ ...o, trackingUrl: value }));
+  resetCarrierOverride(): void {
+    // Clearing the stored value makes the backend re-derive from the delivery type on save.
+    this.carrierOverride.set(false);
+    this.order.update(o => ({ ...o, trackingCarrier: '' }));
   }
+
 
   // Tracking events list + refresh
   trackingEvents = signal<Array<{ id: number; status: string; location: string | null; description: string | null; occurredAt: string; source: string }>>([]);
@@ -828,6 +861,10 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   onRefreshTracking(): void {
     const id = this.order().id;
     if (!id) return;
+    if (!this.order().trackingNumber) {
+      this.toastService.error('Enter a tracking number (and save the order) before refreshing tracking.');
+      return;
+    }
     this.isRefreshingTracking.set(true);
     this.orderService.refreshTracking(String(id)).subscribe({
       next: (response) => {
@@ -839,6 +876,15 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
           occurredAt: e.occurredAt,
           source: e.source ?? 'dhl_api',
         })));
+        // Tracking may have advanced the order status server-side (e.g. delivered).
+        // Sync the form state so a later Save doesn't write the stale status back.
+        const newStatus = (response as any).orderStatus;
+        if (newStatus && newStatus !== this.order().status) {
+          this.order.update(o => ({ ...o, status: newStatus, enableSale: newStatus !== 'draft' }));
+          this.selectedStatus.set(newStatus);
+          const label = this.orderStatusOptions.find(o => o.value === newStatus)?.label ?? newStatus;
+          this.toastService.success(`Order status updated to "${label}" from carrier tracking.`);
+        }
         this.toastService.success(response.created > 0
           ? `${response.created} new tracking event(s) recorded.`
           : 'Tracking is up to date.');
@@ -999,6 +1045,9 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       next: (updatedOrder) => {
         console.log('[ShopOrdersEdit] Order saved successfully:', updatedOrder);
         this.toastService.success('Order saved successfully');
+        // Log entries are written asynchronously by the worker — reload shortly
+        // after saving so the Log messages section reflects this change.
+        setTimeout(() => this.loadOrder(String(orderData.id)), 1200);
       },
       error: (error) => {
         console.error('[ShopOrdersEdit] Error saving order:', error);
