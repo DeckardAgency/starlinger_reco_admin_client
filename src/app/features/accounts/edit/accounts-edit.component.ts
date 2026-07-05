@@ -311,8 +311,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       { key: 'dateCreated', label: 'Date Created', width: '140px' },
       { key: 'internalRef', label: 'Internal reference number' },
       { key: 'customer', label: 'Customer', width: '200px', template: this.orderCustomerTemplate },
-      { key: 'partsOrdered', label: 'Parts ordered', width: '120px' },
-      { key: 'amount', label: 'Amount', width: '120px' },
+      { key: 'partsOrdered', label: 'Parts ordered', width: '120px', align: 'right' },
+      { key: 'amount', label: 'Amount', width: '120px', align: 'right' },
       { key: 'status', label: 'Status', width: '120px', template: this.orderStatusTemplate },
       { key: 'actions', label: '', width: '64px', template: this.orderActionsTemplate }
     ];
@@ -331,7 +331,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       { key: 'dateCreated', label: 'Date Created', width: '140px' },
       { key: 'internalRef', label: 'Internal reference number' },
       { key: 'customer', label: 'Customer', width: '200px', template: this.orderCustomerTemplate },
-      { key: 'partsOrdered', label: 'Parts ordered', width: '120px' },
+      { key: 'partsOrdered', label: 'Parts ordered', width: '120px', align: 'right' },
       { key: 'status', label: 'Status', width: '120px', template: this.orderStatusTemplate },
       { key: 'actions', label: '', width: '64px', template: this.orderActionsTemplate }
     ];

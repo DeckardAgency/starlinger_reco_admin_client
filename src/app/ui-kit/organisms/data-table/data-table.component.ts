@@ -8,6 +8,8 @@ export interface TableColumn {
   template?: TemplateRef<any>;
   headerTemplate?: TemplateRef<any>;
   width?: string;
+  /** Cell/header text alignment; numeric columns should use 'right'. */
+  align?: 'left' | 'center' | 'right';
 }
 
 export interface SortEvent {

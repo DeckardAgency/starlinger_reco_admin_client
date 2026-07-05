@@ -213,8 +213,8 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
       { key: 'code', label: 'Code', sortable: true, width: '128px' },
       { key: 'name', label: 'Name', sortable: true, width: '266px' },
       { key: 'shortDescription', label: 'Short description', sortable: true },
-      { key: 'qty', label: 'Qty', sortable: true, width: '96px' },
-      { key: 'qtyStep', label: 'Qty step', sortable: true, width: '96px' },
+      { key: 'qty', label: 'Qty', sortable: true, width: '96px', align: 'right' },
+      { key: 'qtyStep', label: 'Qty step', sortable: true, width: '96px', align: 'right' },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
 

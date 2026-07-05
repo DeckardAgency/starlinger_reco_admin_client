@@ -104,3 +104,20 @@
   &__customer-name { font-size: 0.875rem; font-weight: 500; color: #232323; margin-bottom: 4px; }
   &__customer-email { font-size: 0.75rem; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+
+// Standard detail-page header (mirrors shop-orders edit)
+.section-header {
+  @include admin.detail-header;
+}
+
+.btn {
+  @include admin.btn-base;
+
+  &--icon {
+    @include admin.btn-icon;
+  }
+
+  &--outline {
+    @include admin.btn-outline;
+  }
+}

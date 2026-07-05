@@ -6,7 +6,9 @@
           *ngFor="let column of columns; trackBy: trackByColumn"
           class="data-table__header-cell"
           [class.data-table__header-cell--sortable]="column.sortable"
+          [class.data-table__header-cell--right]="column.align === 'right'"
           [style.width]="column.width"
+          [style.text-align]="column.align || null"
           (click)="column.headerTemplate ? null : onSort(column)">
           <ng-container *ngIf="column.headerTemplate; else defaultHeader">
             <ng-container *ngTemplateOutlet="column.headerTemplate"></ng-container>
@@ -32,7 +34,8 @@
         <td
           *ngFor="let column of columns; trackBy: trackByColumn"
           class="data-table__cell"
-          [style.width]="column.width">
+          [style.width]="column.width"
+          [style.text-align]="column.align || null">
           <ng-container *ngIf="column.template; else defaultCell">
             <ng-container *ngTemplateOutlet="column.template; context: { $implicit: row }"></ng-container>
           </ng-container>

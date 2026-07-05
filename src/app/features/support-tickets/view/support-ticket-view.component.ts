@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
+import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
+import { BadgeComponent, BadgeVariant } from '@app/ui-kit/atoms/badge/badge.component';
 import { SupportTicketService } from '@core/services/http/support-ticket.service';
 import { SupportTicket } from '@core/models/support-ticket.model';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
@@ -11,7 +13,7 @@ import { environment } from '@env/environment';
 @Component({
   selector: 'app-support-ticket-view',
   standalone: true,
-  imports: [CommonModule, BreadcrumbsComponent],
+  imports: [CommonModule, BreadcrumbsComponent, IconComponent, BadgeComponent],
   templateUrl: './support-ticket-view.component.html',
   styleUrls: ['./support-ticket-view.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -135,5 +137,25 @@ export class SupportTicketViewComponent implements OnInit, OnDestroy {
     const hours = d.getHours().toString().padStart(2, '0');
     const minutes = d.getMinutes().toString().padStart(2, '0');
     return `${day}.${month}.${year} @ ${hours}:${minutes}`;
+  }
+
+  statusVariant(status: string | undefined): BadgeVariant {
+    const variants: Record<string, BadgeVariant> = {
+      'open': 'blue',
+      'in_progress': 'warning',
+      'resolved': 'success',
+      'closed': 'secondary'
+    };
+    return variants[status || ''] || 'secondary';
+  }
+
+  statusLabel(status: string | undefined): string {
+    const labels: Record<string, string> = {
+      'open': 'Open',
+      'in_progress': 'In Progress',
+      'resolved': 'Resolved',
+      'closed': 'Closed'
+    };
+    return labels[status || ''] || (status || '');
   }
 }

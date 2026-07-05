@@ -269,8 +269,8 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
       { key: 'dateCreated', label: 'Date Created', sortable: true, width: '190px' },
       { key: 'internalRef', label: 'Internal reference number', sortable: true },
       { key: 'customer', label: 'Customer', sortable: false, template: this.customerTemplate },
-      { key: 'partsOrdered', label: 'Parts ordered', sortable: false, width: '128px' },
-      { key: 'amount', label: 'Amount', sortable: false, width: '120px' },
+      { key: 'partsOrdered', label: 'Parts ordered', sortable: false, width: '128px', align: 'right' },
+      { key: 'amount', label: 'Amount', sortable: false, width: '120px', align: 'right' },
       { key: 'status', label: 'Status', sortable: true, width: '128px', template: this.statusTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];

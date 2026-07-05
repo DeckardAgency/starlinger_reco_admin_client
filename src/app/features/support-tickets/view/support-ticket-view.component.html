@@ -1,5 +1,9 @@
 <div class="ticket-view">
-  <ui-breadcrumbs [items]="breadcrumbs()"></ui-breadcrumbs>
+  <ui-breadcrumbs
+    variant="page-header"
+    separator="line"
+    [items]="breadcrumbs()"
+  ></ui-breadcrumbs>
 
   @if (loading()) {
     <div class="ticket-view__loading">
@@ -18,14 +22,18 @@
 
   @if (!loading() && !error() && ticket()) {
     <div class="ticket-view__container">
-      <div class="ticket-view__header">
-        <div class="ticket-view__header-left">
-          <button class="ticket-view__back-btn" (click)="goBack()">
-            &lsaquo; Back to tickets
+      <div class="section-header">
+        <div class="section-header__left">
+          <button class="btn btn--icon btn--outline" (click)="goBack()">
+            <ui-icon name="arrow-back" size="sm"></ui-icon>
           </button>
-          <h1 class="ticket-view__title">{{ ticket()!.subject }}</h1>
+          <div class="section-header__title-group">
+            <ui-icon name="clipboard-list" size="md" color="#71717A"></ui-icon>
+            <h1 class="section-header__title">{{ ticket()!.subject }}</h1>
+            <ui-badge [variant]="statusVariant(ticket()!.status)">{{ statusLabel(ticket()!.status) }}</ui-badge>
+          </div>
         </div>
-        <div class="ticket-view__header-actions">
+        <div class="section-header__actions">
           <select class="ticket-view__status-select" [value]="ticket()!.status" (change)="updateStatus($any($event.target).value)">
             <option value="open">Open</option>
             <option value="in_progress">In Progress</option>

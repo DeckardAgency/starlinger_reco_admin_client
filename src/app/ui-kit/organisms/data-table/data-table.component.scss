@@ -160,3 +160,8 @@
     background: transparent;
   }
 }
+
+// Right-aligned columns (numeric): align the header flex content too
+.data-table__header-cell--right .data-table__header-content {
+  justify-content: flex-end;
+}
