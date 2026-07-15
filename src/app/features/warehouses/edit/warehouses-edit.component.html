@@ -13,6 +13,7 @@
     [isEditMode]="isEditMode()"
     [showSaveAndContinue]="true"
     [showDiscard]="false"
+    [isSaving]="isSaving()"
     (back)="onBack()"
     (save)="onSave()"
     (saveAndContinue)="onSaveAndContinue()"
@@ -185,5 +186,5 @@
     </div>
   </ui-modal>
 
-  <ui-mobile-footer (primaryClick)="onSave()" (secondaryClick)="onSaveAndContinue()"></ui-mobile-footer>
+  <ui-mobile-footer [isSaving]="isSaving()" (primaryClick)="onSave()" (secondaryClick)="onSaveAndContinue()"></ui-mobile-footer>
 </div>

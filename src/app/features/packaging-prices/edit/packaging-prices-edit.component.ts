@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs/operators';
 
 import { PackagingPrice } from '@core/models/packaging-price.model';
 import { BreadcrumbsComponent, BreadcrumbItem } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -10,6 +11,7 @@ import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detai
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { PackagingPriceService } from '@core/services/http/packaging-price.service';
+import { LoggerService } from '@core/services/logger.service';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 const EMPTY_PACKAGING_PRICE: PackagingPrice = {
@@ -42,11 +44,13 @@ export class PackagingPricesEditComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private packagingPriceService = inject(PackagingPriceService);
   private toastService = inject(ToastService);
+  private logger = inject(LoggerService);
 
   isEditMode = signal(false);
   packagingPriceId = signal<string | null>(null);
   packagingPrice = signal<PackagingPrice>(EMPTY_PACKAGING_PRICE);
   isLoading = signal(false);
+  isSaving = signal(false);
 
   // Validation state
   touched = signal<Record<string, boolean>>({});
@@ -103,7 +107,7 @@ export class PackagingPricesEditComponent implements OnInit {
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error loading packaging price:', error);
+        this.logger.error('Error loading packaging price:', error);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -118,19 +122,27 @@ export class PackagingPricesEditComponent implements OnInit {
   onSizeFromChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     const value = input.value.trim();
-    this.packagingPrice.update(pp => ({ ...pp, sizeFrom: value === '' ? null : value }));
+    this.packagingPrice.update(pp => ({ ...pp, sizeFrom: value === '' ? null : this.clampNonNegative(value) }));
   }
 
   onSizeToChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     const value = input.value.trim();
-    this.packagingPrice.update(pp => ({ ...pp, sizeTo: value === '' ? null : value }));
+    this.packagingPrice.update(pp => ({ ...pp, sizeTo: value === '' ? null : this.clampNonNegative(value) }));
   }
 
   onPriceBaseChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.packagingPrice.update(pp => ({ ...pp, priceBase: input.value }));
+    this.packagingPrice.update(pp => ({ ...pp, priceBase: this.clampNonNegative(input.value) }));
     this.markFieldTouched('priceBase');
+  }
+
+  // Coerce numeric fields: keep the raw value when it is a valid non-negative
+  // number, otherwise clamp to '0'. Preserves in-progress decimals.
+  private clampNonNegative(value: string): string {
+    if (value === '') return '';
+    const parsed = parseFloat(value);
+    return isNaN(parsed) || parsed < 0 ? '0' : value;
   }
 
   // Validation helpers
@@ -153,6 +165,8 @@ export class PackagingPricesEditComponent implements OnInit {
       return;
     }
 
+    if (this.isSaving()) return;
+
     const data = this.packagingPrice();
     const payload: Record<string, unknown> = {
       name: data.name || null,
@@ -165,13 +179,14 @@ export class PackagingPricesEditComponent implements OnInit {
       ? this.packagingPriceService.updatePackagingPrice(this.packagingPriceId()!, payload as any)
       : this.packagingPriceService.createPackagingPrice(payload as any);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: () => {
         this.toastService.success('Saved successfully');
         this.router.navigate(['/admin/packaging-prices/list']);
       },
       error: (error) => {
-        console.error('Error saving packaging price:', error);
+        this.logger.error('Error saving packaging price:', error);
         this.toastService.error('Failed to save packaging price');
       }
     });

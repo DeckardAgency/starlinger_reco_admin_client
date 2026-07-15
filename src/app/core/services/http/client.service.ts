@@ -12,6 +12,7 @@ import {
     ApiError
 } from '@models/client.model';
 import { environment } from '@env/environment';
+import { LoggerService } from '@core/services/logger.service';
 
 // Result interface for bulk operations
 export interface DeleteResult {
@@ -33,7 +34,7 @@ export class ClientService {
         })
     };
 
-    constructor(private http: HttpClient) {}
+    constructor(private http: HttpClient, private logger: LoggerService) {}
 
     /**
      * Get clients with pagination, sorting and filtering
@@ -54,7 +55,7 @@ export class ClientService {
         return this.http.get<ClientsResponse>(this.apiUrl, { params: httpParams }).pipe(
             map(response => this.transformClientsResponse(response, page)),
             catchError(error => {
-                console.error('API error:', error);
+                this.logger.error('API error:', error);
                 return of({
                     clients: [],
                     totalClients: 0,
@@ -71,7 +72,7 @@ export class ClientService {
      */
     getClient(id: string): Observable<ClientDetail> {
         return this.http.get<ClientDetail>(`${this.apiUrl}/${id}`).pipe(
-            tap(client => console.log('Client details:', client))
+            tap(client => this.logger.debug('Client details:', client))
         );
     }
 
@@ -98,7 +99,7 @@ export class ClientService {
      */
     createClient(clientData: CreateClientDto): Observable<Client> {
         return this.http.post<Client>(this.apiUrl, clientData, this.httpOptions).pipe(
-            tap(client => console.log('Created client:', client))
+            tap(client => this.logger.debug('Created client:', client))
         );
     }
 
@@ -112,7 +113,7 @@ export class ClientService {
                 'Accept': 'application/ld+json'
             })
         }).pipe(
-            tap(client => console.log('Updated client:', client))
+            tap(client => this.logger.debug('Updated client:', client))
         );
     }
 
@@ -121,7 +122,7 @@ export class ClientService {
      */
     replaceClient(id: string, clientData: CreateClientDto): Observable<Client> {
         return this.http.put<Client>(`${this.apiUrl}/${id}`, clientData, this.httpOptions).pipe(
-            tap(client => console.log('Replaced client:', client))
+            tap(client => this.logger.debug('Replaced client:', client))
         );
     }
 

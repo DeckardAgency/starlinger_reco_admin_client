@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpEventType } from '@angular/common/http';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, finalize } from 'rxjs/operators';
 
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { DataTableComponent, TableColumn } from '@app/ui-kit/organisms/data-table/data-table.component';
@@ -21,6 +21,7 @@ import { TextEditorComponent } from '@shared/components/text-editor/text-editor.
 import { PaymentType, PaymentTypeDocument } from '@core/models/payment-type.model';
 import { PaymentTypeService } from '@core/services/http/payment-type.service';
 import { MediaService } from '@core/services/http/media.service';
+import { LoggerService } from '@core/services/logger.service';
 import { MediaItem } from '@core/models/media.model';
 import { environment } from '@env/environment';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
@@ -97,6 +98,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
 
   // Loading state
   isLoading = signal(false);
+  isSaving = signal(false);
 
   // Validation state
   touched = signal<Record<string, boolean>>({});
@@ -148,7 +150,8 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     private paymentTypeService: PaymentTypeService,
-    private mediaService: MediaService
+    private mediaService: MediaService,
+    private logger: LoggerService
   ) {}
 
   ngOnInit(): void {
@@ -209,7 +212,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error loading payment type:', error);
+        this.logger.error('Error loading payment type:', error);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -263,6 +266,8 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
       return;
     }
 
+    if (this.isSaving()) return;
+
     const detail = this.paymentType();
     // Build payload with only writable fields
     const mediaIriPrefix = `${environment.apiPath}/media_items/`;
@@ -285,7 +290,8 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
       ? this.paymentTypeService.createPaymentType(data as any)
       : this.paymentTypeService.updatePaymentType(this.paymentTypeId!, data as any);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
@@ -295,7 +301,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
         }
       },
       error: (error) => {
-        console.error('Error saving payment type:', error);
+        this.logger.error('Error saving payment type:', error);
         this.toastService.error('Failed to save payment type');
       }
     });
@@ -392,7 +398,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
               this.cdr.markForCheck();
             }
           },
-          error: (err) => console.error('Error uploading document:', err)
+          error: (err) => this.logger.error('Error uploading document:', err)
         });
     });
 
@@ -477,7 +483,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
             this.triggerDownload(media.filePath, media.filename || 'document');
           }
         },
-        error: (err) => console.error('Error downloading document:', err)
+        error: (err) => this.logger.error('Error downloading document:', err)
       });
     this.activeDocActionId.set(null);
   }
@@ -496,7 +502,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
           document.body.removeChild(a);
           URL.revokeObjectURL(blobUrl);
         },
-        error: (err) => console.error('Error downloading file:', err)
+        error: (err) => this.logger.error('Error downloading file:', err)
       });
   }
 
@@ -512,7 +518,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
           this.updatePaymentTypeMedia();
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('Error deleting document:', err)
+        error: (err) => this.logger.error('Error deleting document:', err)
       });
     this.activeDocActionId.set(null);
   }
@@ -540,7 +546,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     this.mediaService.updateMediaItem(String(docId), { filename: fullName } as any)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        error: (err) => console.error('Error renaming document:', err)
+        error: (err) => this.logger.error('Error renaming document:', err)
       });
 
     this.cancelRename();
@@ -570,7 +576,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
       this.mediaService.deleteMediaItem(String(doc.id))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          error: (err) => console.error('Error deleting document:', err)
+          error: (err) => this.logger.error('Error deleting document:', err)
         });
     });
 
@@ -605,7 +611,7 @@ export class PaymentTypesEditComponent implements OnInit, OnDestroy, AfterViewIn
     this.paymentTypeService.updatePaymentType(this.paymentTypeId, { documents } as any)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        error: (err) => console.error('Error updating payment type media:', err)
+        error: (err) => this.logger.error('Error updating payment type media:', err)
       });
   }
 }

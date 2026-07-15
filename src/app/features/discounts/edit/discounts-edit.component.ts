@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject, forkJoin } from 'rxjs';
-import { takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { takeUntil, debounceTime, distinctUntilChanged, switchMap, finalize } from 'rxjs/operators';
 
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
@@ -23,6 +23,7 @@ import { AccountGroupService } from '@core/services/http/account-group.service';
 import { ClientService } from '@core/services/http/client.service';
 import { ProductDiscountService } from '@core/services/http/product-discount.service';
 import { ProductService } from '@core/services/http/product.service';
+import { LoggerService } from '@core/services/logger.service';
 
 interface DiscountDetail {
   id: number;
@@ -98,6 +99,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   discount = signal<DiscountDetail>({ ...EMPTY_DISCOUNT });
   isEditMode = signal(false);
   isLoading = signal(false);
+  isSaving = signal(false);
 
   // Validation state
   touched = signal<Record<string, boolean>>({});
@@ -105,6 +107,8 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     const discount = this.discount();
     const errs: Record<string, string> = {};
     if (!discount.name?.trim()) errs['name'] = 'Name is required';
+    if (discount.discountPercent < 0 || discount.discountPercent > 100) errs['discountPercent'] = 'Discount must be between 0 and 100';
+    if (discount.priority < 0) errs['priority'] = 'Priority must be 0 or greater';
     return errs;
   });
   isValid = computed(() => Object.keys(this.errors()).length === 0);
@@ -165,7 +169,8 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     private accountGroupService: AccountGroupService,
     private clientService: ClientService,
     private productDiscountService: ProductDiscountService,
-    private productService: ProductService
+    private productService: ProductService,
+    private logger: LoggerService
   ) {}
 
   ngOnInit(): void {
@@ -289,7 +294,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error loading discount:', error);
+        this.logger.error('Error loading discount:', error);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -329,10 +334,10 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
             })));
             this.cdr.markForCheck();
           },
-          error: (err) => console.error('Error loading products:', err)
+          error: (err) => this.logger.error('Error loading products:', err)
         });
       },
-      error: (err) => console.error('Error loading product discounts:', err)
+      error: (err) => this.logger.error('Error loading product discounts:', err)
     });
   }
 
@@ -344,7 +349,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
         );
         this.cdr.markForCheck();
       },
-      error: (err) => console.error('Error loading account groups:', err)
+      error: (err) => this.logger.error('Error loading account groups:', err)
     });
 
     // Initial page of clients for the typeahead select
@@ -382,7 +387,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error loading selected clients:', err);
+        this.logger.error('Error loading selected clients:', err);
         this.updateAccountOptions();
         this.cdr.markForCheck();
       }
@@ -481,12 +486,14 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   onDiscountPercentChange(value: string): void {
-    const numValue = parseFloat(value) || 0;
+    const parsed = parseFloat(value);
+    const numValue = isNaN(parsed) ? 0 : Math.min(100, Math.max(0, parsed));
     this.discount.update(d => ({ ...d, discountPercent: numValue }));
   }
 
   onPriorityChange(value: string): void {
-    const numValue = parseInt(value) || 0;
+    const parsed = parseInt(value, 10);
+    const numValue = isNaN(parsed) ? 0 : Math.max(0, parsed);
     this.discount.update(d => ({ ...d, priority: numValue }));
   }
 
@@ -526,6 +533,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
       this.cdr.markForCheck();
       return;
     }
+    if (this.isSaving()) return;
 
     const data = this.discount();
     // Map component's local interface back to API format
@@ -546,7 +554,8 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
       ? this.discountService.createDiscount(apiData)
       : this.discountService.updateDiscount(this.discountId!, apiData);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
@@ -556,7 +565,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
         }
       },
       error: (error) => {
-        console.error('Error saving discount:', error);
+        this.logger.error('Error saving discount:', error);
         this.toastService.error('Failed to save discount');
       }
     });
@@ -604,7 +613,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error linking product:', err);
+        this.logger.error('Error linking product:', err);
         this.toastService.error('Failed to link product');
       }
     });
@@ -646,7 +655,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
           this.cdr.markForCheck();
         },
         error: (err) => {
-          console.error('Error removing product:', err);
+          this.logger.error('Error removing product:', err);
           this.toastService.error('Failed to remove product');
         }
       });

@@ -14,6 +14,7 @@
     [showSaveAndContinue]="true"
     [showDiscard]="false"
     (back)="onBack()"
+    [isSaving]="isSaving()"
     (save)="onSave()"
     (saveAndContinue)="onSaveAndContinue()"
   ></ui-detail-header>
@@ -82,11 +83,11 @@
         </ui-form-field>
 
         <ui-form-field label="Discount %" layout="horizontal">
-          <input type="number" [ngModel]="discount().discountPercent" (ngModelChange)="onDiscountPercentChange($event)" placeholder="0">
+          <input type="number" min="0" max="100" [ngModel]="discount().discountPercent" (ngModelChange)="onDiscountPercentChange($event)" placeholder="0">
         </ui-form-field>
 
         <ui-form-field label="Priority" layout="horizontal">
-          <input type="number" [ngModel]="discount().priority" (ngModelChange)="onPriorityChange($event)" placeholder="0">
+          <input type="number" min="0" [ngModel]="discount().priority" (ngModelChange)="onPriorityChange($event)" placeholder="0">
         </ui-form-field>
 
         <ui-form-field label="Client groups" layout="horizontal">
@@ -150,7 +151,7 @@
     }
   </div>
 
-  <ui-mobile-footer (primaryClick)="onSave()" (secondaryClick)="onSaveAndContinue()"></ui-mobile-footer>
+  <ui-mobile-footer [isSaving]="isSaving()" (primaryClick)="onSave()" (secondaryClick)="onSaveAndContinue()"></ui-mobile-footer>
 </div>
 
 <ui-modal

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, catchError, of, shareReplay } from 'rxjs';
 import { environment } from '@env/environment';
+import { LoggerService } from '@core/services/logger.service';
 
 // Generic lookup item interface
 export interface LookupItem {
@@ -40,7 +41,7 @@ export class LookupService {
     private contactTitles$: Observable<LookupItem[]> | null = null;
     private departments$: Observable<LookupItem[]> | null = null;
 
-    constructor(private http: HttpClient) {}
+    constructor(private http: HttpClient, private logger: LoggerService) {}
 
     /**
      * Get all contact titles
@@ -52,7 +53,7 @@ export class LookupService {
             ).pipe(
                 map(response => this.transformToLookupItems(response.member)),
                 catchError(error => {
-                    console.error('Error loading contact titles:', error);
+                    this.logger.error('Error loading contact titles:', error);
                     // Return fallback options
                     return of([
                         { id: 1, name: 'Mr.' },
@@ -77,7 +78,7 @@ export class LookupService {
             ).pipe(
                 map(response => this.transformToLookupItems(response.member)),
                 catchError(error => {
-                    console.error('Error loading departments:', error);
+                    this.logger.error('Error loading departments:', error);
                     // Return fallback options
                     return of([
                         { id: 1, name: 'Sales' },

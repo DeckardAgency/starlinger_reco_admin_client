@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, finalize } from 'rxjs';
 
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
@@ -29,6 +29,7 @@ import { ClientDetail, ClientAddress, ClientUser } from '@core/models/client.mod
 import { Order } from '@core/models/order.model';
 import { AccountGroupService } from '@core/services/http/account-group.service';
 import { CountryService } from '@core/services/http/country.service';
+import { LoggerService } from '@core/services/logger.service';
 import { CountryOption } from '../../../shared/components/modals/address-modal/address-modal.component';
 
 // Interfaces for tab data
@@ -116,9 +117,11 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   private accountGroupService = inject(AccountGroupService);
   private countryService = inject(CountryService);
   private toastService = inject(ToastService);
+  private logger = inject(LoggerService);
   private destroy$ = new Subject<void>();
 
   isLoading = signal(false);
+  isSaving = signal(false);
   loadError = signal<string | null>(null);
 
   // Template refs for custom cell rendering
@@ -368,7 +371,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         );
         this.cdr.markForCheck();
       },
-      error: (err) => console.error('Error loading account groups:', err)
+      error: (err) => this.logger.error('Error loading account groups:', err)
     });
   }
 
@@ -379,7 +382,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           (response.member || []).map(c => ({ id: c.id, name: c.name, code: c.code }))
         );
       },
-      error: (err) => console.error('Error loading countries:', err)
+      error: (err) => this.logger.error('Error loading countries:', err)
     });
   }
 
@@ -424,7 +427,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error loading addresses:', err);
+        this.logger.error('Error loading addresses:', err);
         this.addresses.set([]);
       }
     });
@@ -447,7 +450,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error loading users:', err);
+        this.logger.error('Error loading users:', err);
         this.clientUsers.set([]);
       }
     });
@@ -480,7 +483,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error loading orders:', err);
+        this.logger.error('Error loading orders:', err);
         this.shopOrders.set([]);
         this.ordersTotalItems.set(0);
         this.cdr.markForCheck();
@@ -677,7 +680,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.toastService.success('User removed from client');
         this.cdr.markForCheck();
       },
-      error: (err) => console.error('Error removing user:', err)
+      error: (err) => this.logger.error('Error removing user:', err)
     });
   }
 
@@ -725,6 +728,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       this.cdr.detectChanges();
       return;
     }
+    if (this.isSaving()) return;
 
     const data: Record<string, unknown> = {
       code: account.code?.trim() ?? '',
@@ -747,7 +751,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       ? this.clientService.createClient(data as any)
       : this.clientService.updateClient(this.accountId()!, data as any);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
@@ -759,7 +764,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         // If editing and not navigating, just stay on page (data already saved)
       },
       error: (error) => {
-        console.error('Error saving account:', error);
+        this.logger.error('Error saving account:', error);
         this.toastService.error('Failed to save account');
       }
     });
@@ -816,7 +821,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error loading clients:', err);
+        this.logger.error('Error loading clients:', err);
         this.isLoadingAvailableClients.set(false);
         this.cdr.markForCheck();
       }
@@ -890,7 +895,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error updating managed clients:', err);
+        this.logger.error('Error updating managed clients:', err);
         this.toastService.error('Failed to update managed clients');
       }
     });
@@ -932,7 +937,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error loading unassigned users:', err);
+        this.logger.error('Error loading unassigned users:', err);
         this.isLoadingUnassignedUsers.set(false);
         this.cdr.markForCheck();
       }
@@ -969,7 +974,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error assigning user:', err);
+        this.logger.error('Error assigning user:', err);
         this.toastService.error('Failed to assign user');
       }
     });
@@ -1001,7 +1006,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     const clientId = this.accountId();
 
     if (!clientId) {
-      console.error('Cannot save address: no client ID');
+      this.logger.error('Cannot save address: no client ID');
       this.isAddressSaving.set(false);
       return;
     }
@@ -1024,7 +1029,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           this.closeAddressModal();
         },
         error: (err) => {
-          console.error('Error updating address:', err);
+          this.logger.error('Error updating address:', err);
           this.isAddressSaving.set(false);
         }
       });
@@ -1044,7 +1049,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           this.closeAddressModal();
         },
         error: (err) => {
-          console.error('Error creating address:', err);
+          this.logger.error('Error creating address:', err);
           this.isAddressSaving.set(false);
         }
       });
@@ -1060,7 +1065,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error deleting address:', err);
+        this.logger.error('Error deleting address:', err);
       }
     });
   }

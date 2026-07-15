@@ -15,6 +15,7 @@
     [isEditMode]="isEditMode()"
     [showSaveAndContinue]="true"
     [showDiscard]="false"
+    [isSaving]="isSaving()"
     (back)="onBack()"
     (save)="onSave()"
     (saveAndContinue)="onSaveAndContinue()"
@@ -198,6 +199,7 @@
 
   <!-- Mobile Sticky Footer -->
   <ui-mobile-footer
+    [isSaving]="isSaving()"
     (primaryClick)="onSave()"
     (secondaryClick)="onSaveAndContinue()"
   ></ui-mobile-footer>

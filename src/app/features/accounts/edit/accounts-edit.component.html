@@ -26,6 +26,7 @@
     [showSaveAndContinue]="true"
     [showDiscard]="false"
     (back)="goBack()"
+    [isSaving]="isSaving()"
     (save)="onSave()"
     (saveAndContinue)="onSaveAndContinue()"
   ></ui-detail-header>
@@ -223,6 +224,7 @@
 
   <!-- Mobile Sticky Footer -->
   <ui-mobile-footer
+    [isSaving]="isSaving()"
     (primaryClick)="onSave()"
     (secondaryClick)="onSaveAndContinue()"
   ></ui-mobile-footer>

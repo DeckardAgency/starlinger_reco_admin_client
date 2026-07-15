@@ -4,6 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { InputComponent, ButtonComponent, LinkComponent } from '@app/ui-kit';
+import { AuthService } from '@core/auth/auth.service';
 import { LoggerService, ScopedLogger } from '@services/logger.service';
 
 @Component({
@@ -39,6 +40,7 @@ export class ForgotPasswordComponent {
   private destroyRef = inject(DestroyRef);
 
   constructor(
+    private authService: AuthService,
     private router: Router,
     private loggerService: LoggerService
   ) {
@@ -63,12 +65,21 @@ export class ForgotPasswordComponent {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    // Simulate API call - replace with actual service call
-    setTimeout(() => {
-      this.isLoading.set(false);
-      this.isSubmitted.set(true);
-      this.logger.debug('Password reset requested for:', usernameVal);
-    }, 1500);
+    // The backend endpoint is enumeration-safe: any 2xx means "request accepted",
+    // so we always show the generic success screen without revealing whether the
+    // email exists.
+    this.authService.forgotPassword(usernameVal).subscribe({
+      next: () => {
+        this.isLoading.set(false);
+        this.isSubmitted.set(true);
+        this.logger.debug('Password reset requested for:', usernameVal);
+      },
+      error: (error) => {
+        this.isLoading.set(false);
+        this.errorMessage.set('Something went wrong. Please try again.');
+        this.logger.error('Password reset request failed', error);
+      }
+    });
   }
 
   backToLogin(): void {

@@ -19,11 +19,11 @@
         <h1 class="section-header__title">{{ isEditMode() ? product().name : 'New product' }}</h1>
       </div>
       <div class="section-header__actions">
-        <button class="btn btn--outline" (click)="onSaveAndContinue()">
+        <button class="btn btn--outline" [disabled]="isSaving()" (click)="onSaveAndContinue()">
           <span>Save and continue</span>
           <ui-icon name="chevron-right" size="sm"></ui-icon>
         </button>
-        <button class="btn btn--primary" (click)="onSave()">
+        <button class="btn btn--primary" [disabled]="isSaving()" (click)="onSave()">
           <span>Save</span>
           <ui-icon name="save" size="sm"></ui-icon>
         </button>
@@ -88,7 +88,7 @@
 
         <div class="card__fields">
           <ui-form-field label="Base price" layout="horizontal">
-            <input type="number" [value]="product().basePrice" placeholder="0.00" (input)="updateProductNumber('basePrice', $event)">
+            <input type="number" min="0" [value]="product().basePrice" placeholder="0.00" (input)="updateProductNumber('basePrice', $event)">
           </ui-form-field>
           <ui-form-field label="Currency" layout="horizontal">
             <ui-select
@@ -109,17 +109,17 @@
 
         <div class="card__fields">
           <ui-form-field label="Quantity" layout="horizontal">
-            <input type="number" [value]="product().quantity" placeholder="0" (input)="updateProductNumber('quantity', $event)">
+            <input type="number" min="0" [value]="product().quantity" placeholder="0" (input)="updateProductNumber('quantity', $event)">
           </ui-form-field>
           <ui-form-field label="Quantity step" layout="horizontal">
-            <input type="number" [value]="product().quantityStep" placeholder="0" (input)="updateProductNumber('quantityStep', $event)">
+            <input type="number" min="0" [value]="product().quantityStep" placeholder="0" (input)="updateProductNumber('quantityStep', $event)">
           </ui-form-field>
           <ui-form-field label="Quote item limit" layout="horizontal">
-            <input type="number" [value]="product().quoteItemLimit" placeholder="0" (input)="updateProductNumber('quoteItemLimit', $event)">
+            <input type="number" min="0" [value]="product().quoteItemLimit" placeholder="0" (input)="updateProductNumber('quoteItemLimit', $event)">
           </ui-form-field>
           <ui-form-field label="Fixed quantity" layout="horizontal"
                          hint="If set, customers can only order exactly this quantity. 0 = no restriction.">
-            <input type="number" [value]="product().fixedQuantity" placeholder="0" (input)="updateProductNumber('fixedQuantity', $event)">
+            <input type="number" min="0" [value]="product().fixedQuantity" placeholder="0" (input)="updateProductNumber('fixedQuantity', $event)">
           </ui-form-field>
           <ui-form-field label="Weight" layout="horizontal">
             <input type="text" [value]="product().weight" placeholder="kg 0.00" (input)="updateProduct('weight', $event)">
@@ -449,6 +449,7 @@
 
 <!-- Mobile Footer -->
 <ui-mobile-footer
+  [isSaving]="isSaving()"
   (primaryClick)="onSave()"
   (secondaryClick)="onSaveAndContinue()"
 ></ui-mobile-footer>

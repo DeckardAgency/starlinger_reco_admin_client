@@ -26,6 +26,8 @@ interface Product {
   shortDescription: string;
   qty: number;
   qtyStep: number;
+  price: number;
+  currency: string;
   selected?: boolean;
 }
 
@@ -64,6 +66,7 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
+  @ViewChild('priceTemplate') priceTemplate!: TemplateRef<any>;
 
   // Search state
   searchQuery = signal('');
@@ -177,7 +180,11 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
     const sortCol = this.sortColumn();
     const sortDir = this.sortDirection();
     if (sortCol && sortDir) {
-      params[`order[${sortCol}]`] = sortDir;
+      // Map display column keys to the actual orderable entity fields
+      // (e.g. the "code" column is the Product.partNo field).
+      const fieldMap: Record<string, string> = { code: 'partNo' };
+      const apiField = fieldMap[sortCol] ?? sortCol;
+      params[`order[${apiField}]`] = sortDir;
     }
 
     return params;
@@ -191,6 +198,8 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
       shortDescription: p.shortDescription || '',
       qty: 1,
       qtyStep: 1,
+      price: p.price ?? 0,
+      currency: p.currency || 'EUR',
       selected: false
     };
   }
@@ -201,8 +210,8 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
       { key: 'code', label: 'Code', visible: true },
       { key: 'name', label: 'Name', visible: true, locked: true },
       { key: 'shortDescription', label: 'Short description', visible: true },
-      { key: 'qty', label: 'Qty', visible: true },
-      { key: 'qtyStep', label: 'Qty step', visible: true }
+      { key: 'price', label: 'Price', visible: true },
+      { key: 'qty', label: 'Qty', visible: true }
     ];
 
     this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
@@ -213,8 +222,8 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
       { key: 'code', label: 'Code', sortable: true, width: '128px' },
       { key: 'name', label: 'Name', sortable: true, width: '266px' },
       { key: 'shortDescription', label: 'Short description', sortable: true },
+      { key: 'price', label: 'Price', sortable: true, width: '112px', align: 'right', template: this.priceTemplate },
       { key: 'qty', label: 'Qty', sortable: true, width: '96px', align: 'right' },
-      { key: 'qtyStep', label: 'Qty step', sortable: true, width: '96px', align: 'right' },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
 

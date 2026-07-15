@@ -36,6 +36,7 @@ export class AuthService {
   private loginUrl = `${environment.apiBaseUrl}/api/login_check`;
   private meUrl = `${environment.apiBaseUrl}/api/me`;
   private logoutUrl = `${environment.apiBaseUrl}/api/logout`;
+  private forgotPasswordUrl = `${environment.apiBaseUrl}/api/auth/forgot-password`;
   private userKey = 'currentUser';
 
   private currentUserSubject = new BehaviorSubject<User | null>(null);
@@ -106,6 +107,22 @@ export class AuthService {
         }),
         catchError(error => {
           this.logger.error('Login error', error);
+          return throwError(() => error);
+        })
+      );
+  }
+
+  /**
+   * Request a password-reset email. POSTs the email to the public, enumeration-safe
+   * endpoint (the backend always responds with success, regardless of whether the
+   * address exists). Callers should show a generic confirmation on 2xx.
+   */
+  forgotPassword(email: string): Observable<void> {
+    return this.http
+      .post<void>(this.forgotPasswordUrl, { email }, { withCredentials: true })
+      .pipe(
+        catchError(error => {
+          this.logger.error('Forgot-password request failed', error);
           return throwError(() => error);
         })
       );

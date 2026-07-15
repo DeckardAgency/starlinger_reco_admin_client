@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpEventType } from '@angular/common/http';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, finalize } from 'rxjs/operators';
 
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { DataTableComponent, TableColumn } from '@app/ui-kit/organisms/data-table/data-table.component';
@@ -23,6 +23,7 @@ import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-contai
 import { DeliveryType, DeliveryTypeDocument } from '@core/models/delivery-type.model';
 import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
 import { MediaService } from '@core/services/http/media.service';
+import { LoggerService } from '@core/services/logger.service';
 import { MediaItem } from '@core/models/media.model';
 import { environment } from '@env/environment';
 
@@ -93,6 +94,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
 
   // Loading state
   isLoading = signal(false);
+  isSaving = signal(false);
 
   // Validation state
   touched = signal<Record<string, boolean>>({});
@@ -143,7 +145,8 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     private deliveryTypeService: DeliveryTypeService,
-    private mediaService: MediaService
+    private mediaService: MediaService,
+    private logger: LoggerService
   ) {}
 
   ngOnInit(): void {
@@ -202,7 +205,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error loading delivery type:', error);
+        this.logger.error('Error loading delivery type:', error);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -256,6 +259,8 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
       return;
     }
 
+    if (this.isSaving()) return;
+
     const detail = this.deliveryType();
 
     // Build payload with only writable fields — never send id
@@ -276,7 +281,8 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
       ? this.deliveryTypeService.createDeliveryType(data as any)
       : this.deliveryTypeService.updateDeliveryType(this.deliveryTypeId!, data as any);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
@@ -286,7 +292,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
         }
       },
       error: (error) => {
-        console.error('Error saving delivery type:', error);
+        this.logger.error('Error saving delivery type:', error);
         this.toastService.error('Failed to save delivery type');
       }
     });
@@ -380,7 +386,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
               this.cdr.markForCheck();
             }
           },
-          error: (err) => console.error('Error uploading document:', err)
+          error: (err) => this.logger.error('Error uploading document:', err)
         });
     });
 
@@ -460,7 +466,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
             this.triggerDownload(media.filePath, media.filename || 'document');
           }
         },
-        error: (err) => console.error('Error downloading document:', err)
+        error: (err) => this.logger.error('Error downloading document:', err)
       });
     this.activeDocActionId.set(null);
   }
@@ -479,7 +485,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
           document.body.removeChild(a);
           URL.revokeObjectURL(blobUrl);
         },
-        error: (err) => console.error('Error downloading file:', err)
+        error: (err) => this.logger.error('Error downloading file:', err)
       });
   }
 
@@ -495,7 +501,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
           this.updateDeliveryTypeMedia();
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('Error deleting document:', err)
+        error: (err) => this.logger.error('Error deleting document:', err)
       });
     this.activeDocActionId.set(null);
   }
@@ -523,7 +529,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
     this.mediaService.updateMediaItem(String(docId), { filename: fullName } as any)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        error: (err) => console.error('Error renaming document:', err)
+        error: (err) => this.logger.error('Error renaming document:', err)
       });
 
     this.cancelRename();
@@ -553,7 +559,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
       this.mediaService.deleteMediaItem(String(doc.id))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          error: (err) => console.error('Error deleting document:', err)
+          error: (err) => this.logger.error('Error deleting document:', err)
         });
     });
 
@@ -588,7 +594,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
     this.deliveryTypeService.updateDeliveryType(this.deliveryTypeId, { documents } as any)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        error: (err) => console.error('Error updating delivery type media:', err)
+        error: (err) => this.logger.error('Error updating delivery type media:', err)
       });
   }
 }

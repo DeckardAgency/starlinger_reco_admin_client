@@ -3,13 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, finalize } from 'rxjs/operators';
 
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { ProductCategoryService } from '@core/services/http/product-category.service';
+import { LoggerService } from '@core/services/logger.service';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface ProductCategoryDetail {
@@ -69,7 +70,8 @@ export class ProductCategoriesEditComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private productCategoryService: ProductCategoryService
+    private productCategoryService: ProductCategoryService,
+    private logger: LoggerService
   ) {}
 
   ngOnInit(): void {
@@ -111,7 +113,7 @@ export class ProductCategoriesEditComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error loading product category:', error);
+        this.logger.error('Error loading product category:', error);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -179,6 +181,8 @@ export class ProductCategoriesEditComponent implements OnInit, OnDestroy {
   }
 
   private saveProductCategory(navigateToList: boolean): void {
+    if (this.isSaving()) return;
+
     this.isSaving.set(true);
     const formData = this.productCategory();
     const isCreating = !this.isEditMode();
@@ -191,9 +195,8 @@ export class ProductCategoriesEditComponent implements OnInit, OnDestroy {
       ? this.productCategoryService.createProductCategory(data)
       : this.productCategoryService.updateProductCategory(this.productCategoryId!, data);
 
-    operation.subscribe({
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
-        this.isSaving.set(false);
         this.toastService.success('Saved successfully');
         if (navigateToList) {
           this.router.navigate(['/admin/product-categories/list']);
@@ -202,13 +205,10 @@ export class ProductCategoriesEditComponent implements OnInit, OnDestroy {
         } else if (!isCreating && this.productCategoryId) {
           this.loadProductCategory(this.productCategoryId);
         }
-        this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error saving product category:', error);
-        this.isSaving.set(false);
+        this.logger.error('Error saving product category:', error);
         this.toastService.error('Failed to save product category');
-        this.cdr.markForCheck();
       }
     });
   }

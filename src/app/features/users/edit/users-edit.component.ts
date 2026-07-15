@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs/operators';
 
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detail-header.component';
@@ -13,6 +14,7 @@ import { AdminUser, AdminUserRoleType, ADMIN_USER_ROLE_OPTIONS, AdminUserRoleOpt
 import { UserService } from '@core/services/http/user.service';
 import { User } from '@core/models';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
+import { LoggerService } from '@core/services/logger.service';
 
 const EMPTY_USER: AdminUser = {
   id: 0,
@@ -46,11 +48,13 @@ export class UsersEditComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private userService = inject(UserService);
   private toastService = inject(ToastService);
+  private logger = inject(LoggerService);
 
   isEditMode = signal(false);
   userId = signal<string | null>(null);
   user = signal<AdminUser>(EMPTY_USER);
   isLoading = signal(false);
+  isSaving = signal(false);
   loadError = signal<string | null>(null);
 
   // Password fields
@@ -222,23 +226,26 @@ export class UsersEditComponent implements OnInit {
       return;
     }
 
+    if (this.isSaving()) return;
+
     const user = this.user();
 
     // New user without a password: send an invitation email instead of creating
     // the account directly — the user picks their own password via the link.
     if (!this.isEditMode() && !this.password()) {
+      this.isSaving.set(true);
       this.userService.inviteUser({
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         roles: this.mapAdminRoleToRoles(user.role)
-      }).subscribe({
+      }).pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
         next: () => {
           this.toastService.success(`Invitation email sent to ${user.email}`);
           this.router.navigate(['/admin/users/list']);
         },
         error: (error) => {
-          console.error('Error sending invitation:', error);
+          this.logger.error('Error sending invitation:', error);
           this.toastService.error('Failed to send invitation: ' + (error?.error?.detail || 'Unknown error'));
         }
       });
@@ -261,13 +268,14 @@ export class UsersEditComponent implements OnInit {
       ? this.userService.updateUser(this.userId()!, data)
       : this.userService.createUser(data);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: () => {
         this.toastService.success('Saved successfully');
         this.router.navigate(['/admin/users/list']);
       },
       error: (error) => {
-        console.error('Error saving user:', error);
+        this.logger.error('Error saving user:', error);
         this.toastService.error('Failed to save user');
       }
     });
@@ -279,6 +287,8 @@ export class UsersEditComponent implements OnInit {
       this.cdr.markForCheck();
       return;
     }
+
+    if (this.isSaving()) return;
 
     const user = this.user();
 
@@ -304,16 +314,16 @@ export class UsersEditComponent implements OnInit {
       ? this.userService.updateUser(this.userId()!, data)
       : this.userService.createUser(data);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (response) => {
         this.toastService.success('Saved successfully');
         if (!this.isEditMode() && response?.id) {
           this.router.navigate(['/admin/users', response.id, 'edit']);
         }
-        this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error saving user:', error);
+        this.logger.error('Error saving user:', error);
         this.toastService.error('Failed to save user');
       }
     });

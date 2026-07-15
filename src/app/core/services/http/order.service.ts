@@ -4,6 +4,7 @@ import { Observable, of, catchError, tap } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Order, OrdersResponse, TransformedOrdersResponse } from '@models/order.model';
 import {environment} from "@env/environment";
+import { LoggerService } from '@core/services/logger.service';
 
 @Injectable({
     providedIn: 'root'
@@ -17,7 +18,7 @@ export class OrderService {
         })
     };
 
-    constructor(private http: HttpClient) {}
+    constructor(private http: HttpClient, private logger: LoggerService) {}
 
     /**
      * Get orders with pagination, sorting and filtering
@@ -58,7 +59,7 @@ export class OrderService {
                 return ordersResponse;
             }),
             catchError(error => {
-                console.error('API error:', error);
+                this.logger.error('API error:', error);
                 return of({
                     orders: [],
                     totalOrders: 0,
@@ -94,9 +95,9 @@ export class OrderService {
             updateData,
             options
         ).pipe(
-            tap(response => console.log('Order updated:', response)),
+            tap(response => this.logger.debug('Order updated:', response)),
             catchError(error => {
-                console.error('Error updating order:', error);
+                this.logger.error('Error updating order:', error);
                 throw error;
             })
         );
@@ -154,9 +155,9 @@ export class OrderService {
                 responseType: 'blob'
             }
         ).pipe(
-            tap(() => console.log('Excel export requested')),
+            tap(() => this.logger.debug('Excel export requested')),
             catchError(error => {
-                console.error('Error exporting to Excel:', error);
+                this.logger.error('Error exporting to Excel:', error);
                 throw error;
             })
         );

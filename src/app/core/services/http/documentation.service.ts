@@ -10,6 +10,7 @@ import {
   CategoriesResponse
 } from '@models/documentation.model';
 import { environment } from "@env/environment";
+import { LoggerService } from '@core/services/logger.service';
 
 interface HydraResponse<T> {
   '@context': string;
@@ -57,7 +58,7 @@ export class DocumentationService {
     })
   };
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private logger: LoggerService) {}
 
   /**
    * Get documentations with pagination, sorting and filtering
@@ -89,7 +90,7 @@ export class DocumentationService {
     }
 
     return this.http.get<HydraResponse<Documentation>>(this.apiUrl, { params }).pipe(
-      tap(response => console.log('Raw API response:', response)),
+      tap(response => this.logger.debug('Raw API response:', response)),
       map(response => {
         const documentationsResponse: DocumentationsResponse = {
           documentations: response.member || [],
@@ -106,7 +107,7 @@ export class DocumentationService {
         return documentationsResponse;
       }),
       catchError(error => {
-        console.error('API error:', error);
+        this.logger.error('API error:', error);
         return of({
           documentations: [],
           totalItems: 0,
@@ -230,7 +231,7 @@ export class DocumentationService {
         totalItems: response.totalItems || 0
       })),
       catchError(error => {
-        console.error('API error:', error);
+        this.logger.error('API error:', error);
         return of({ revisions: [], totalItems: 0 });
       })
     );
@@ -280,7 +281,7 @@ export class DocumentationService {
   getMedia(documentationId: string): Observable<DocumentationMedia[]> {
     return this.http.get<DocumentationMedia[]>(`${this.apiUrl}/${documentationId}/media`).pipe(
       catchError(error => {
-        console.error('Error fetching media:', error);
+        this.logger.error('Error fetching media:', error);
         return of([]);
       })
     );

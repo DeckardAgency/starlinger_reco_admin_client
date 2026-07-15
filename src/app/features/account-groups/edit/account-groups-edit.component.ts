@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, finalize } from 'rxjs/operators';
 
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
@@ -12,6 +12,7 @@ import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detai
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { AccountGroupService } from '@core/services/http/account-group.service';
+import { LoggerService } from '@core/services/logger.service';
 
 interface AccountGroupDetail {
   id: number;
@@ -51,6 +52,7 @@ export class AccountGroupsEditComponent implements OnInit, OnDestroy {
 
   accountGroup = signal<AccountGroupDetail>({ ...EMPTY_ACCOUNT_GROUP });
   isLoading = signal(false);
+  isSaving = signal(false);
 
   touched = signal<Record<string, boolean>>({});
   errors = computed(() => {
@@ -65,7 +67,8 @@ export class AccountGroupsEditComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private accountGroupService: AccountGroupService
+    private accountGroupService: AccountGroupService,
+    private logger: LoggerService
   ) {}
 
   ngOnInit(): void {
@@ -97,7 +100,7 @@ export class AccountGroupsEditComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error loading account group:', error);
+        this.logger.error('Error loading account group:', error);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -145,6 +148,8 @@ export class AccountGroupsEditComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.isSaving()) return;
+
     const detail = this.accountGroup();
     const data: Record<string, unknown> = {
       name: detail.name,
@@ -156,7 +161,8 @@ export class AccountGroupsEditComponent implements OnInit, OnDestroy {
       ? this.accountGroupService.createAccountGroup(data as any)
       : this.accountGroupService.updateAccountGroup(this.accountGroupId!, data as any);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
@@ -166,7 +172,7 @@ export class AccountGroupsEditComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        console.error('Error saving account group:', error);
+        this.logger.error('Error saving account group:', error);
         this.toastService.error('Failed to save account group');
       }
     });

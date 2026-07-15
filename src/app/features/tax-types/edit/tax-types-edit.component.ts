@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, finalize } from 'rxjs/operators';
 
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -11,6 +11,7 @@ import { DetailHeaderComponent } from '@app/ui-kit/molecules/detail-header/detai
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
 import { TaxType } from '@core/models/tax-type.model';
 import { TaxTypeService } from '@core/services/http/tax-type.service';
+import { LoggerService } from '@core/services/logger.service';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
 interface TaxTypeDetail {
@@ -58,6 +59,7 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
 
   // Loading state
   isLoading = signal(false);
+  isSaving = signal(false);
 
   // Validation state
   touched = signal<Record<string, boolean>>({});
@@ -79,7 +81,8 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private taxTypeService: TaxTypeService
+    private taxTypeService: TaxTypeService,
+    private logger: LoggerService
   ) {}
 
   ngOnInit(): void {
@@ -113,7 +116,7 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error loading tax type:', error);
+        this.logger.error('Error loading tax type:', error);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -152,6 +155,8 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.isSaving()) return;
+
     const detail = this.taxType();
 
     // Build payload with only writable fields — never send id
@@ -165,7 +170,8 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
       ? this.taxTypeService.createTaxType(data as any)
       : this.taxTypeService.updateTaxType(this.taxTypeId!, data as any);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
@@ -175,7 +181,7 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        console.error('Error saving tax type:', error);
+        this.logger.error('Error saving tax type:', error);
         this.toastService.error('Failed to save tax type');
       }
     });
@@ -189,8 +195,18 @@ export class TaxTypesEditComponent implements OnInit, OnDestroy {
 
   onPercentChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.taxType.update(t => ({ ...t, percent: input.value }));
+    this.taxType.update(t => ({ ...t, percent: this.clampPercent(input.value) }));
     this.markFieldTouched('percent');
+  }
+
+  // Coerce percent: keep the raw value when it is a valid 0–100 number,
+  // otherwise clamp to the nearest bound. Preserves in-progress decimals.
+  private clampPercent(value: string): string {
+    if (value === '') return '';
+    const parsed = parseFloat(value);
+    if (isNaN(parsed) || parsed < 0) return '0';
+    if (parsed > 100) return '100';
+    return value;
   }
 
 }

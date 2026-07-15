@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, finalize } from 'rxjs/operators';
 
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -14,6 +14,7 @@ import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-contai
 import { DeliveryPrice, DeliveryPriceDeliveryType } from '@core/models/delivery-price.model';
 import { DeliveryPriceService } from '@core/services/http/delivery-price.service';
 import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
+import { LoggerService } from '@core/services/logger.service';
 import { DHL_ZONES } from '@core/models/country.model';
 
 interface DeliveryPriceDetail {
@@ -78,6 +79,7 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
 
   // Loading state
   isLoading = signal(false);
+  isSaving = signal(false);
 
   // Validation state
   touched = signal<Record<string, boolean>>({});
@@ -104,7 +106,8 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     private deliveryPriceService: DeliveryPriceService,
-    private deliveryTypeService: DeliveryTypeService
+    private deliveryTypeService: DeliveryTypeService,
+    private logger: LoggerService
   ) {}
 
   ngOnInit(): void {
@@ -130,7 +133,7 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
           this.deliveryTypeOptions.set(options);
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('Error loading delivery types:', err)
+        error: (err) => this.logger.error('Error loading delivery types:', err)
       });
   }
 
@@ -174,7 +177,7 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error loading delivery price:', error);
+        this.logger.error('Error loading delivery price:', error);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -213,6 +216,8 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.isSaving()) return;
+
     const data = this.deliveryPrice();
 
     // Build explicit payload with only writable fields - never send id
@@ -233,7 +238,8 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
       ? this.deliveryPriceService.createDeliveryPrice(payload as Partial<DeliveryPrice>)
       : this.deliveryPriceService.updateDeliveryPrice(this.deliveryPriceId!, payload as Partial<DeliveryPrice>);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
@@ -243,10 +249,18 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        console.error('Error saving delivery price:', error);
+        this.logger.error('Error saving delivery price:', error);
         this.toastService.error('Failed to save delivery price');
       }
     });
+  }
+
+  // Coerce numeric text fields: keep the raw value when it is a valid
+  // non-negative number, otherwise clamp to '0'. Preserves in-progress decimals.
+  private clampNonNegative(value: string): string {
+    if (value === '') return '';
+    const parsed = parseFloat(value);
+    return isNaN(parsed) || parsed < 0 ? '0' : value;
   }
 
   // Input handlers
@@ -265,33 +279,33 @@ export class DeliveryPricesEditComponent implements OnInit, OnDestroy {
 
   onSizeFromChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.deliveryPrice.update(dp => ({ ...dp, sizeFrom: input.value }));
+    this.deliveryPrice.update(dp => ({ ...dp, sizeFrom: this.clampNonNegative(input.value) }));
   }
 
   onSizeToChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.deliveryPrice.update(dp => ({ ...dp, sizeTo: input.value }));
+    this.deliveryPrice.update(dp => ({ ...dp, sizeTo: this.clampNonNegative(input.value) }));
   }
 
   onPriceBaseChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.deliveryPrice.update(dp => ({ ...dp, priceBase: input.value }));
+    this.deliveryPrice.update(dp => ({ ...dp, priceBase: this.clampNonNegative(input.value) }));
     this.markFieldTouched('priceBase');
   }
 
   onStepStartsAtChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.deliveryPrice.update(dp => ({ ...dp, stepStartsAt: input.value }));
+    this.deliveryPrice.update(dp => ({ ...dp, stepStartsAt: this.clampNonNegative(input.value) }));
   }
 
   onForEveryNextSizeChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.deliveryPrice.update(dp => ({ ...dp, forEveryNextSize: input.value }));
+    this.deliveryPrice.update(dp => ({ ...dp, forEveryNextSize: this.clampNonNegative(input.value) }));
   }
 
   onPriceBaseStepChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.deliveryPrice.update(dp => ({ ...dp, priceBaseStep: input.value }));
+    this.deliveryPrice.update(dp => ({ ...dp, priceBaseStep: this.clampNonNegative(input.value) }));
   }
 
   // Select handlers

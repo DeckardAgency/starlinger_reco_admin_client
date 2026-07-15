@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs/operators';
 
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -12,6 +13,7 @@ import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { FuelSurchargeService } from '@core/services/http/fuel-surcharge.service';
 import { DeliveryTypeService } from '@core/services/http/delivery-type.service';
+import { LoggerService } from '@core/services/logger.service';
 
 interface FuelSurchargeDetail {
   id: number;
@@ -58,12 +60,14 @@ export class FuelSurchargesEditComponent implements OnInit {
   private fuelSurchargeService = inject(FuelSurchargeService);
   private deliveryTypeService = inject(DeliveryTypeService);
   private toastService = inject(ToastService);
+  private logger = inject(LoggerService);
 
   private fuelSurchargeId: string | null = null;
 
   fuelSurcharge = signal<FuelSurchargeDetail>({ ...EMPTY_FUEL_SURCHARGE });
   isEditMode = signal(false);
   isLoading = signal(false);
+  isSaving = signal(false);
 
   deliveryTypeOptions = signal<SelectOption[]>([]);
   selectedDeliveryType = '';
@@ -142,7 +146,7 @@ export class FuelSurchargesEditComponent implements OnInit {
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error loading fuel surcharge:', error);
+        this.logger.error('Error loading fuel surcharge:', error);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -175,8 +179,16 @@ export class FuelSurchargesEditComponent implements OnInit {
 
   onFuelSurchargeChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.fuelSurcharge.update(fs => ({ ...fs, fuelSurcharge: input.value }));
+    this.fuelSurcharge.update(fs => ({ ...fs, fuelSurcharge: this.clampNonNegative(input.value) }));
     this.markFieldTouched('fuelSurcharge');
+  }
+
+  // Coerce numeric field: keep the raw value when it is a valid non-negative
+  // number, otherwise clamp to '0'. Preserves in-progress decimals.
+  private clampNonNegative(value: string): string {
+    if (value === '') return '';
+    const parsed = parseFloat(value);
+    return isNaN(parsed) || parsed < 0 ? '0' : value;
   }
 
   onDeliveryTypeChange(value: string | number): void {
@@ -210,6 +222,8 @@ export class FuelSurchargesEditComponent implements OnInit {
       return;
     }
 
+    if (this.isSaving()) return;
+
     const formData = this.fuelSurcharge();
 
     const payload: Record<string, unknown> = {
@@ -224,7 +238,8 @@ export class FuelSurchargesEditComponent implements OnInit {
       ? this.fuelSurchargeService.createFuelSurcharge(payload as any)
       : this.fuelSurchargeService.updateFuelSurcharge(this.fuelSurchargeId!, payload as any);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
@@ -234,7 +249,7 @@ export class FuelSurchargesEditComponent implements OnInit {
         }
       },
       error: (error) => {
-        console.error('Error saving fuel surcharge:', error);
+        this.logger.error('Error saving fuel surcharge:', error);
         this.toastService.error('Failed to save fuel surcharge');
       }
     });

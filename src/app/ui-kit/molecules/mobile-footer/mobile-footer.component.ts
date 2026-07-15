@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, booleanAttribute } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 
@@ -16,6 +16,7 @@ export class MobileFooterComponent {
   @Input() secondaryLabel = 'Save and continue';
   @Input() secondaryIcon = 'chevron-right';
   @Input() showSecondary = true;
+  @Input({ transform: booleanAttribute }) isSaving = false;
 
   @Output() primaryClick = new EventEmitter<void>();
   @Output() secondaryClick = new EventEmitter<void>();

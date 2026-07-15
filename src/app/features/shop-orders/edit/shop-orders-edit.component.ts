@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, finalize } from 'rxjs';
 
 import { BreadcrumbsComponent, BreadcrumbItem } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { BadgeComponent, BadgeVariant } from '@app/ui-kit/atoms/badge/badge.component';
@@ -21,6 +21,7 @@ import { Order } from '@core/models/order.model';
 import { Client, ClientAddress } from '@core/models/client.model';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { AlertService } from '@services/alert.service';
+import { LoggerService } from '@core/services/logger.service';
 
 // Interfaces
 interface OrderProduct {
@@ -160,9 +161,11 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private addressService = inject(AddressService);
   private toastService = inject(ToastService);
   private alertService = inject(AlertService);
+  private logger = inject(LoggerService);
   private destroy$ = new Subject<void>();
 
   isLoading = signal(true);
+  isSaving = signal(false);
   loadError = signal<string | null>(null);
 
   // Template references for custom cell rendering
@@ -293,7 +296,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
           this.deliveryTypeOptions.set(options);
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('[ShopOrdersEdit] Error loading delivery types:', err)
+        error: (err) => this.logger.error('[ShopOrdersEdit] Error loading delivery types:', err)
       });
   }
 
@@ -308,7 +311,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
           this.paymentTypeOptions.set(options);
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('[ShopOrdersEdit] Error loading payment types:', err)
+        error: (err) => this.logger.error('[ShopOrdersEdit] Error loading payment types:', err)
       });
   }
 
@@ -397,7 +400,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
           this.contactOptions.set(contacts);
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('[ShopOrdersEdit] Error loading contacts:', err)
+        error: (err) => this.logger.error('[ShopOrdersEdit] Error loading contacts:', err)
       });
 
     // Load addresses for this client from the Address API
@@ -461,7 +464,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
 
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('[ShopOrdersEdit] Error loading addresses:', err)
+        error: (err) => this.logger.error('[ShopOrdersEdit] Error loading addresses:', err)
       });
   }
 
@@ -892,7 +895,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('[Tracking] refresh failed', err);
+        this.logger.error('[Tracking] refresh failed', err);
         this.toastService.error('Failed to refresh tracking.');
         this.isRefreshingTracking.set(false);
       }
@@ -980,7 +983,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
         window.URL.revokeObjectURL(url);
       },
       error: (err) => {
-        console.error('Export failed:', err);
+        this.logger.error('Export failed:', err);
         this.alertService.error('Failed to export order to Excel.');
       }
     });
@@ -1001,7 +1004,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
         }
       },
       error: (err) => {
-        console.error('Print failed:', err);
+        this.logger.error('Print failed:', err);
         this.alertService.error('Failed to generate print preview.');
       }
     });
@@ -1020,6 +1023,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       this.alertService.error(errorMessages, 'Validation Error');
       return;
     }
+    if (this.isSaving()) return;
 
     // Save as order - build payload with all changed fields
     // Note: isDraft is deliberately NOT sent — the backend derives it from status,
@@ -1038,19 +1042,22 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       trackingUrl: orderData.trackingUrl || null,
     };
 
-    console.log('[ShopOrdersEdit] Saving order ID:', orderData.id);
-    console.log('[ShopOrdersEdit] Payload:', JSON.stringify(updatePayload, null, 2));
+    this.logger.debug('[ShopOrdersEdit] Saving order ID:', orderData.id);
+    this.logger.debug('[ShopOrdersEdit] Payload:', JSON.stringify(updatePayload, null, 2));
 
-    this.orderService.updateOrder(String(orderData.id), updatePayload as Partial<Order>).subscribe({
+    this.isSaving.set(true);
+    this.orderService.updateOrder(String(orderData.id), updatePayload as Partial<Order>)
+      .pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); }))
+      .subscribe({
       next: (updatedOrder) => {
-        console.log('[ShopOrdersEdit] Order saved successfully:', updatedOrder);
+        this.logger.debug('[ShopOrdersEdit] Order saved successfully:', updatedOrder);
         this.toastService.success('Order saved successfully');
         // Log entries are written asynchronously by the worker — reload shortly
         // after saving so the Log messages section reflects this change.
         setTimeout(() => this.loadOrder(String(orderData.id)), 1200);
       },
       error: (error) => {
-        console.error('[ShopOrdersEdit] Error saving order:', error);
+        this.logger.error('[ShopOrdersEdit] Error saving order:', error);
         this.toastService.error('Error saving order: ' + (error?.error?.detail || error?.error?.message || error?.message || 'Unknown error'));
       }
     });

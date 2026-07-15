@@ -83,6 +83,11 @@
   ></ui-table-checkbox-selection>
 </ng-template>
 
+<!-- Price Template -->
+<ng-template #priceTemplate let-row>
+  {{ row.price | currency:(row.currency || 'EUR'):'symbol':'1.2-2' }}
+</ng-template>
+
 <!-- Actions Template -->
 <ng-template #actionsTemplate let-row>
   <ui-table-actions-dropdown

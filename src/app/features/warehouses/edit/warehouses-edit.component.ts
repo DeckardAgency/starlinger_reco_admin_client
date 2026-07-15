@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpEventType } from '@angular/common/http';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, finalize } from 'rxjs/operators';
 
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { DataTableComponent, TableColumn } from '@app/ui-kit/organisms/data-table/data-table.component';
@@ -21,6 +21,7 @@ import { TextEditorComponent } from '@shared/components/text-editor/text-editor.
 import { WarehouseDocument } from '@core/models/warehouse.model';
 import { WarehouseService } from '@core/services/http/warehouse.service';
 import { MediaService } from '@core/services/http/media.service';
+import { LoggerService } from '@core/services/logger.service';
 import { environment } from '@env/environment';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 
@@ -98,6 +99,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
 
   // Loading state
   isLoading = signal(false);
+  isSaving = signal(false);
 
   // Validation state
   touched = signal<Record<string, boolean>>({});
@@ -148,7 +150,8 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     private warehouseService: WarehouseService,
-    private mediaService: MediaService
+    private mediaService: MediaService,
+    private logger: LoggerService
   ) {}
 
   ngOnInit(): void {
@@ -210,7 +213,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error loading warehouse:', error);
+        this.logger.error('Error loading warehouse:', error);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -283,6 +286,8 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
       return;
     }
 
+    if (this.isSaving()) return;
+
     const payload = this.buildPayload();
     const isCreating = !this.isEditMode();
 
@@ -290,7 +295,8 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
       ? this.warehouseService.createWarehouse(payload)
       : this.warehouseService.updateWarehouse(this.warehouseId!, payload);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
@@ -302,7 +308,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
         }
       },
       error: (error) => {
-        console.error('Error saving warehouse:', error);
+        this.logger.error('Error saving warehouse:', error);
         this.toastService.error('Failed to save warehouse');
       }
     });
@@ -401,7 +407,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
               this.cdr.markForCheck();
             }
           },
-          error: (err) => console.error('Error uploading document:', err)
+          error: (err) => this.logger.error('Error uploading document:', err)
         });
     });
 
@@ -486,7 +492,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
             this.triggerDownload(media.filePath, media.filename || 'document');
           }
         },
-        error: (err) => console.error('Error downloading document:', err)
+        error: (err) => this.logger.error('Error downloading document:', err)
       });
     this.activeDocActionId.set(null);
   }
@@ -505,7 +511,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
           document.body.removeChild(a);
           URL.revokeObjectURL(blobUrl);
         },
-        error: (err) => console.error('Error downloading file:', err)
+        error: (err) => this.logger.error('Error downloading file:', err)
       });
   }
 
@@ -521,7 +527,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
           this.updateWarehouseMedia();
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('Error deleting document:', err)
+        error: (err) => this.logger.error('Error deleting document:', err)
       });
     this.activeDocActionId.set(null);
   }
@@ -548,7 +554,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.mediaService.updateMediaItem(String(docId), { filename: fullName } as any)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        error: (err) => console.error('Error renaming document:', err)
+        error: (err) => this.logger.error('Error renaming document:', err)
       });
 
     this.cancelRename();
@@ -578,7 +584,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
       this.mediaService.deleteMediaItem(String(doc.id))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          error: (err) => console.error('Error deleting document:', err)
+          error: (err) => this.logger.error('Error deleting document:', err)
         });
     });
 
@@ -612,7 +618,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
     this.warehouseService.updateWarehouse(this.warehouseId, { documents } as any)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        error: (err) => console.error('Error updating warehouse media:', err)
+        error: (err) => this.logger.error('Error updating warehouse media:', err)
       });
   }
 }

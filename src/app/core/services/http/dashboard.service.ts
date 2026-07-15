@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of, catchError, map } from 'rxjs';
 import { environment } from '@env/environment';
+import { LoggerService } from '@core/services/logger.service';
 
 export interface DashboardOrder {
     id: string;
@@ -39,7 +40,7 @@ export interface OrderStatusDistributionResponse {
 export class DashboardService {
     private apiUrl = environment.apiBaseUrl;
 
-    constructor(private http: HttpClient) {}
+    constructor(private http: HttpClient, private logger: LoggerService) {}
 
     /**
      * Get recent orders for dashboard
@@ -53,7 +54,7 @@ export class DashboardService {
         return this.http.get<any>(`${this.apiUrl}/api/v1/orders`, { params }).pipe(
             map(response => response.member || []),
             catchError(error => {
-                console.error('Error fetching recent orders:', error);
+                this.logger.error('Error fetching recent orders:', error);
                 return of([]);
             })
         );
@@ -67,7 +68,7 @@ export class DashboardService {
             `${this.apiUrl}/api/v1/dashboard/order-status-distribution`
         ).pipe(
             catchError(error => {
-                console.error('Error fetching order status distribution:', error);
+                this.logger.error('Error fetching order status distribution:', error);
                 return of({
                     distribution: [],
                     total: 0

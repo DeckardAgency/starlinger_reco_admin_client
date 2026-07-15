@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, map, tap, catchError, of } from 'rxjs';
 import { ClientAddress, CreateAddressDto, UpdateAddressDto } from '@models/client.model';
 import { environment } from '@env/environment';
+import { LoggerService } from '@core/services/logger.service';
 
 export interface AddressesResponse {
     '@context'?: string;
@@ -24,7 +25,7 @@ export class AddressService {
         })
     };
 
-    constructor(private http: HttpClient) {}
+    constructor(private http: HttpClient, private logger: LoggerService) {}
 
     /**
      * Get all addresses for a specific client
@@ -32,10 +33,10 @@ export class AddressService {
     getAddressesByClient(clientId: string): Observable<ClientAddress[]> {
         const url = `${environment.apiBaseUrl}/api/v1/clients/${clientId}/addresses`;
         return this.http.get<AddressesResponse>(url).pipe(
-            tap(response => console.log('Addresses response:', response)),
+            tap(response => this.logger.debug('Addresses response:', response)),
             map(response => response.member || []),
             catchError(error => {
-                console.error('Error loading addresses:', error);
+                this.logger.error('Error loading addresses:', error);
                 return of([]);
             })
         );
@@ -46,7 +47,7 @@ export class AddressService {
      */
     getAddress(id: string): Observable<ClientAddress> {
         return this.http.get<ClientAddress>(`${this.apiUrl}/${id}`).pipe(
-            tap(address => console.log('Address details:', address))
+            tap(address => this.logger.debug('Address details:', address))
         );
     }
 
@@ -55,7 +56,7 @@ export class AddressService {
      */
     createAddress(addressData: CreateAddressDto): Observable<ClientAddress> {
         return this.http.post<ClientAddress>(this.apiUrl, addressData, this.httpOptions).pipe(
-            tap(address => console.log('Created address:', address))
+            tap(address => this.logger.debug('Created address:', address))
         );
     }
 
@@ -80,7 +81,7 @@ export class AddressService {
                 'Accept': 'application/ld+json'
             })
         }).pipe(
-            tap(address => console.log('Updated address:', address))
+            tap(address => this.logger.debug('Updated address:', address))
         );
     }
 
@@ -89,7 +90,7 @@ export class AddressService {
      */
     deleteAddress(id: string): Observable<void> {
         return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
-            tap(() => console.log('Deleted address:', id))
+            tap(() => this.logger.debug('Deleted address:', id))
         );
     }
 

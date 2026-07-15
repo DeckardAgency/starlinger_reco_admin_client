@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil, filter } from 'rxjs/operators';
+import { takeUntil, filter, finalize } from 'rxjs/operators';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 
 import { BreadcrumbsComponent, BreadcrumbItem } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -26,6 +26,7 @@ import { Product, MediaItem } from '@core/models';
 import { MediaService } from '@core/services/http/media.service';
 import { environment } from '@env/environment';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
+import { LoggerService } from '@core/services/logger.service';
 
 interface ProductDetail {
   id: number;
@@ -121,6 +122,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // State
   product = signal<ProductDetail>(EMPTY_PRODUCT);
   isEditMode = signal(false);
+  isSaving = signal(false);
+  private lastSaveAt = 0;
   activeTab = signal('shortDescription');
 
   // Breadcrumb items
@@ -276,7 +279,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     private productService: ProductService,
     private productCategoryService: ProductCategoryService,
     private productProductLinkService: ProductProductLinkService,
-    private mediaService: MediaService
+    private mediaService: MediaService,
+    private logger: LoggerService
   ) {}
 
   ngOnInit(): void {
@@ -307,7 +311,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           this.productGroupOptions.set(options);
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('Error loading product categories:', err)
+        error: (err) => this.logger.error('Error loading product categories:', err)
       });
   }
 
@@ -438,7 +442,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           this.totalItems.set(response.totalItems || 0);
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('Error loading available products:', err)
+        error: (err) => this.logger.error('Error loading available products:', err)
       });
   }
 
@@ -492,10 +496,10 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.relatedProducts.set(related.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)));
                 this.cdr.markForCheck();
               },
-              error: (err) => console.error('Error loading related product details:', err)
+              error: (err) => this.logger.error('Error loading related product details:', err)
             });
         },
-        error: (err) => console.error('Error loading related products:', err)
+        error: (err) => this.logger.error('Error loading related products:', err)
       });
   }
 
@@ -526,8 +530,17 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   updateProductNumber(field: string, event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.product.update(p => ({ ...p, [field]: value ? parseFloat(value) : 0 }));
+    const input = event.target as HTMLInputElement;
+    const parsed = parseFloat(input.value);
+    const numValue = isNaN(parsed) ? 0 : Math.max(0, parsed);
+    // The model is clamped to >= 0, but a bare [value] binding won't re-write the
+    // input once the model is already 0 — so a typed negative like "-11" stays
+    // visible. Snap the display back when the user entered a negative. (Valid
+    // positive/partial input such as "10." is left alone so decimals still type.)
+    if (!isNaN(parsed) && parsed < 0 && input.value !== String(numValue)) {
+      input.value = String(numValue);
+    }
+    this.product.update(p => ({ ...p, [field]: numValue }));
   }
 
   // Currency handlers
@@ -548,7 +561,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Rich text editor
   onFormatClick(format: string): void {
-    console.log('Format:', format);
+    this.logger.debug('Format:', format);
     // Implement rich text formatting
   }
 
@@ -706,7 +719,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
             this.triggerDownload(url, media.filename || 'document');
           }
         },
-        error: (err) => console.error('Error downloading document:', err)
+        error: (err) => this.logger.error('Error downloading document:', err)
       });
     this.activeDocActionId.set(null);
   }
@@ -720,7 +733,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           this.updateProductMedia();
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('Error deleting document:', err)
+        error: (err) => this.logger.error('Error deleting document:', err)
       });
     this.activeDocActionId.set(null);
   }
@@ -733,7 +746,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       this.mediaService.deleteMediaItem(String(docId))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          error: (err) => console.error('Error deleting document:', err)
+          error: (err) => this.logger.error('Error deleting document:', err)
         });
     });
     this.productDocuments.update(docs => docs.filter(d => !selectedIds.has(d.id)));
@@ -768,7 +781,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           this.linkToProductMap.set(link.id, childProductId);
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('Error adding related product:', err)
+        error: (err) => this.logger.error('Error adding related product:', err)
       });
     });
 
@@ -795,7 +808,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.linkToProductMap.set(link.id, childProductId);
         this.cdr.markForCheck();
       },
-      error: (err) => console.error('Error adding related product:', err)
+      error: (err) => this.logger.error('Error adding related product:', err)
     });
   }
 
@@ -813,7 +826,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           }
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('Error removing related product:', err)
+        error: (err) => this.logger.error('Error removing related product:', err)
       });
   }
 
@@ -832,7 +845,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
             }
             this.cdr.markForCheck();
           },
-          error: (err) => console.error('Error removing related product:', err)
+          error: (err) => this.logger.error('Error removing related product:', err)
         });
     });
     this.selectedRelatedProductIds.set(new Set());
@@ -869,11 +882,16 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   private saveProduct(navigateToList: boolean): void {
     this.markAllTouched();
     if (!this.isValid()) {
-      console.warn('[ProductSave] Validation failed:', this.errors());
+      this.logger.warn('[ProductSave] Validation failed:', this.errors());
       this.toastService.error('Please fix validation errors before saving');
       this.cdr.markForCheck();
       return;
     }
+    // Double-submit guard: block while a save is in flight AND for a short cooldown
+    // afterwards, so a rapid second click can't fire a second save once the (fast)
+    // first request has already returned and re-enabled the button.
+    if (this.isSaving() || (Date.now() - this.lastSaveAt) < 1200) return;
+    this.lastSaveAt = Date.now();
 
     const product = this.product();
     const mediaIriPrefix = `${environment.apiPath}/media_items/`;
@@ -901,13 +919,14 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     };
 
     const isCreating = !this.isEditMode() || !product.id;
-    console.log('[ProductSave]', isCreating ? 'Creating' : `Updating id=${product.id}`, data);
+    this.logger.debug('[ProductSave]', isCreating ? 'Creating' : `Updating id=${product.id}`, data);
 
     const operation = isCreating
       ? this.productService.createProduct(data)
       : this.productService.updateProduct(String(product.id), data);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
@@ -919,7 +938,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       },
       error: (error) => {
-        console.error('[ProductSave] Error:', error);
+        this.logger.error('[ProductSave] Error:', error);
         const detail = error?.error?.detail || error?.error?.message || error?.message || 'Unknown error';
         this.toastService.error(`Failed to save: ${detail}`);
       }
@@ -977,7 +996,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.productService.updateProduct(String(productId), data)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        error: (err) => console.error('Error updating product media:', err)
+        error: (err) => this.logger.error('Error updating product media:', err)
       });
   }
 
@@ -1049,7 +1068,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           document.body.removeChild(a);
           URL.revokeObjectURL(blobUrl);
         },
-        error: (err) => console.error('Error downloading file:', err)
+        error: (err) => this.logger.error('Error downloading file:', err)
       });
   }
 
@@ -1066,7 +1085,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           this.updateProductMedia();
           this.cdr.markForCheck();
         },
-        error: (err) => console.error('Error deleting image:', err)
+        error: (err) => this.logger.error('Error deleting image:', err)
       });
     this.activeImageDropdown.set(null);
   }
@@ -1105,7 +1124,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
               this.cdr.markForCheck();
             }
           },
-          error: (err) => console.error('Error uploading image:', err)
+          error: (err) => this.logger.error('Error uploading image:', err)
         });
     });
 
@@ -1142,7 +1161,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
               });
             }
           },
-          error: (err) => console.error(`Error fetching image ${image.name}:`, err)
+          error: (err) => this.logger.error(`Error fetching image ${image.name}:`, err)
         });
     });
   }
@@ -1153,7 +1172,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     images.forEach(image => {
       this.mediaService.deleteMediaItem(String(image.id))
         .pipe(takeUntil(this.destroy$))
-        .subscribe({ error: (err) => console.error('Error deleting image:', err) });
+        .subscribe({ error: (err) => this.logger.error('Error deleting image:', err) });
     });
     this.galleryImages.set([]);
     this.updateProductMedia();
@@ -1224,7 +1243,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
               this.cdr.markForCheck();
             }
           },
-          error: (err) => console.error('Error uploading document:', err)
+          error: (err) => this.logger.error('Error uploading document:', err)
         });
     });
 
@@ -1270,7 +1289,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.mediaService.updateMediaItem(String(itemId), { filename: fullName } as any)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        error: (err) => console.error('Error renaming media item:', err)
+        error: (err) => this.logger.error('Error renaming media item:', err)
       });
 
     this.cancelRename();

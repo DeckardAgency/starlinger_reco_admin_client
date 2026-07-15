@@ -89,10 +89,31 @@ export class LoginComponent {
       },
       error: (error) => {
         this.isLoading.set(false);
-        this.errorMessage.set('An error occurred. Please try again.');
+        this.errorMessage.set(this.resolveLoginError(error));
         this.logger.error('Login error', error);
       }
     });
+  }
+
+  /**
+   * Surface the most specific error message available. A 401 is always invalid
+   * credentials; otherwise prefer the API Platform problem+json `detail`, then the
+   * error's own `message` (AuthService throws specific ones, e.g. archived account),
+   * falling back to a generic string only when nothing specific is present.
+   */
+  private resolveLoginError(error: any): string {
+    if (error?.status === 401) {
+      return 'Invalid email or password';
+    }
+    const detail = error?.error?.detail;
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail;
+    }
+    const message = error?.message;
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+    return 'An error occurred. Please try again.';
   }
 
   /**

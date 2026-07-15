@@ -11,6 +11,7 @@
   <ui-detail-header
     [title]="isEditMode() ? 'Edit delivery price' : 'New delivery price'"
     [isEditMode]="isEditMode()"
+    [isSaving]="isSaving()"
     [showSaveAndContinue]="true"
     [showDiscard]="false"
     (back)="onBack()"
@@ -75,5 +76,5 @@
     </div>
   </div>
 
-  <ui-mobile-footer (primaryClick)="onSave()" (secondaryClick)="onSaveAndContinue()"></ui-mobile-footer>
+  <ui-mobile-footer [isSaving]="isSaving()" (primaryClick)="onSave()" (secondaryClick)="onSaveAndContinue()"></ui-mobile-footer>
 </div>

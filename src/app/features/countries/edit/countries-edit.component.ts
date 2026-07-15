@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, finalize } from 'rxjs/operators';
 
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
@@ -15,6 +15,7 @@ import { DHL_ZONES } from '@core/models/country.model';
 import { CountryService } from '@core/services/http/country.service';
 import { TaxTypeService } from '@core/services/http/tax-type.service';
 import { TaxType } from '@core/models/tax-type.model';
+import { LoggerService } from '@core/services/logger.service';
 
 interface CountryDetail {
   id: number;
@@ -64,6 +65,7 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
   country = signal<CountryDetail>({ ...EMPTY_COUNTRY });
   isEditMode = signal(false);
   isLoading = signal(false);
+  isSaving = signal(false);
 
   // Validation state
   touched = signal<Record<string, boolean>>({});
@@ -93,7 +95,8 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private countryService: CountryService
+    private countryService: CountryService,
+    private logger: LoggerService
   ) {}
 
   ngOnInit(): void {
@@ -136,7 +139,7 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
       error: (error) => {
-        console.error('Error loading country:', error);
+        this.logger.error('Error loading country:', error);
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -182,7 +185,7 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
         }));
         this.cdr.markForCheck();
       },
-      error: (err) => console.error('Failed to load tax types:', err)
+      error: (err) => this.logger.error('Failed to load tax types:', err)
     });
   }
 
@@ -222,6 +225,8 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.isSaving()) return;
+
     const c = this.country();
     const payload: Record<string, unknown> = {
       name: c.name,
@@ -235,7 +240,8 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
       ? this.countryService.createCountry(payload)
       : this.countryService.updateCountry(this.countryId!, payload);
 
-    operation.subscribe({
+    this.isSaving.set(true);
+    operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
         if (navigateToList) {
@@ -245,7 +251,7 @@ export class CountriesEditComponent implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        console.error('Error saving country:', error);
+        this.logger.error('Error saving country:', error);
         this.toastService.error('Failed to save country');
       }
     });
