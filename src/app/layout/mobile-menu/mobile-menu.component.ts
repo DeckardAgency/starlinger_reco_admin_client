@@ -138,9 +138,13 @@ export class MobileMenuComponent implements OnInit {
             } else if (this.currentUser.firstName) {
                 this.userFullName = this.currentUser.firstName;
                 this.userInitials = this.currentUser.firstName[0].toUpperCase();
-            } else {
+            } else if (this.currentUser.email) {
                 this.userFullName = this.currentUser.email;
                 this.userInitials = this.currentUser.email[0].toUpperCase();
+            } else {
+                // Partial user (missing name AND email) — never index undefined.
+                this.userFullName = '';
+                this.userInitials = '?';
             }
 
             if (this.currentUser.roles && this.currentUser.roles.length > 0) {

@@ -134,29 +134,38 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   updateUserDisplay(): void {
-    if (this.currentUser) {
-      // Set the user full name
-      if (this.currentUser.firstName && this.currentUser.lastName) {
-        this.userFullName = `${this.currentUser.firstName} ${this.currentUser.lastName}`;
-        // Generate initials from name (first letter of first and last name)
-        this.userInitials = `${this.currentUser.firstName[0]}${this.currentUser.lastName[0]}`.toUpperCase();
-      } else if (this.currentUser.firstName) {
-        this.userFullName = this.currentUser.firstName;
-        this.userInitials = this.currentUser.firstName[0].toUpperCase();
-      } else {
-        this.userFullName = this.currentUser.email;
-        this.userInitials = this.currentUser.email[0].toUpperCase();
-      }
+    const u = this.currentUser;
+    if (!u) {
+      this.userFullName = '';
+      this.userInitials = '';
+      this.userRole = 'User';
+      return;
+    }
 
-      // Set user role (assuming roles is an array of strings)
-      if (this.currentUser.roles && this.currentUser.roles.length > 0) {
-        const role = this.currentUser.roles[1] || this.currentUser.roles[0];
-        // Convert ROLE_USER to User, ROLE_ADMIN to Administrator, etc.
-        this.userRole = role.replace('ROLE_', '').charAt(0).toUpperCase() +
-          role.replace('ROLE_', '').slice(1).toLowerCase();
-      } else {
-        this.userRole = 'User';
-      }
+    // Null-safe: a partial user (e.g. after a failed /api/me or token refresh)
+    // may be missing name AND email — never index into an undefined string, or
+    // the crash takes down the whole sidebar/layout on every page.
+    if (u.firstName && u.lastName) {
+      this.userFullName = `${u.firstName} ${u.lastName}`;
+      this.userInitials = `${u.firstName[0]}${u.lastName[0]}`.toUpperCase();
+    } else if (u.firstName) {
+      this.userFullName = u.firstName;
+      this.userInitials = u.firstName[0].toUpperCase();
+    } else if (u.email) {
+      this.userFullName = u.email;
+      this.userInitials = u.email[0].toUpperCase();
+    } else {
+      this.userFullName = '';
+      this.userInitials = '?';
+    }
+
+    if (u.roles && u.roles.length > 0) {
+      const role = u.roles[1] || u.roles[0];
+      // Convert ROLE_USER to User, ROLE_ADMIN to Administrator, etc.
+      this.userRole = role.replace('ROLE_', '').charAt(0).toUpperCase() +
+        role.replace('ROLE_', '').slice(1).toLowerCase();
+    } else {
+      this.userRole = 'User';
     }
   }
 
