@@ -126,7 +126,7 @@ export class UsersEditComponent implements OnInit {
       id: user.id,
       firstName: user.firstName ?? '',
       lastName: user.lastName ?? '',
-      username: user.email ?? user.username ?? '',
+      username: user.username ?? '',
       email: user.email ?? '',
       role: this.mapRolesToAdminRole(user.roles ?? [])
     };
@@ -260,6 +260,8 @@ export class UsersEditComponent implements OnInit {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      // Optional display/login alias; null clears it (it is NOT derived from email)
+      username: user.username?.trim() || null,
       roles: this.mapAdminRoleToRoles(user.role)
     };
 
@@ -307,6 +309,8 @@ export class UsersEditComponent implements OnInit {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      // Optional display/login alias; null clears it (it is NOT derived from email)
+      username: user.username?.trim() || null,
       roles: this.mapAdminRoleToRoles(user.role)
     };
 

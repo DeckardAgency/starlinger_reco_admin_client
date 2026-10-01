@@ -217,7 +217,7 @@ export class UsersListComponent implements OnInit, AfterViewInit {
       id: user.id,
       firstName: user.firstName || '',
       lastName: user.lastName || '',
-      username: user.email,
+      username: user.username || '',
       email: user.email,
       role: this.mapRolesToAdminRole(user.roles),
       selected: false
@@ -247,6 +247,7 @@ export class UsersListComponent implements OnInit, AfterViewInit {
       { key: 'id', label: 'Id', visible: true, locked: true },
       { key: 'name', label: 'Name', visible: true, locked: true },
       { key: 'email', label: 'Email', visible: true },
+      { key: 'username', label: 'Username', visible: true },
       { key: 'role', label: 'Role', visible: true }
     ];
 
@@ -257,6 +258,7 @@ export class UsersListComponent implements OnInit, AfterViewInit {
       { key: 'id', label: 'id', sortable: true, width: '112px' },
       { key: 'name', label: 'Name', sortable: true, template: this.nameTemplate },
       { key: 'email', label: 'Email', sortable: true },
+      { key: 'username', label: 'Username', sortable: true },
       { key: 'role', label: 'Role', sortable: false, template: this.roleTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
