@@ -84,6 +84,11 @@ export class UsersEditComponent implements OnInit {
   });
   isValid = computed(() => Object.keys(this.errors()).length === 0);
 
+  // Context from the referring page (e.g. a client's Users tab): where to go
+  // back to after save, and which client to assign a newly created user to.
+  private returnTo = signal<string | null>(null);
+  private presetClientId = signal<string | null>(null);
+
   constructor() {
     this.route.params.pipe(takeUntilDestroyed()).subscribe(params => {
       const id = params['id'];
@@ -96,6 +101,17 @@ export class UsersEditComponent implements OnInit {
         this.user.set({ ...EMPTY_USER });
       }
     });
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(qp => {
+      // Only allow in-app admin targets, never external/arbitrary URLs.
+      const rt = qp.get('returnTo');
+      this.returnTo.set(rt && rt.startsWith('/admin/') ? rt : null);
+      this.presetClientId.set(qp.get('clientId'));
+    });
+  }
+
+  /** Where Save / Back should land: the referring page when given, else the list. */
+  private exitUrl(): string {
+    return this.returnTo() ?? '/admin/users/list';
   }
 
   ngOnInit(): void {}
@@ -242,11 +258,13 @@ export class UsersEditComponent implements OnInit {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        roles: this.mapAdminRoleToRoles(user.role)
+        roles: this.mapAdminRoleToRoles(user.role),
+        // Invited from a client's Users tab: assign the company right away
+        ...(this.presetClientId() ? { client: `/api/v1/clients/${this.presetClientId()}` } : {})
       }).pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
         next: () => {
           this.toastService.success(`Invitation email sent to ${user.email}`);
-          this.router.navigate(['/admin/users/list']);
+          this.router.navigateByUrl(this.exitUrl());
         },
         error: (error) => {
           this.logger.error('Error sending invitation:', error);
@@ -270,6 +288,11 @@ export class UsersEditComponent implements OnInit {
       data['plainPassword'] = this.password();
     }
 
+    // Created from a client's Users tab: assign that company right away
+    if (!this.isEditMode() && this.presetClientId()) {
+      data['client'] = `/api/v1/clients/${this.presetClientId()}`;
+    }
+
     const operation = this.isEditMode() && this.userId()
       ? this.userService.updateUser(this.userId()!, data)
       : this.userService.createUser(data);
@@ -278,7 +301,7 @@ export class UsersEditComponent implements OnInit {
     operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: () => {
         this.toastService.success('Saved successfully');
-        this.router.navigate(['/admin/users/list']);
+        this.router.navigateByUrl(this.exitUrl());
       },
       error: (error) => {
         this.logger.error('Error saving user:', error);
@@ -318,6 +341,11 @@ export class UsersEditComponent implements OnInit {
       data['plainPassword'] = this.password();
     }
 
+    // Created from a client's Users tab: assign that company right away
+    if (!this.isEditMode() && this.presetClientId()) {
+      data['client'] = `/api/v1/clients/${this.presetClientId()}`;
+    }
+
     const operation = this.isEditMode() && this.userId()
       ? this.userService.updateUser(this.userId()!, data)
       : this.userService.createUser(data);
@@ -327,7 +355,10 @@ export class UsersEditComponent implements OnInit {
       next: (response) => {
         this.toastService.success('Saved successfully');
         if (!this.isEditMode() && response?.id) {
-          this.router.navigate(['/admin/users', response.id, 'edit']);
+          // Keep the referring-page context so a later Save still returns there
+          this.router.navigate(['/admin/users', response.id, 'edit'], {
+            queryParams: this.returnTo() ? { returnTo: this.returnTo() } : {}
+          });
         }
       },
       error: (error) => {
@@ -338,10 +369,10 @@ export class UsersEditComponent implements OnInit {
   }
 
   onDiscard(): void {
-    this.router.navigate(['/admin/users/list']);
+    this.router.navigateByUrl(this.exitUrl());
   }
 
   goBack(): void {
-    this.router.navigate(['/admin/users/list']);
+    this.router.navigateByUrl(this.exitUrl());
   }
 }

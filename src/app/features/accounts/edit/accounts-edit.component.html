@@ -138,6 +138,13 @@
 
           <!-- Add Button (desktop: inline, mobile: hidden) -->
           <button
+            *ngIf="activeTab() === 'users' && isEditMode()"
+            class="btn btn--outline tabs-header__add-btn"
+            (click)="onCreateNewUser()">
+            <span>Create user</span>
+            <ui-icon name="plus" size="sm"></ui-icon>
+          </button>
+          <button
             *ngIf="activeTab() === 'users' || activeTab() === 'addresses' || activeTab() === 'managed-clients'"
             class="btn btn--outline tabs-header__add-btn"
             (click)="onAddTabItem()">
@@ -148,6 +155,10 @@
 
         <!-- Add Button Row (mobile only) -->
         <div class="tabs-action-row" *ngIf="activeTab() === 'users' || activeTab() === 'addresses' || activeTab() === 'managed-clients'">
+          <button *ngIf="activeTab() === 'users' && isEditMode()" class="btn btn--outline btn--full-width" (click)="onCreateNewUser()">
+            <span>Create user</span>
+            <ui-icon name="plus" size="sm"></ui-icon>
+          </button>
           <button class="btn btn--outline btn--full-width" (click)="onAddTabItem()">
             <span>{{ addButtonText() }}</span>
             <ui-icon name="plus" size="sm"></ui-icon>

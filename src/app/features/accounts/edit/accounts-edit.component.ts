@@ -781,6 +781,18 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  /**
+   * Create a brand-new user for THIS client: the user form pre-assigns the
+   * company and returns to this page after saving (instead of the users list).
+   */
+  onCreateNewUser(): void {
+    const id = this.accountId();
+    if (!id) return;
+    this.router.navigate(['/admin/users/new'], {
+      queryParams: { clientId: id, returnTo: `/admin/clients/${id}/edit` }
+    });
+  }
+
   // ---- Managed clients (client-agent only) ----
 
   /** Build the managed-clients table from the IRIs (or embedded objects) on the detail. */
