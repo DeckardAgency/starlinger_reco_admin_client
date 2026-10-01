@@ -111,7 +111,10 @@ export const USER_ROLES = {
   CLIENT: 'ROLE_CLIENT',
   CLIENT_ADMIN: 'ROLE_CLIENT_ADMIN',
   ADMIN: 'ROLE_ADMIN',
-  FINANCE: 'ROLE_FINANCE'
+  FINANCE: 'ROLE_FINANCE',
+  // Same role string as the inquiry tool: a user who places orders on behalf
+  // of the client companies managed by their own (agent-flagged) company.
+  USER_CLIENT_AGENT: 'ROLE_USER_CLIENT_AGENT'
 } as const;
 
 export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES];
@@ -123,7 +126,8 @@ export const ROLE_ARRAYS = {
   CLIENT: ['ROLE_USER', 'ROLE_CLIENT'],
   CLIENT_ADMIN: ['ROLE_USER', 'ROLE_CLIENT_ADMIN'],
   ADMIN: ['ROLE_USER', 'ROLE_ADMIN'],
-  FINANCE: ['ROLE_USER', 'ROLE_FINANCE']
+  FINANCE: ['ROLE_USER', 'ROLE_FINANCE'],
+  USER_CLIENT_AGENT: ['ROLE_USER', 'ROLE_USER_CLIENT_AGENT']
 } as const;
 
 /**
@@ -135,7 +139,8 @@ export function getRoleDisplayName(role: string): string {
     'ROLE_CLIENT': 'Customer',
     'ROLE_CLIENT_ADMIN': 'Customer Admin',
     'ROLE_ADMIN': 'Admin',
-    'ROLE_FINANCE': 'Finance'
+    'ROLE_FINANCE': 'Finance',
+    'ROLE_USER_CLIENT_AGENT': 'Client Agent'
   };
   return roleMap[role] || role;
 }

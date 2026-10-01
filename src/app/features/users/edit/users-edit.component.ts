@@ -136,6 +136,9 @@ export class UsersEditComponent implements OnInit {
     if (!roles || roles.length === 0) return null;
     if (roles.includes('ROLE_ADMIN')) return 'admin';
     if (roles.includes('ROLE_CLIENT_ADMIN')) return 'client_admin';
+    // Agent before client: an agent may also hold ROLE_CLIENT, but the agent
+    // role is the more specific one and must survive an open-and-save round trip.
+    if (roles.includes('ROLE_USER_CLIENT_AGENT')) return 'client_agent';
     if (roles.includes('ROLE_CLIENT')) return 'client';
     if (roles.includes('ROLE_FINANCE')) return 'finance';
     return 'client';
@@ -146,6 +149,7 @@ export class UsersEditComponent implements OnInit {
       case 'admin': return ['ROLE_ADMIN'];
       case 'client_admin': return ['ROLE_CLIENT_ADMIN'];
       case 'client': return ['ROLE_CLIENT'];
+      case 'client_agent': return ['ROLE_USER_CLIENT_AGENT'];
       case 'finance': return ['ROLE_FINANCE'];
       default: return ['ROLE_CLIENT'];
     }

@@ -442,6 +442,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           email: u.email ?? '',
           role: (u.roles || []).includes('ROLE_ADMIN') ? 'Admin' :
                 (u.roles || []).includes('ROLE_CLIENT_ADMIN') ? 'Client Admin' :
+                (u.roles || []).includes('ROLE_USER_CLIENT_AGENT') ? 'Client Agent' :
                 (u.roles || []).includes('ROLE_FINANCE') ? 'Finance' :
                 (u.roles || []).includes('ROLE_CLIENT') ? 'Client' : 'User',
           isActive: u.isActive ?? true
@@ -928,6 +929,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
             email: u.email ?? '',
             role: (u.roles || []).includes('ROLE_ADMIN') ? 'Admin' :
                   (u.roles || []).includes('ROLE_CLIENT_ADMIN') ? 'Client Admin' :
+                  (u.roles || []).includes('ROLE_USER_CLIENT_AGENT') ? 'Client Agent' :
                   (u.roles || []).includes('ROLE_FINANCE') ? 'Finance' :
                   (u.roles || []).includes('ROLE_CLIENT') ? 'Client' : 'User'
           }));

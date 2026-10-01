@@ -8,7 +8,7 @@ export interface AdminUser {
   selected?: boolean;
 }
 
-export type AdminUserRoleType = 'admin' | 'client_admin' | 'client' | 'finance';
+export type AdminUserRoleType = 'admin' | 'client_admin' | 'client' | 'client_agent' | 'finance';
 
 export interface AdminUserRoleOption {
   id: AdminUserRoleType;
@@ -31,6 +31,11 @@ export const ADMIN_USER_ROLE_OPTIONS: AdminUserRoleOption[] = [
     id: 'client',
     name: 'Client',
     description: 'Standard client access for browsing the shop and placing orders.'
+  },
+  {
+    id: 'client_agent',
+    name: 'Client Agent',
+    description: 'Places orders on behalf of the client companies their own company manages. The company must have the "Client agent" flag and managed clients assigned on its account.'
   },
   {
     id: 'finance',

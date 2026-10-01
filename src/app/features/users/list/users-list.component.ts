@@ -93,6 +93,7 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     { value: USER_ROLES.ADMIN, label: 'Admin' },
     { value: USER_ROLES.CLIENT_ADMIN, label: 'Client Admin' },
     { value: USER_ROLES.CLIENT, label: 'Client' },
+    { value: USER_ROLES.USER_CLIENT_AGENT, label: 'Client Agent' },
     { value: USER_ROLES.FINANCE, label: 'Finance' },
     { value: USER_ROLES.USER, label: 'User' }
   ];
@@ -227,6 +228,8 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     if (!roles || roles.length === 0) return null;
     if (roles.includes('ROLE_ADMIN')) return 'admin';
     if (roles.includes('ROLE_CLIENT_ADMIN')) return 'client_admin';
+    // Agent before finance/client: it is the more specific role.
+    if (roles.includes('ROLE_USER_CLIENT_AGENT')) return 'client_agent';
     // Finance before client: finance accounts are notification-only and must
     // not read as regular webshop clients in the list.
     if (roles.includes('ROLE_FINANCE')) return 'finance';
