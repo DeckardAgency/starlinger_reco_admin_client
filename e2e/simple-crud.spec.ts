@@ -6,8 +6,7 @@ import { cleanupE2ERecords } from './fixtures/api-cleanup';
  * Simple CRUD Modules - Unified E2E Tests
  *
  * Tests: Countries, Warehouses, Delivery Types, Payment Types, Tax Types,
- *        Discounts, Product Groups, Delivery Prices, Packaging Prices, Fuel Surcharges,
- *        Client Groups
+ *        Discounts, Product Groups, Delivery Prices, Packaging Prices, Fuel Surcharges
  *
  * Key principle: NO silent error swallowing. Every assertion is real.
  * If a form field doesn't exist, the API fails, or data doesn't persist — the test FAILS.
@@ -24,7 +23,6 @@ const SIMPLE_CRUD_MODULES = [
   'deliveryPrices',
   'packagingPrices',
   'fuelSurcharges',
-  'clientGroups',
 ] as const;
 
 for (const moduleKey of SIMPLE_CRUD_MODULES) {

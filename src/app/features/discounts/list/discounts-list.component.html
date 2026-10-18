@@ -69,6 +69,16 @@
   </ui-badge>
 </ng-template>
 
+<!-- Adjustment Template: negative = discount, positive = markup -->
+<ng-template #adjustmentTemplate let-row>
+  <span
+    class="adjustment"
+    [class.adjustment--discount]="row.adjustment < 0"
+    [class.adjustment--markup]="row.adjustment > 0">
+    {{ formatAdjustment(row.adjustment) }}
+  </span>
+</ng-template>
+
 <!-- Actions Template -->
 <ng-template #actionsTemplate let-row>
   <ui-table-actions-dropdown

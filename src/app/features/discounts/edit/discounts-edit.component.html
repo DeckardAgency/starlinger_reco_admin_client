@@ -30,87 +30,61 @@
           <input type="text" [ngModel]="discount().name" (ngModelChange)="onNameChange($event)" placeholder="Enter name">
         </ui-form-field>
 
-        <ui-form-field label="Date from" layout="horizontal">
-          <div class="datepicker" (click)="$event.stopPropagation()">
-            <div class="datepicker__input" (click)="toggleDateFromCalendar($event)">
-              <input type="text" readonly [value]="formatDateDisplay(discount().dateFrom)" placeholder="DD/MM/YYYY">
-              @if (discount().dateFrom) {
-                <button type="button" class="datepicker__clear" (click)="clearDateFrom($event)">
-                  <ui-icon name="close" size="xs"></ui-icon>
-                </button>
-              }
-              <ui-icon name="calendar" size="sm" class="datepicker__icon"></ui-icon>
+        <!-- Signed percentage: Discount = negative (price goes down), Markup = positive (price goes up) -->
+        <ui-form-field
+          label="Adjustment"
+          layout="horizontal"
+          [required]="true"
+          [error]="getError('adjustmentPercent')"
+          hint="Discount lowers the client's price; a markup raises it and is shown to the client as their regular price.">
+          <div class="adjustment">
+            <div class="adjustment__kind" role="radiogroup" aria-label="Adjustment type">
+              <label class="adjustment__option" [class.adjustment__option--active]="adjustmentKind() === 'discount'">
+                <input
+                  type="radio"
+                  name="adjustmentKind"
+                  value="discount"
+                  [checked]="adjustmentKind() === 'discount'"
+                  (change)="onAdjustmentKindChange('discount')">
+                Discount
+              </label>
+              <label class="adjustment__option" [class.adjustment__option--active]="adjustmentKind() === 'markup'">
+                <input
+                  type="radio"
+                  name="adjustmentKind"
+                  value="markup"
+                  [checked]="adjustmentKind() === 'markup'"
+                  (change)="onAdjustmentKindChange('markup')">
+                Markup
+              </label>
             </div>
-            @if (showDateFromCalendar()) {
-              <div class="datepicker__dropdown">
-                <ui-calendar
-                  [selectedDate]="dateFromDate()"
-                  [firstDayOfWeek]="1"
-                  [showTodayButton]="true"
-                  [showClearButton]="false"
-                  (dateSelected)="onDateFromSelected($event)"
-                  (close)="showDateFromCalendar.set(false)"
-                ></ui-calendar>
-              </div>
-            }
+            <div class="adjustment__percent">
+              <input
+                type="number"
+                inputmode="decimal"
+                step="0.01"
+                min="0.01"
+                [max]="percentMax()"
+                aria-label="Percent"
+                placeholder="Percent"
+                [value]="percentText()"
+                (input)="onPercentInput($event)"
+                (blur)="markFieldTouched('adjustmentPercent')">
+              <span class="adjustment__unit">%</span>
+            </div>
           </div>
         </ui-form-field>
 
-        <ui-form-field label="Date to" layout="horizontal">
-          <div class="datepicker" (click)="$event.stopPropagation()">
-            <div class="datepicker__input" (click)="toggleDateToCalendar($event)">
-              <input type="text" readonly [value]="formatDateDisplay(discount().dateTo)" placeholder="DD/MM/YYYY">
-              @if (discount().dateTo) {
-                <button type="button" class="datepicker__clear" (click)="clearDateTo($event)">
-                  <ui-icon name="close" size="xs"></ui-icon>
-                </button>
-              }
-              <ui-icon name="calendar" size="sm" class="datepicker__icon"></ui-icon>
-            </div>
-            @if (showDateToCalendar()) {
-              <div class="datepicker__dropdown">
-                <ui-calendar
-                  [selectedDate]="dateToDate()"
-                  [firstDayOfWeek]="1"
-                  [showTodayButton]="true"
-                  [showClearButton]="false"
-                  (dateSelected)="onDateToSelected($event)"
-                  (close)="showDateToCalendar.set(false)"
-                ></ui-calendar>
-              </div>
-            }
-          </div>
-        </ui-form-field>
-
-        <ui-form-field label="Discount %" layout="horizontal">
-          <input type="number" min="0" max="100" [ngModel]="discount().discountPercent" (ngModelChange)="onDiscountPercentChange($event)" placeholder="0">
-        </ui-form-field>
-
-        <ui-form-field label="Priority" layout="horizontal">
-          <input type="number" min="0" [ngModel]="discount().priority" (ngModelChange)="onPriorityChange($event)" placeholder="0">
-        </ui-form-field>
-
-        <ui-form-field label="Client groups" layout="horizontal">
-          <ui-select
-            variant="pill"
-            [multiple]="true"
-            [options]="accountGroupOptions()"
-            [ngModel]="discount().accountGroups"
-            (ngModelChange)="onAccountGroupsChange($event)"
-            placeholder="Select account groups">
-          </ui-select>
-        </ui-form-field>
-
-        <ui-form-field label="Clients" layout="horizontal">
+        <ui-form-field label="Clients" layout="horizontal" [required]="true" [error]="getError('clients')">
           <ui-select
             variant="pill"
             [multiple]="true"
             [searchable]="true"
-            [options]="accountOptions()"
-            [ngModel]="discount().accounts"
-            (ngModelChange)="onAccountsChange($event)"
-            (searchChange)="onAccountSearch($event)"
-            placeholder="Select accounts">
+            [options]="clientOptions()"
+            [ngModel]="discount().clients"
+            (ngModelChange)="onClientsChange($event)"
+            (searchChange)="onClientSearch($event)"
+            placeholder="Select clients">
           </ui-select>
         </ui-form-field>
 

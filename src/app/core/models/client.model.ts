@@ -77,11 +77,6 @@ export interface Client {
     otherEmail?: string | null;
     fax?: string | null;
     web?: string | null;
-    accountGroup?: {
-        '@id'?: string;
-        id: number;
-        name: string;
-    } | null;
     // Whether this client acts as an agent that manages/orders for other clients
     isClientAgent?: boolean;
     // Number of clients this agent manages (read-only, server-computed)
@@ -184,7 +179,6 @@ export interface CreateClientDto {
     maxActiveUsers?: number | null;
     isActive?: boolean;
     isArchived?: boolean;
-    accountGroup?: string | null;
     isClientAgent?: boolean;
     managedClients?: string[]; // IRI references to managed clients
 }
@@ -205,7 +199,6 @@ export interface UpdateClientDto {
     maxActiveUsers?: number | null;
     isActive?: boolean;
     isArchived?: boolean;
-    accountGroup?: string | null;
     isClientAgent?: boolean;
     managedClients?: string[]; // IRI references to managed clients
 }

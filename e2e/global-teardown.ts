@@ -121,7 +121,6 @@ async function globalTeardown(config: FullConfig) {
     { path: '/delivery_prices', field: 'name' },
     { path: '/packaging_prices', field: 'name' },
     { path: '/fuel_surcharges', field: 'name' },
-    { path: '/account_groups', field: 'name' },
     { path: '/clients', field: 'name' },
     { path: '/products', field: 'name' },
     { path: '/users', field: 'firstName' },

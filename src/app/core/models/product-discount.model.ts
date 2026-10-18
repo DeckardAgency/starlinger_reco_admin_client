@@ -8,8 +8,6 @@ export interface ProductDiscount {
   discountPriceRetail: string | null;
   rebate: string | null;
   type: number | null;
-  dateValidFrom: string | null;
-  dateValidTo: string | null;
   appliedTo: string | null;
   createdAt: string;
   updatedAt: string;

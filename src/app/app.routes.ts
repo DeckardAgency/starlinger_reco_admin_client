@@ -60,24 +60,6 @@ export const routes: Routes = [
         title: 'Admin | Client Detail'
       },
 
-      // Client Groups
-      { path: 'client-groups', redirectTo: 'client-groups/list', pathMatch: 'full' },
-      {
-        path: 'client-groups/list',
-        loadComponent: () => import('@features/account-groups/list/account-groups-list.component').then(m => m.AccountGroupsListComponent),
-        title: 'Admin | Client Groups'
-      },
-      {
-        path: 'client-groups/new',
-        loadComponent: () => import('@features/account-groups/edit/account-groups-edit.component').then(m => m.AccountGroupsEditComponent),
-        title: 'Admin | New Client Group'
-      },
-      {
-        path: 'client-groups/:id/edit',
-        loadComponent: () => import('@features/account-groups/edit/account-groups-edit.component').then(m => m.AccountGroupsEditComponent),
-        title: 'Admin | Client Group Detail'
-      },
-
       // Shop Orders
       { path: 'shop-orders', redirectTo: 'shop-orders/list', pathMatch: 'full' },
       {

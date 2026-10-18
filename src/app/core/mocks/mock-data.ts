@@ -498,17 +498,17 @@ export interface AdminDiscount {
   id: string;
   name: string;
   status: 'active' | 'inactive';
-  priority: number;
-  dateValidFrom: string;
-  dateValidTo: string;
+  /** Signed decimal string: negative = discount, positive = markup */
+  adjustmentPercent: string;
+  clientCount: number;
   selected?: boolean;
 }
 
 export const mockAdminDiscounts: AdminDiscount[] = [
-  { id: '0001', name: 'ET -30%', status: 'active', priority: 0, dateValidFrom: '25/10/2024 00:00:25', dateValidTo: '01/11/2024 00:00:25' },
-  { id: '0002', name: 'Black Friday -50%', status: 'active', priority: 3, dateValidFrom: '25/11/2024 00:00:11', dateValidTo: '10/11/2024 00:00:11' },
-  { id: '0003', name: 'Spring -25%', status: 'active', priority: 2, dateValidFrom: '01/02/2025 00:00:19', dateValidTo: '25/02/2025 00:00:19' },
-  { id: '0004', name: 'Special -50%', status: 'inactive', priority: 0, dateValidFrom: '15/03/2025 00:05:42', dateValidTo: '15/03/2025 00:05:45' }
+  { id: '0001', name: 'ET -30%', status: 'active', adjustmentPercent: '-30.0000', clientCount: 2 },
+  { id: '0002', name: 'Black Friday -50%', status: 'active', adjustmentPercent: '-50.0000', clientCount: 5 },
+  { id: '0003', name: 'Spring -25%', status: 'active', adjustmentPercent: '-25.0000', clientCount: 1 },
+  { id: '0004', name: 'Agent markup +20%', status: 'inactive', adjustmentPercent: '20.0000', clientCount: 1 }
 ];
 
 // =============================================================================
@@ -1324,21 +1324,18 @@ export const mockProductDocuments = [
 ];
 
 export const mockProductAppliedDiscounts = [
-  { id: '8099336', dateValidFrom: '25/10/2024 00:00:25', dateValidTo: '01/11/2024 00:00:25', discountPriceBase: '€ 198,96', discountPercent: '30,00', appliedTo: 'Recycling team Gmbh' },
-  { id: '8099592', dateValidFrom: '25/11/2024 00:00:11', dateValidTo: '10/11/2024 00:00:11', discountPriceBase: '€ 220,40', discountPercent: '25,00', appliedTo: 'Rodomsko recycling' },
-  { id: '8099905', dateValidFrom: '01/02/2025 00:00:19', dateValidTo: '25/02/2025 00:00:19', discountPriceBase: '€ 1.084,20', discountPercent: '15,00', appliedTo: 'General recycling group' }
+  { id: '8099336', discountPriceBase: '€ 198,96', discountPercent: '30,00', appliedTo: 'Recycling team Gmbh' },
+  { id: '8099592', discountPriceBase: '€ 220,40', discountPercent: '25,00', appliedTo: 'Rodomsko recycling' },
+  { id: '8099905', discountPriceBase: '€ 1.084,20', discountPercent: '15,00', appliedTo: 'General recycling group' }
 ];
 
 export const mockDiscountDetail = {
   id: '1',
   name: 'ET -30%',
   active: true,
-  dateFrom: '01/01/2025',
-  dateTo: '01/01/2025',
-  discountPercent: 30,
-  priority: 0,
-  accountGroups: ['group1'],
-  accounts: ['acc1', 'acc2']
+  adjustmentPercent: -30,
+  clients: ['acc1', 'acc2'],
+  productTypes: ['ET']
 };
 
 export const mockDiscountProducts = [

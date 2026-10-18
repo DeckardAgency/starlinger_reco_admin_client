@@ -37,6 +37,21 @@
   --data-table-row-hover-background: white;
 }
 
+// Adjustment column: a discount lowers the price, a markup raises it
+.adjustment {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &--discount {
+    color: #15803d;
+  }
+
+  &--markup {
+    color: #b45309;
+  }
+}
+
 // Mobile responsive
 @media (max-width: 768px) {
   .page-content {

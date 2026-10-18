@@ -63,17 +63,6 @@
             <input type="text" [value]="account().name" (input)="updateAccount('name', $event)" placeholder="Company title">
           </ui-form-field>
 
-          <ui-form-field label="Client group" layout="horizontal">
-            <ui-select
-              variant="pill"
-              [options]="accountGroupOptions()"
-              [value]="account().accountGroupId || ''"
-              placeholder="Select group..."
-              (selectChange)="onAccountGroupChange($event)"
-              (cleared)="clearAccountGroup()">
-            </ui-select>
-          </ui-form-field>
-
           <ui-form-field label="Code" layout="horizontal" [error]="getError('code')" [required]="true">
             <input type="text" [value]="account().code" (input)="updateAccount('code', $event)" placeholder="Code">
           </ui-form-field>

@@ -5,7 +5,6 @@ import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil, finalize, debounceTime, switchMap, tap } from 'rxjs';
 
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
-import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { TabsComponent, TabItem } from '@app/ui-kit/molecules/tabs/tabs.component';
 import { BadgeComponent, BadgeVariant } from '@app/ui-kit/atoms/badge/badge.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
@@ -27,7 +26,6 @@ import { AddressService } from '@core/services/http/address.service';
 import { UserService } from '@core/services/http/user.service';
 import { ClientDetail, ClientAddress, ClientUser } from '@core/models/client.model';
 import { Order } from '@core/models/order.model';
-import { AccountGroupService } from '@core/services/http/account-group.service';
 import { CountryService } from '@core/services/http/country.service';
 import { LoggerService } from '@core/services/logger.service';
 import { CountryOption } from '../../../shared/components/modals/address-modal/address-modal.component';
@@ -94,7 +92,6 @@ const EMPTY_ACCOUNT: Account = {
     FormsModule,
     RouterModule,
     ToggleComponent,
-    SelectComponent,
     TabsComponent,
     BadgeComponent,
     IconComponent,
@@ -121,7 +118,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   private userService = inject(UserService);
   private orderService = inject(OrderService);
   private addressService = inject(AddressService);
-  private accountGroupService = inject(AccountGroupService);
   private countryService = inject(CountryService);
   private toastService = inject(ToastService);
   private logger = inject(LoggerService);
@@ -247,19 +243,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   });
   isValid = computed(() => Object.keys(this.errors()).length === 0);
 
-  // Account group options - loaded from API
-  accountGroupOptions = signal<{ value: string; label: string }[]>([]);
-
-  // Handle account group change
-  onAccountGroupChange(value: string | number): void {
-    this.account.update(a => ({ ...a, accountGroupId: Number(value) }));
-  }
-
-  // Clear account group
-  clearAccountGroup(): void {
-    this.account.update(a => ({ ...a, accountGroupId: undefined }));
-  }
-
   // Table actions
   userActions: TableAction[] = [
     { id: 'edit', label: 'Edit', icon: 'pencil' },
@@ -282,8 +265,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   ];
 
   ngOnInit(): void {
-    // Load account groups and countries for dropdowns
-    this.loadAccountGroups();
+    // Load countries for dropdowns
     this.loadCountries();
     this.setupManagedClientSearch();
 
@@ -414,18 +396,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   /** True when leaving is fine: nothing unsaved, or the user agreed to discard. */
   private confirmLeaveIfDirty(): boolean {
     return !this.isDirty() || confirm('You have unsaved changes. Leave this page?');
-  }
-
-  private loadAccountGroups(): void {
-    this.accountGroupService.getAllAccountGroups().subscribe({
-      next: (response) => {
-        this.accountGroupOptions.set(
-          (response.member || []).map(g => ({ value: String(g.id), label: g.name }))
-        );
-        this.cdr.markForCheck();
-      },
-      error: (err) => this.logger.error('Error loading account groups:', err)
-    });
   }
 
   private loadCountries(): void {
@@ -624,7 +594,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       email: c.email ?? '',
       status: c.isActive ? 'active' : 'inactive',
       isActive: c.isActive,
-      accountGroupId: c.accountGroup?.id ?? undefined,
       phone: c.phoneNumber ?? '',
       otherPhone: c.otherPhone ?? '',
       otherEmail: c.otherEmail ?? '',
@@ -795,8 +764,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       web: account.web?.trim() || null,
       purchaseLimit: account.purchaseLimit?.toString() || null,
       isActive: this.isActive(),
-      isClientAgent: this.isClientAgent(),
-      accountGroup: account.accountGroupId ? `/api/v1/account_groups/${account.accountGroupId}` : null
+      isClientAgent: this.isClientAgent()
     };
 
     const isCreating = !this.isEditMode() || !this.accountId();

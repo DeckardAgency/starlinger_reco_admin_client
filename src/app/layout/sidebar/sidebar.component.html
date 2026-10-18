@@ -39,16 +39,6 @@
           @if (isSectionExpanded('customer') || isCollapsed()) {
             <ul class="sidebar__sub-list" @expandCollapse>
               <li class="sidebar__item">
-                <a routerLink="/admin/client-groups/list" [class.sidebar__link--active]="isRouteActive('client-groups')" class="sidebar__link">
-                  <span class="sidebar__icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M10.6668 14V12.6667C10.6668 11.9594 10.3859 11.2811 9.88579 10.781C9.38569 10.281 8.70741 10 8.00016 10H4.00016C3.29292 10 2.61464 10.281 2.11454 10.781C1.61445 11.2811 1.3335 11.9594 1.3335 12.6667V14M14.6668 14V12.6667C14.6664 12.0758 14.4695 11.5019 14.1078 11.0349C13.746 10.5679 13.2399 10.2344 12.6668 10.0867M10.6668 2.08667C11.2415 2.23354 11.7493 2.56714 12.1121 3.03488C12.475 3.50262 12.6722 4.07789 12.6722 4.67C12.6722 5.26211 12.475 5.83738 12.1121 6.30512C11.7493 6.77286 11.2415 7.10646 10.6668 7.25333M8.66683 4.66667C8.66683 6.13943 7.47292 7.33333 6.00016 7.33333C4.5274 7.33333 3.3335 6.13943 3.3335 4.66667C3.3335 3.19391 4.5274 2 6.00016 2C7.47292 2 8.66683 3.19391 8.66683 4.66667Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                  <span class="sidebar__link-text">Client groups</span>
-                </a>
-              </li>
-              <li class="sidebar__item">
                 <a routerLink="/admin/clients/list" [class.sidebar__link--active]="isRouteActive('clients')" class="sidebar__link">
                   <span class="sidebar__icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">

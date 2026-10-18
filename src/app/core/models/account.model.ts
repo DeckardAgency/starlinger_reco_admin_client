@@ -11,7 +11,6 @@ export interface Account {
   updatedAt?: string;
   // Extended fields for detail view
   isActive?: boolean;
-  accountGroupId?: number;
   phone?: string;
   otherPhone?: string;
   otherEmail?: string;
