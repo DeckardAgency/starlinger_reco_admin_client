@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, finalize } from 'rxjs';
+import { Subject, takeUntil, finalize, debounceTime, switchMap, tap } from 'rxjs';
 
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
@@ -59,6 +59,13 @@ interface ShopOrder {
   status: string;
   statusLabel: string;
   statusVariant: BadgeVariant;
+}
+
+/** Row of the "Managed clients" tab and of the add-client picker. */
+interface ManagedClientRow {
+  id: number;
+  name: string;
+  code: string;
 }
 
 // Default empty account for new mode
@@ -147,6 +154,10 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   isEditMode = signal(false);
   accountId = signal<string | null>(null);
 
+  // Where Back / "Save and continue" land when this page was opened from another
+  // admin page (e.g. an agent's "Managed clients" tab). Only in-app targets.
+  private returnTo = signal<string | null>(null);
+
   // Account data - starts empty
   account = signal<Account>({ ...EMPTY_ACCOUNT });
 
@@ -190,15 +201,26 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   isActive = signal(true);
   isClientAgent = signal(false);
 
+  // Unsaved-change detection: serialized form state as last loaded/saved vs. now.
+  private savedSnapshot = signal('');
+  isDirty = computed(() =>
+    this.serializeForm(this.account(), this.isActive(), this.isClientAgent()) !== this.savedSnapshot()
+  );
+
   // Managed clients (client-agent only)
-  managedClients = signal<{ id: number; name: string; code: string }[]>([]);
+  managedClients = signal<ManagedClientRow[]>([]);
   isManagedClientModalOpen = signal(false);
-  availableClients = signal<{ id: number; name: string; code: string }[]>([]);
-  filteredAvailableClients = signal<{ id: number; name: string; code: string }[]>([]);
+  /** Latest server-side search results for the "Add managed clients" picker. */
+  availableClients = signal<ManagedClientRow[]>([]);
+  /** Picker candidates: search results minus this client and the already-managed ones. */
+  filteredAvailableClients = computed(() => {
+    const selfId = this.account().id;
+    const managedIds = new Set(this.managedClients().map(c => c.id));
+    return this.availableClients().filter(c => c.id !== selfId && !managedIds.has(c.id));
+  });
   managedClientSearchQuery = signal('');
   isLoadingAvailableClients = signal(false);
-  private allClients: { id: number; name: string; code: string }[] = [];
-  private allClientsLoaded = false;
+  private managedClientSearch$ = new Subject<string>();
 
   // Address modal state
   isAddressModalOpen = signal(false);
@@ -255,6 +277,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   ];
 
   managedClientActions: TableAction[] = [
+    { id: 'edit', label: 'Edit', icon: 'pencil' },
     { id: 'remove', label: 'Remove', icon: 'trash', variant: 'danger' }
   ];
 
@@ -262,6 +285,16 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     // Load account groups and countries for dropdowns
     this.loadAccountGroups();
     this.loadCountries();
+    this.setupManagedClientSearch();
+
+    // Referring-page context; re-read on every navigation (incl. agent -> managed client -> back)
+    this.route.queryParamMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(qp => {
+        // Only allow in-app admin targets, never external/arbitrary URLs.
+        const rt = qp.get('returnTo');
+        this.returnTo.set(rt && rt.startsWith('/admin/') ? rt : null);
+      });
 
     // Subscribe to route param changes to handle navigation between add/edit
     this.route.paramMap
@@ -360,7 +393,27 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.managedClients.set([]);
     this.activeTab.set('users');
     this.touched.set({});
+    this.markClean();
     this.cdr.markForCheck();
+  }
+
+  /** Where Back / "Save and continue" land: the referring page when given, else the clients list. */
+  private exitUrl(): string {
+    return this.returnTo() ?? '/admin/clients/list';
+  }
+
+  private serializeForm(account: Account, isActive: boolean, isClientAgent: boolean): string {
+    return JSON.stringify({ account, isActive, isClientAgent });
+  }
+
+  /** Take the current form state as the clean baseline for isDirty(). */
+  private markClean(): void {
+    this.savedSnapshot.set(this.serializeForm(this.account(), this.isActive(), this.isClientAgent()));
+  }
+
+  /** True when leaving is fine: nothing unsaved, or the user agreed to discard. */
+  private confirmLeaveIfDirty(): boolean {
+    return !this.isDirty() || confirm('You have unsaved changes. Leave this page?');
   }
 
   private loadAccountGroups(): void {
@@ -403,7 +456,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.manualEntries.set([]);
         this.isActive.set(client.isActive ?? true);
         this.isClientAgent.set(client.isClientAgent ?? false);
-        this.setManagedClientsFromDetail(client.managedClients);
+        this.setManagedClientsFromDetail(client);
+        this.markClean();
         this.isLoading.set(false);
         this.cdr.markForCheck();
 
@@ -414,6 +468,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       },
       error: (err) => {
         this.loadError.set(err?.message || 'Client not found');
+        this.markClean(); // nothing editable was loaded, so nothing can be lost on Back
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -617,10 +672,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onClientAgentChange(value: boolean): void {
     this.isClientAgent.set(value);
-    if (value) {
-      // Preload the client list so the "Managed clients" tab/modal is ready
-      this.ensureClientsLoaded();
-    } else if (this.activeTab() === 'managed-clients') {
+    if (!value && this.activeTab() === 'managed-clients') {
       // The tab disappears when the flag is off — fall back to a visible tab
       this.activeTab.set('users');
     }
@@ -756,11 +808,15 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
+        this.markClean();
         if (navigateToList) {
-          this.router.navigate(['/admin/clients/list']);
+          this.router.navigateByUrl(this.exitUrl());
         } else if (isCreating && result?.id) {
-          // After creating, navigate to edit page for the new client
-          this.router.navigate(['/admin/clients', result.id, 'edit']);
+          // After creating, navigate to edit page for the new client, keeping
+          // the referring-page context so a later Back/Save still returns there
+          this.router.navigate(['/admin/clients', result.id, 'edit'], {
+            queryParams: this.returnTo() ? { returnTo: this.returnTo() } : {}
+          });
         }
         // If editing and not navigating, just stay on page (data already saved)
       },
@@ -795,22 +851,33 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // ---- Managed clients (client-agent only) ----
 
-  /** Build the managed-clients table from the IRIs (or embedded objects) on the detail. */
-  private setManagedClientsFromDetail(raw: unknown): void {
-    const ids = (Array.isArray(raw) ? raw : [])
-      .map((m: any) => (typeof m === 'string' ? this.idFromIri(m) : m?.id))
-      .filter((id: any): id is number => typeof id === 'number' && !Number.isNaN(id));
-
-    if (ids.length === 0) {
-      this.managedClients.set([]);
+  /**
+   * Build the managed-clients table from the detail response. Prefer the
+   * server-side `managedClientSummaries` (id/name/code); fall back to the bare
+   * `managedClients` IRIs / embedded objects when the API does not send them.
+   */
+  private setManagedClientsFromDetail(client: ClientDetail): void {
+    if (Array.isArray(client.managedClientSummaries)) {
+      this.managedClients.set(
+        client.managedClientSummaries.map(s => ({ id: s.id, name: s.name, code: s.code ?? '' }))
+      );
       return;
     }
 
-    this.ensureClientsLoaded(() => {
-      const byId = new Map(this.allClients.map(c => [c.id, c]));
-      this.managedClients.set(ids.map(id => byId.get(id) ?? { id, name: `Client #${id}`, code: '' }));
-      this.cdr.markForCheck();
-    });
+    const raw: Array<string | { id?: number; name?: string; code?: string }> =
+      Array.isArray(client.managedClients) ? client.managedClients : [];
+    const rows = raw
+      .map((m): ManagedClientRow | null => {
+        if (typeof m === 'string') {
+          const id = this.idFromIri(m);
+          return Number.isNaN(id) ? null : { id, name: `Client #${id}`, code: '' };
+        }
+        return typeof m?.id === 'number'
+          ? { id: m.id, name: m.name || `Client #${m.id}`, code: m.code ?? '' }
+          : null;
+      })
+      .filter((r): r is ManagedClientRow => r !== null);
+    this.managedClients.set(rows);
   }
 
   private idFromIri(iri: string): number {
@@ -818,34 +885,37 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     return match ? Number(match[1]) : NaN;
   }
 
-  /** Fetch the full client list once (used to resolve names + populate the picker). */
-  private ensureClientsLoaded(cb?: () => void): void {
-    if (this.allClientsLoaded) {
-      cb?.();
-      return;
-    }
-    this.isLoadingAvailableClients.set(true);
-    this.clientService.getClients({ itemsPerPage: 1000, 'order[name]': 'asc' }).subscribe({
-      next: (res) => {
-        this.allClients = (res.clients || []).map(c => ({ id: c.id, name: c.name, code: c.code }));
-        this.allClientsLoaded = true;
-        this.isLoadingAvailableClients.set(false);
-        cb?.();
+  /**
+   * Debounced server-side lookup for the picker: partial name match, first 50
+   * sorted by name. switchMap drops stale responses while the user keeps typing.
+   */
+  private setupManagedClientSearch(): void {
+    this.managedClientSearch$.pipe(
+      debounceTime(300),
+      tap(() => {
+        this.isLoadingAvailableClients.set(true);
         this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.logger.error('Error loading clients:', err);
-        this.isLoadingAvailableClients.set(false);
-        this.cdr.markForCheck();
-      }
+      }),
+      switchMap(term => this.clientService.getClients({
+        page: 1,
+        itemsPerPage: 50,
+        'order[name]': 'asc',
+        ...(term ? { name: term } : {})
+      })),
+      takeUntil(this.destroy$)
+    ).subscribe(res => {
+      this.availableClients.set((res.clients || []).map(c => ({ id: c.id, name: c.name, code: c.code })));
+      this.isLoadingAvailableClients.set(false);
+      this.cdr.markForCheck();
     });
   }
 
   openManagedClientModal(): void {
     this.isManagedClientModalOpen.set(true);
     this.managedClientSearchQuery.set('');
-    this.ensureClientsLoaded(() => this.refreshAvailableClients());
-    this.refreshAvailableClients();
+    this.availableClients.set([]);
+    this.isLoadingAvailableClients.set(true);
+    this.managedClientSearch$.next('');
   }
 
   closeManagedClientModal(): void {
@@ -853,45 +923,41 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.managedClientSearchQuery.set('');
   }
 
-  /** Candidates = all clients except this one and the already-managed ones. */
-  private refreshAvailableClients(): void {
-    const selfId = this.account().id;
-    const managedIds = new Set(this.managedClients().map(c => c.id));
-    this.availableClients.set(
-      this.allClients.filter(c => c.id !== selfId && !managedIds.has(c.id))
-    );
-    this.applyManagedClientFilter();
-  }
-
   onManagedClientSearchChange(event: Event): void {
-    this.managedClientSearchQuery.set((event.target as HTMLInputElement).value.toLowerCase().trim());
-    this.applyManagedClientFilter();
+    const term = (event.target as HTMLInputElement).value;
+    this.managedClientSearchQuery.set(term);
+    this.managedClientSearch$.next(term.trim());
   }
 
-  private applyManagedClientFilter(): void {
-    const q = this.managedClientSearchQuery();
-    const list = this.availableClients();
-    this.filteredAvailableClients.set(
-      !q ? list : list.filter(c => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
-    );
-  }
-
-  addManagedClient(client: { id: number; name: string; code: string }): void {
+  addManagedClient(client: ManagedClientRow): void {
     this.managedClients.update(list => [...list, client]);
-    this.refreshAvailableClients();
     this.persistManagedClients();
   }
 
   onManagedClientActionClick(event: ActionClickEvent): void {
     this.closeDropdown();
-    if (event.actionId === 'remove') {
-      this.removeManagedClient(event.row as { id: number });
+    const row = event.row as ManagedClientRow;
+    switch (event.actionId) {
+      case 'edit':
+        this.openManagedClient(row);
+        break;
+      case 'remove':
+        this.removeManagedClient(row);
+        break;
     }
+  }
+
+  /** Open the managed client's own detail page; its Back / Save return to this agent. */
+  private openManagedClient(row: { id: number }): void {
+    const agentId = this.accountId();
+    if (!agentId || !this.confirmLeaveIfDirty()) return;
+    this.router.navigate(['/admin/clients', row.id, 'edit'], {
+      queryParams: { returnTo: `/admin/clients/${agentId}/edit` }
+    });
   }
 
   removeManagedClient(client: { id: number }): void {
     this.managedClients.update(list => list.filter(c => c.id !== client.id));
-    this.refreshAvailableClients();
     this.persistManagedClients();
   }
 
@@ -1085,7 +1151,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   goBack(): void {
-    window.history.back();
+    if (!this.confirmLeaveIfDirty()) return;
+    this.router.navigateByUrl(this.exitUrl());
   }
 
   updatePurchaseLimit(event: Event): void {

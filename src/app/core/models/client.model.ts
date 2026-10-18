@@ -97,6 +97,15 @@ export interface ClientDetail extends Client {
     addresses?: ClientAddress[];
     // Clients managed by this agent — serialized as IRIs (client:read:details)
     managedClients?: string[] | Client[];
+    // Read-only id/name/code of the managed clients (client:read:details), so the
+    // UI can label them without fetching the whole client list.
+    managedClientSummaries?: ManagedClientSummary[];
+}
+
+export interface ManagedClientSummary {
+    id: number;
+    name: string;
+    code: string;
 }
 
 // User reference within Client

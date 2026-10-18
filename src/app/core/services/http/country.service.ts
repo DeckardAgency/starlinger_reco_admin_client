@@ -24,7 +24,8 @@ export class CountryService extends BaseHttpService {
    */
   getAllCountries(): Observable<CountriesCollection> {
     if (!this.allCountries$) {
-      this.allCountries$ = this.getCountries({ itemsPerPage: 300, 'order[name]': 'asc' }).pipe(
+      // The countries endpoint has pagination disabled server-side: one call returns them all.
+      this.allCountries$ = this.getCountries({ 'order[name]': 'asc' }).pipe(
         catchError(error => {
           this.allCountries$ = null;
           return throwError(() => error);

@@ -13,6 +13,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { animate, style, transition, trigger } from '@angular/animations';
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { FormFieldComponent } from '@app/ui-kit/molecules/form-field/form-field.component';
+import { SelectComponent, SelectOption } from '@app/ui-kit/atoms/select/select.component';
 
 export interface AddressFormData {
   id?: number | string;
@@ -45,7 +46,8 @@ export interface ExistingAddress {
     CommonModule,
     ReactiveFormsModule,
     ToggleComponent,
-    FormFieldComponent
+    FormFieldComponent,
+    SelectComponent
   ],
   templateUrl: './address-modal.component.html',
   styleUrls: ['./address-modal.component.scss'],
@@ -83,6 +85,9 @@ export class AddressModalComponent implements OnChanges {
 
   addressForm: FormGroup;
 
+  /** ui-select options; string values because the form stores `countryId` as a string. */
+  countryOptions: SelectOption[] = [];
+
   constructor(private fb: FormBuilder) {
     this.addressForm = this.fb.group({
       street: ['', [Validators.required, Validators.minLength(3)]],
@@ -95,6 +100,9 @@ export class AddressModalComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['countries']) {
+      this.countryOptions = (this.countries || []).map(c => ({ value: String(c.id), label: c.name }));
+    }
     if (changes['isOpen'] && this.isOpen) {
       if (this.address) {
         this.addressForm.patchValue({
@@ -160,6 +168,18 @@ export class AddressModalComponent implements OnChanges {
     const existing = this.existingAddresses.find(a => a.isBilling && a.id !== currentId);
     if (!existing) return null;
     return `"${existing.street}, ${existing.city}" is currently the billing address and will be overridden.`;
+  }
+
+  /** Current country selection as the string the ui-select expects ('' = none). */
+  get countryId(): string {
+    const value = this.addressForm.get('countryId')?.value;
+    return value == null ? '' : String(value);
+  }
+
+  onCountryChange(value: string | number): void {
+    const control = this.addressForm.get('countryId');
+    control?.setValue(String(value));
+    control?.markAsTouched();
   }
 
   onBillingChange(value: boolean): void {

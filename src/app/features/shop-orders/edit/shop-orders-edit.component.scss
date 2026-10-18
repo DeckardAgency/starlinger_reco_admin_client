@@ -48,6 +48,16 @@
 // =============================================================================
 .order-info-row {
   @include admin.detail-info-row;
+
+  &__left {
+    gap: 24px;
+  }
+
+  // Secondary info (checkout reference) in a smaller type
+  &__item--small .order-info-row__label,
+  &__item--small .order-info-row__value {
+    font-size: 12px;
+  }
 }
 
 // =============================================================================

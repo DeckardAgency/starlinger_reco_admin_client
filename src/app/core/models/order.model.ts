@@ -92,7 +92,10 @@ export interface Order {
     /** Sum of item quantities — present on list responses. */
     totalQuantity?: number;
     user: User;
-    onBehalfOfClient?: OrderClientRef | null;
+    /** Managed client the agent ordered for — embedded object, or a bare IRI depending on the serialization group. */
+    onBehalfOfClient?: OrderClientRef | string | null;
+    /** Read-only; agent orders created in one checkout share the same reference. */
+    checkoutReference?: string | null;
     logs?: OrderLog[];
     // Tracking fields (for dispatched status)
     trackingNumber?: string;

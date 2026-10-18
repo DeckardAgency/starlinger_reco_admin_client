@@ -52,8 +52,23 @@
     <!-- Order Info Row -->
     <div class="order-info-row">
       <div class="order-info-row__left">
-        <span class="order-info-row__label">Internal reference number: </span>
-        <span class="order-info-row__value">{{ order().internalRef }}</span>
+        <div class="order-info-row__item">
+          <span class="order-info-row__label">Internal reference number:&nbsp;</span>
+          <span class="order-info-row__value">{{ order().internalRef }}</span>
+        </div>
+        <!-- Company being charged: the on-behalf-of client for agent orders, else the user's company -->
+        @if (order().account) {
+          <div class="order-info-row__item">
+            <span class="order-info-row__label">Company:&nbsp;</span>
+            <span class="order-info-row__value">{{ order().account }}</span>
+          </div>
+        }
+        @if (order().checkoutReference) {
+          <div class="order-info-row__item order-info-row__item--small">
+            <span class="order-info-row__label">Checkout ref:&nbsp;</span>
+            <span class="order-info-row__value">{{ order().checkoutReference }}</span>
+          </div>
+        }
       </div>
       <div class="order-info-row__right">
         <div class="order-info-row__item">
