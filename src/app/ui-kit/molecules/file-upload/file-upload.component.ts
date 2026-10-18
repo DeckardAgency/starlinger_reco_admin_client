@@ -6,8 +6,7 @@ import {
   EventEmitter,
   ElementRef,
   ViewChild,
-  signal,
-  computed
+  signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -18,6 +17,12 @@ export interface UploadedFile {
   status: 'pending' | 'uploading' | 'success' | 'error';
   error?: string;
   previewUrl?: string;
+}
+
+/** A file the dropzone refused: over `maxSize`, or beyond the `maxFiles` cap of one selection. */
+export interface RejectedFile {
+  file: File;
+  reason: 'size' | 'count';
 }
 
 @Component({
@@ -34,19 +39,25 @@ export class FileUploadComponent {
   @Input() accept = '*';
   @Input() multiple = false;
   @Input() maxSize = 10 * 1024 * 1024; // 10MB default
+  /** Cap on the files kept in the list (when shown) — otherwise on the files of a single selection. */
   @Input() maxFiles = 5;
   @Input() label = 'Upload files';
   @Input() hint = '';
   @Input() error = '';
   @Input() disabled = false;
+  /** Set to false when the parent renders the files itself (e.g. a gallery) — the dropzone then only emits. */
+  @Input() showFileList = true;
 
   @Output() filesSelected = new EventEmitter<File[]>();
+  @Output() filesRejected = new EventEmitter<RejectedFile[]>();
   @Output() fileRemoved = new EventEmitter<UploadedFile>();
 
   protected isDragging = signal(false);
   protected files = signal<UploadedFile[]>([]);
 
-  protected dropzoneClasses = computed(() => {
+  // A plain method rather than computed(): `disabled` and `error` are regular inputs,
+  // not signals, so a computed would never re-evaluate when they change.
+  protected dropzoneClasses(): string[] {
     const classes = ['ui-file-upload__dropzone'];
 
     if (this.isDragging()) {
@@ -62,7 +73,7 @@ export class FileUploadComponent {
     }
 
     return classes;
-  });
+  }
 
   openFilePicker(): void {
     if (!this.disabled) {
@@ -112,37 +123,39 @@ export class FileUploadComponent {
   }
 
   private handleFiles(newFiles: File[]): void {
-    const currentCount = this.files().length;
-    const availableSlots = this.maxFiles - currentCount;
+    // Files beyond the cap are truncated (not the whole selection) and reported via filesRejected.
+    const limit = this.multiple ? Math.max(this.maxFiles - this.files().length, 0) : 1;
+    const rejected: RejectedFile[] = newFiles.slice(limit).map(file => ({ file, reason: 'count' as const }));
 
-    if (availableSlots <= 0) return;
-
-    const filesToAdd = this.multiple
-      ? newFiles.slice(0, availableSlots)
-      : newFiles.slice(0, 1);
-
-    const validFiles = filesToAdd.filter(file => {
+    const validFiles = newFiles.slice(0, limit).filter(file => {
       if (file.size > this.maxSize) {
-        console.warn(`File ${file.name} exceeds max size of ${this.maxSize} bytes`);
+        rejected.push({ file, reason: 'size' });
         return false;
       }
       return true;
     });
 
-    const uploadedFiles: UploadedFile[] = validFiles.map(file => ({
-      file,
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      progress: 0,
-      status: 'pending' as const,
-      previewUrl: file.type.startsWith('image/')
-        ? URL.createObjectURL(file)
-        : undefined
-    }));
+    if (rejected.length > 0) {
+      this.filesRejected.emit(rejected);
+    }
+    if (validFiles.length === 0) return;
 
-    if (!this.multiple) {
-      this.files.set(uploadedFiles);
-    } else {
-      this.files.update(files => [...files, ...uploadedFiles]);
+    if (this.showFileList) {
+      const uploadedFiles: UploadedFile[] = validFiles.map(file => ({
+        file,
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        progress: 0,
+        status: 'pending' as const,
+        previewUrl: file.type.startsWith('image/')
+          ? URL.createObjectURL(file)
+          : undefined
+      }));
+
+      if (!this.multiple) {
+        this.files.set(uploadedFiles);
+      } else {
+        this.files.update(files => [...files, ...uploadedFiles]);
+      }
     }
 
     this.filesSelected.emit(validFiles);

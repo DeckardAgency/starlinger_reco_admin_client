@@ -1,6 +1,11 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ProductProductLink, ProductProductLinksCollection } from '@core/models/product-product-link.model';
+import {
+  ProductProductLink,
+  ProductProductLinkCreate,
+  ProductProductLinkUpdate,
+  ProductProductLinksCollection
+} from '@core/models/product-product-link.model';
 import { BaseHttpService } from './base-http.service';
 
 @Injectable({
@@ -14,11 +19,11 @@ export class ProductProductLinkService extends BaseHttpService {
     return this.getWithJsonLd<ProductProductLinksCollection>(this.endpoint, params);
   }
 
-  createLink(data: Partial<ProductProductLink>): Observable<ProductProductLink> {
+  createLink(data: ProductProductLinkCreate): Observable<ProductProductLink> {
     return this.postWithJsonLd<ProductProductLink>(this.endpoint, data);
   }
 
-  updateLink(id: string, data: Partial<ProductProductLink>): Observable<ProductProductLink> {
+  updateLink(id: string, data: ProductProductLinkUpdate): Observable<ProductProductLink> {
     return this.patchWithJsonLd<ProductProductLink>(`${this.endpoint}/${id}`, data);
   }
 

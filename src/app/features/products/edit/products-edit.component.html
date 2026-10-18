@@ -150,8 +150,8 @@
             <ui-icon name="plus" size="sm"></ui-icon>
           </button>
         </div>
-        <div class="tabbed-section__cta" *ngIf="activeTab() === 'relatedProducts'">
-          <button *ngIf="selectedRelatedProductIds().size > 0" class="btn btn--outline" (click)="removeSelectedRelatedProducts()">
+        <div class="tabbed-section__cta" *ngIf="activeRelationType() && activeSelectedLinkIds().size > 0">
+          <button class="btn btn--outline" (click)="removeSelectedLinks()">
             <span>Remove selected</span>
           </button>
         </div>
@@ -168,12 +168,31 @@
 
       <!-- Gallery Tab Content -->
       <div class="tab-content" *ngIf="activeTab() === 'gallery'" (click)="closeImageDropdown()">
-        <input #imageFileInput type="file" accept="image/*" multiple style="display: none" (change)="onImageFileSelected($event)">
+        <div class="gallery-upload">
+          <ui-file-upload
+            label=""
+            [accept]="imageAccept"
+            [multiple]="true"
+            [maxSize]="maxImageSize"
+            [maxFiles]="maxImagesPerUpload"
+            [showFileList]="false"
+            [disabled]="!product().id"
+            [hint]="imageUploadHint"
+            (filesSelected)="uploadImages($event)"
+            (filesRejected)="onImagesRejected($event)">
+          </ui-file-upload>
+          <p class="gallery-upload__notice" *ngIf="!product().id">
+            <ui-icon name="info" size="sm"></ui-icon>
+            <span>Save the product first to upload images</span>
+          </p>
+          <div class="upload-progress" *ngIf="uploadProgress() as progress" role="status" aria-live="polite">
+            <div class="upload-progress__bar">
+              <div class="upload-progress__fill" [style.width.%]="progress.percent"></div>
+            </div>
+            <span class="upload-progress__text">Uploading images… {{ progress.done }}/{{ progress.total }} done ({{ progress.percent }}%)</span>
+          </div>
+        </div>
         <div class="gallery-toolbar">
-          <button class="btn btn--secondary" (click)="uploadImage()">
-            <span>Upload image</span>
-            <ui-icon name="plus" size="sm"></ui-icon>
-          </button>
           <button class="btn btn--outline" (click)="downloadAllImages()" [disabled]="galleryImages().length === 0">
             <span>Download all images</span>
             <ui-icon name="download" size="sm"></ui-icon>
@@ -183,40 +202,47 @@
             <ui-icon name="trash" size="sm"></ui-icon>
           </button>
         </div>
-        <div class="gallery-grid" *ngIf="galleryImages().length > 0">
-          <div class="gallery-item" *ngFor="let image of galleryImages(); trackBy: trackByImageId">
-            <div class="gallery-item__header">
-              <span class="gallery-item__name">{{ image.name }}</span>
-              <button class="gallery-item__menu-btn" (click)="toggleImageDropdown(image.id, $event)">
-                <ui-icon name="more-vertical" size="md"></ui-icon>
-              </button>
-              <div class="gallery-item__dropdown" *ngIf="activeImageDropdown() === image.id" (click)="$event.stopPropagation()">
-                <button class="gallery-item__dropdown-item" (click)="makeImagePrimary(image.id)">
-                  <ui-icon name="circle-dot" size="sm"></ui-icon>
-                  <span>Make primary</span>
+        <!-- The whole grid area is a drop target too, so files can be dropped onto existing thumbnails -->
+        <div class="gallery-dropzone"
+             [class.gallery-dropzone--active]="isDraggingOverGallery()"
+             (dragover)="onGalleryDragOver($event)"
+             (dragleave)="onGalleryDragLeave($event)"
+             (drop)="onGalleryDrop($event)">
+          <div class="gallery-grid" *ngIf="galleryImages().length > 0">
+            <div class="gallery-item" *ngFor="let image of galleryImages(); trackBy: trackByImageId">
+              <div class="gallery-item__header">
+                <span class="gallery-item__name">{{ image.name }}</span>
+                <button class="gallery-item__menu-btn" (click)="toggleImageDropdown(image.id, $event)">
+                  <ui-icon name="more-vertical" size="md"></ui-icon>
                 </button>
-                <button class="gallery-item__dropdown-item" (click)="renameImage(image.id)">
-                  <ui-icon name="edit" size="sm"></ui-icon>
-                  <span>Rename</span>
-                </button>
-                <button class="gallery-item__dropdown-item" (click)="downloadImage(image.id)">
-                  <ui-icon name="download" size="sm"></ui-icon>
-                  <span>Download</span>
-                </button>
-                <button class="gallery-item__dropdown-item" (click)="deleteImage(image.id)">
-                  <ui-icon name="trash" size="sm"></ui-icon>
-                  <span>Delete</span>
-                </button>
+                <div class="gallery-item__dropdown" *ngIf="activeImageDropdown() === image.id" (click)="$event.stopPropagation()">
+                  <button class="gallery-item__dropdown-item" (click)="makeImagePrimary(image.id)">
+                    <ui-icon name="circle-dot" size="sm"></ui-icon>
+                    <span>Make primary</span>
+                  </button>
+                  <button class="gallery-item__dropdown-item" (click)="renameImage(image.id)">
+                    <ui-icon name="edit" size="sm"></ui-icon>
+                    <span>Rename</span>
+                  </button>
+                  <button class="gallery-item__dropdown-item" (click)="downloadImage(image.id)">
+                    <ui-icon name="download" size="sm"></ui-icon>
+                    <span>Download</span>
+                  </button>
+                  <button class="gallery-item__dropdown-item" (click)="deleteImage(image.id)">
+                    <ui-icon name="trash" size="sm"></ui-icon>
+                    <span>Delete</span>
+                  </button>
+                </div>
+              </div>
+              <div class="gallery-item__image">
+                <img *ngIf="image.url" [src]="image.url" [alt]="image.name" class="gallery-item__img">
+                <div *ngIf="!image.url" class="gallery-item__placeholder"></div>
               </div>
             </div>
-            <div class="gallery-item__image">
-              <img *ngIf="image.url" [src]="image.url" [alt]="image.name" class="gallery-item__img">
-              <div *ngIf="!image.url" class="gallery-item__placeholder"></div>
-            </div>
           </div>
-        </div>
-        <div class="empty-state" *ngIf="galleryImages().length === 0">
-          <p class="empty-state__text">No images</p>
+          <div class="empty-state" *ngIf="galleryImages().length === 0">
+            <p class="empty-state__text">{{ isDraggingOverGallery() ? 'Drop images to upload' : 'No images' }}</p>
+          </div>
         </div>
       </div>
 
@@ -235,27 +261,27 @@
         </div>
       </div>
 
-      <!-- Related Products Tab Content -->
-      <div class="tab-content tab-content--no-padding" *ngIf="activeTab() === 'relatedProducts'">
+      <!-- Alternative / Replacement parts Tab Content: one table bound to the active tab's links -->
+      <div class="tab-content tab-content--no-padding" *ngIf="activeRelationType()">
         <div class="related-section related-section--compact">
           <div class="table-container">
             <ui-data-table
               [columns]="relatedProductColumns"
-              [data]="relatedProducts()"
+              [data]="activeLinks()"
               [sortColumn]="sortColumn()"
               [sortDirection]="sortDirection()"
               (sort)="onSort($event)">
             </ui-data-table>
           </div>
-          <div class="empty-state" *ngIf="relatedProducts().length === 0">
-            <p class="empty-state__text">No related products selected</p>
+          <div class="empty-state" *ngIf="activeLinks().length === 0">
+            <p class="empty-state__text">No {{ activeRelationLabel().toLowerCase() }} parts selected</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Available Products Section (outside tabs) -->
-    <div class="available-products-section">
+    <!-- Available Products Section (outside tabs) — only while an alternative/replacement tab is active -->
+    <div class="available-products-section" *ngIf="activeRelationType()">
       <div class="section-title-header">
         <div class="section-title-header__left">
           <h2 class="section-title-header__title">Available products</h2>
@@ -272,7 +298,7 @@
               (input)="onSearch($any($event.target).value)">
           </div>
           <button *ngIf="selectedProductIds().size > 0" class="btn btn--secondary" (click)="addSelectedProducts()">
-            <span>Add selected</span>
+            <span>{{ addSelectedLinksLabel() }}</span>
             <ui-icon name="plus" size="sm"></ui-icon>
           </button>
         </div>
@@ -340,20 +366,20 @@
 
 <ng-template #actionsTemplate let-row>
   <button class="btn btn--outline btn--sm" (click)="addProduct(row)">
-    <span>Related</span>
+    <span>{{ addLinkLabel() }}</span>
     <ui-icon name="plus" size="sm"></ui-icon>
   </button>
 </ng-template>
 
-<!-- Templates for Related Products table -->
+<!-- Templates for the Alternative / Replacement parts table -->
 <ng-template #relatedCheckboxHeaderTemplate>
   <div class="checkbox-header-cell">
     <button class="checkbox-menu-btn" (click)="toggleRelatedHeaderDropdown($event)">
       <ui-icon name="more-vertical" size="sm"></ui-icon>
     </button>
     <div class="header-dropdown" *ngIf="isRelatedHeaderDropdownOpen()" (click)="$event.stopPropagation()">
-      <button class="header-dropdown__item" (click)="selectAllRelatedProducts()">Select all</button>
-      <button class="header-dropdown__item" (click)="selectNoneRelatedProducts()">None</button>
+      <button class="header-dropdown__item" (click)="selectAllLinks()">Select all</button>
+      <button class="header-dropdown__item" (click)="selectNoneLinks()">None</button>
     </div>
   </div>
 </ng-template>
@@ -361,8 +387,8 @@
 <ng-template #relatedCheckboxTemplate let-row>
   <div class="checkbox-cell">
     <input type="checkbox" class="checkbox"
-      [checked]="selectedRelatedProductIds().has(row.id)"
-      (change)="toggleRelatedProductSelection(row.id)">
+      [checked]="activeSelectedLinkIds().has(row.id)"
+      (change)="toggleLinkSelection(row.id)">
   </div>
 </ng-template>
 
@@ -371,7 +397,7 @@
 </ng-template>
 
 <ng-template #removeActionsTemplate let-row>
-  <button class="btn btn--outline btn--sm" (click)="removeProduct(row)">
+  <button class="btn btn--outline btn--sm" (click)="removeLink(row)">
     <span>Remove</span>
     <ui-icon name="minus" size="sm"></ui-icon>
   </button>

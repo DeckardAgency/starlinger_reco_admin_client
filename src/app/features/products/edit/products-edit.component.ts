@@ -1,10 +1,10 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ViewChild, TemplateRef, ElementRef, AfterViewInit, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, signal, computed, ViewChild, TemplateRef, ElementRef, AfterViewInit, ChangeDetectorRef, inject, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
-import { Subject } from 'rxjs';
-import { takeUntil, filter, finalize } from 'rxjs/operators';
-import { HttpClient, HttpEventType } from '@angular/common/http';
+import { Subject, Observable, from, of } from 'rxjs';
+import { takeUntil, filter, finalize, map, mergeMap, tap, catchError } from 'rxjs/operators';
+import { HttpClient, HttpEventType, HttpResponse } from '@angular/common/http';
 
 import { BreadcrumbsComponent, BreadcrumbItem } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
@@ -19,10 +19,11 @@ import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-f
 import { TextEditorComponent } from '@shared/components/text-editor/text-editor.component';
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobile-footer.component';
+import { FileUploadComponent, RejectedFile } from '@app/ui-kit/molecules/file-upload/file-upload.component';
 import { ProductService } from '@core/services/http/product.service';
 import { ProductCategoryService } from '@core/services/http/product-category.service';
 import { ProductProductLinkService } from '@core/services/http/product-product-link.service';
-import { Product, MediaItem } from '@core/models';
+import { Product, MediaItem, ProductProductLink, ProductLinkRelationType, PRODUCT_LINK_RELATION_TYPES } from '@core/models';
 import { MediaService } from '@core/services/http/media.service';
 import { environment } from '@env/environment';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
@@ -54,8 +55,27 @@ interface RelatedProduct {
   name: string;
   status: 'active' | 'inactive';
   available: boolean;
-  sortOrder?: number;
 }
+
+/** A row of the alternative/replacement tables: `id` is the LINK id, the product itself is `childProductId`. */
+interface LinkedProduct extends RelatedProduct {
+  childProductId: number;
+  relationType: ProductLinkRelationType;
+  sortOrder: number;
+}
+
+/** Tab id → relation type managed by that tab. */
+const LINK_TAB_TYPES: Record<string, ProductLinkRelationType> = {
+  alternativeParts: 'alternative',
+  replacementParts: 'replacement'
+};
+const EMPTY_ID_SET: ReadonlySet<number> = new Set<number>();
+
+// Mirrors the backend media limits (CreateMediaItemAction): image MIME whitelist, 5 MB per file.
+const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGES_PER_UPLOAD = 50;
+const MAX_CONCURRENT_UPLOADS = 3;
 
 interface GalleryImage {
   id: number;
@@ -109,7 +129,8 @@ const EMPTY_PRODUCT: ProductDetail = {
     TableFooterComponent,
     TextEditorComponent,
     MobileFooterComponent,
-    TableActionsDropdownComponent
+    TableActionsDropdownComponent,
+    FileUploadComponent
   ],
   templateUrl: './products-edit.component.html',
   styleUrls: ['./products-edit.component.scss'],
@@ -142,24 +163,58 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   activeImageDropdown = signal<number | null>(null);
   primaryImageId = signal<number | null>(null);
 
+  // Gallery upload (dropzone + drop-anywhere on the grid)
+  readonly imageAccept = IMAGE_MIME_TYPES.join(',');
+  readonly maxImageSize = MAX_IMAGE_SIZE;
+  readonly maxImagesPerUpload = MAX_IMAGES_PER_UPLOAD;
+  readonly imageUploadHint = `JPEG, PNG, GIF or WebP, up to ${MAX_IMAGE_SIZE / 1024 / 1024} MB per image`;
+  isDraggingOverGallery = signal(false);
+  /** Non-null while an upload batch is running; `percent` aggregates the byte progress of all files. */
+  uploadProgress = signal<{ done: number; total: number; percent: number } | null>(null);
+
   // Product documents
   productDocuments = signal<ProductDocument[]>([]);
   selectedDocumentIds = signal<Set<number>>(new Set());
 
-  // Applied discounts
-
-  // Related products
+  // Alternative / replacement parts. Links are loaded once per product and split by relationType;
+  // the template shows ONE table bound to the active tab's list and selection.
   availableProducts = signal<RelatedProduct[]>([]);
-  relatedProducts = signal<RelatedProduct[]>([]);
-  relatedChildProductIds = signal<Set<number>>(new Set());
-  private linkToProductMap = new Map<number, number>(); // link ID -> child product ID
+  alternativeLinks = signal<LinkedProduct[]>([]);
+  replacementLinks = signal<LinkedProduct[]>([]);
+  private readonly linksByType: Record<ProductLinkRelationType, WritableSignal<LinkedProduct[]>> = {
+    alternative: this.alternativeLinks,
+    replacement: this.replacementLinks
+  };
+  private readonly selectedLinkIdsByType: Record<ProductLinkRelationType, WritableSignal<Set<number>>> = {
+    alternative: signal(new Set<number>()),
+    replacement: signal(new Set<number>())
+  };
+  /** Relation type the active tab manages — null on the non-link tabs (hides the available-products area). */
+  activeRelationType = computed<ProductLinkRelationType | null>(() => LINK_TAB_TYPES[this.activeTab()] ?? null);
+  activeRelationLabel = computed(() => {
+    const type = this.activeRelationType();
+    return PRODUCT_LINK_RELATION_TYPES.find(t => t.value === type)?.label ?? '';
+  });
+  activeLinks = computed(() => {
+    const type = this.activeRelationType();
+    return type ? this.linksByType[type]() : [];
+  });
+  activeSelectedLinkIds = computed<ReadonlySet<number>>(() => {
+    const type = this.activeRelationType();
+    return type ? this.selectedLinkIdsByType[type]() : EMPTY_ID_SET;
+  });
+  addLinkLabel = computed(() => `Add as ${this.activeRelationLabel().toLowerCase()}`);
+  addSelectedLinksLabel = computed(() => `Add selected as ${this.activeRelationLabel().toLowerCase()}`);
+  /** Products already linked with EITHER type — excluded from the available list (unique (parent, child) on the backend). */
+  linkedChildProductIds = computed(() =>
+    new Set([...this.alternativeLinks(), ...this.replacementLinks()].map(l => l.childProductId))
+  );
   filteredAvailableProducts = computed(() => {
-    const related = this.relatedChildProductIds();
+    const linked = this.linkedChildProductIds();
     const currentProductId = this.product().id;
-    return this.availableProducts().filter(p => !related.has(p.id) && p.id !== currentProductId);
+    return this.availableProducts().filter(p => !linked.has(p.id) && p.id !== currentProductId);
   });
   selectedProductIds = signal<Set<number>>(new Set());
-  selectedRelatedProductIds = signal<Set<number>>(new Set());
 
   // Search and pagination
   searchQuery = signal('');
@@ -237,7 +292,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     { id: 'shortDescription', label: 'Short description' },
     { id: 'gallery', label: 'Gallery' },
     { id: 'documents', label: 'Product documents' },
-    { id: 'relatedProducts', label: 'Alternative and replacement parts' }
+    { id: 'alternativeParts', label: 'Alternative parts' },
+    { id: 'replacementParts', label: 'Replacement parts' }
   ];
 
   // Table columns
@@ -260,7 +316,6 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('docActionsTemplate') docActionsTemplate!: TemplateRef<any>;
 
   // File input refs
-  @ViewChild('imageFileInput') imageFileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('documentFileInput') documentFileInput!: ElementRef<HTMLInputElement>;
 
   // Document table columns
@@ -333,14 +388,14 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       { key: 'name', label: 'Name', sortable: true },
       { key: 'status', label: 'Status', width: '96px', template: this.statusTemplate },
       { key: 'available', label: 'Available', width: '96px', template: this.availableTemplate },
-      { key: 'actions', label: '', width: '131px', template: this.actionsTemplate }
+      { key: 'actions', label: '', width: '196px', template: this.actionsTemplate }
     ];
 
     this.relatedProductColumns = [
       { key: 'checkbox', label: '', width: '56px', headerTemplate: this.relatedCheckboxHeaderTemplate, template: this.relatedCheckboxTemplate },
       { key: 'productId', label: 'Product ID', width: '112px' },
       { key: 'code', label: 'Code', width: '128px' },
-      { key: 'name', label: 'Related product', sortable: true },
+      { key: 'name', label: 'Product', sortable: true },
       { key: 'status', label: 'Status', width: '96px', template: this.statusTemplate },
       { key: 'sortOrder', label: 'Sort order', width: '128px', template: this.sortOrderTemplate },
       { key: 'actions', label: '', width: '134px', template: this.removeActionsTemplate }
@@ -388,8 +443,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           }))
         );
 
-        // Load related products
-        this.loadRelatedProducts(id);
+        // Load alternative / replacement links
+        this.loadProductLinks(id);
 
         this.cdr.markForCheck();
       },
@@ -430,15 +485,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     obs.pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          const products = (response.member || []).map(p => ({
-            id: p.id,
-            productId: p.partNo || String(p.id),
-            code: p.partNo || '',
-            name: p.name || '',
-            status: (p.isActive ? 'active' : 'inactive') as 'active' | 'inactive',
-            available: p.isActive ?? true
-          }));
-          this.availableProducts.set(products);
+          this.availableProducts.set((response.member || []).map(p => this.toRelatedProduct(p)));
           this.totalItems.set(response.totalItems || 0);
           this.cdr.markForCheck();
         },
@@ -446,61 +493,67 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       });
   }
 
-  private loadRelatedProducts(productId: string): void {
+  /** One request for all links of the product, one batch request for their child products, then split by type. */
+  private loadProductLinks(productId: string): void {
     this.productProductLinkService.getByParentProductId(productId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           const links = response.member || [];
           if (links.length === 0) {
-            this.relatedProducts.set([]);
-            this.relatedChildProductIds.set(new Set());
-            this.cdr.markForCheck();
+            this.setLinks([]);
             return;
           }
-          // Track all child product UUIDs for filtering
-          const childIds = links.map(l => l.childProductId);
-          this.relatedChildProductIds.set(new Set(childIds));
-          this.linkToProductMap.clear();
-          links.forEach(l => this.linkToProductMap.set(l.id, l.childProductId));
-          // Fetch all child product details in a single request instead of one per link.
+          const childIds = [...new Set(links.map(l => l.childProductId))];
           this.productService.getProductsByIds(childIds)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
               next: (resp) => {
-                const byId = new Map<string, Product>();
-                (resp.member || []).forEach(p => byId.set(String(p.id), p));
-                const related: RelatedProduct[] = links.map((link): RelatedProduct => {
-                  const p = byId.get(String(link.childProductId));
-                  if (p) {
-                    return {
-                      id: link.id,
-                      productId: p.partNo || String(p.id),
-                      code: p.partNo || '',
-                      name: p.name || '',
-                      status: (p.isActive ? 'active' : 'inactive') as 'active' | 'inactive',
-                      available: p.isActive ?? true,
-                      sortOrder: link.ord ?? 0
-                    };
-                  }
-                  return {
-                    id: link.id,
-                    productId: String(link.childProductId),
-                    code: '-',
-                    name: 'Unknown product',
-                    status: 'inactive',
-                    available: false,
-                    sortOrder: link.ord ?? 0
-                  };
-                });
-                this.relatedProducts.set(related.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)));
-                this.cdr.markForCheck();
+                const byId = new Map<number, RelatedProduct>();
+                (resp.member || []).forEach(p => byId.set(p.id, this.toRelatedProduct(p)));
+                this.setLinks(links.map(link => this.toLinkedProduct(link, byId.get(link.childProductId))));
               },
-              error: (err) => this.logger.error('Error loading related product details:', err)
+              error: (err) => this.logger.error('Error loading linked product details:', err)
             });
         },
-        error: (err) => this.logger.error('Error loading related products:', err)
+        error: (err) => this.logger.error('Error loading product links:', err)
       });
+  }
+
+  private setLinks(rows: LinkedProduct[]): void {
+    const byOrd = (a: LinkedProduct, b: LinkedProduct) => a.sortOrder - b.sortOrder;
+    this.alternativeLinks.set(rows.filter(r => r.relationType === 'alternative').sort(byOrd));
+    this.replacementLinks.set(rows.filter(r => r.relationType === 'replacement').sort(byOrd));
+    this.cdr.markForCheck();
+  }
+
+  private toRelatedProduct(p: Product): RelatedProduct {
+    return {
+      id: p.id,
+      productId: p.partNo || String(p.id),
+      code: p.partNo || '',
+      name: p.name || '',
+      status: p.isActive ? 'active' : 'inactive',
+      available: p.isActive ?? true
+    };
+  }
+
+  private toLinkedProduct(link: ProductProductLink, product: RelatedProduct | undefined): LinkedProduct {
+    const base: RelatedProduct = product ?? {
+      id: link.childProductId,
+      productId: String(link.childProductId),
+      code: '-',
+      name: 'Unknown product',
+      status: 'inactive',
+      available: false
+    };
+    return {
+      ...base,
+      id: link.id,
+      childProductId: link.childProductId,
+      relationType: link.relationType,
+      sortOrder: link.ord ?? 0
+    };
   }
 
 
@@ -508,6 +561,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.product.set({ ...EMPTY_PRODUCT });
     this.editorContent.set('');
     this.selectedProductIds.set(new Set());
+    this.setLinks([]);
     this.productGroupValue = '';
     this.currencyValue = '';
     this.productTypeValue = '';
@@ -585,15 +639,14 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedProductIds.set(newSet);
   }
 
-  toggleRelatedProductSelection(productId: number): void {
-    const current = this.selectedRelatedProductIds();
-    const newSet = new Set(current);
-    if (newSet.has(productId)) {
-      newSet.delete(productId);
-    } else {
-      newSet.add(productId);
-    }
-    this.selectedRelatedProductIds.set(newSet);
+  toggleLinkSelection(linkId: number): void {
+    const type = this.activeRelationType();
+    if (!type) return;
+    this.selectedLinkIdsByType[type].update(ids => {
+      const s = new Set(ids);
+      if (s.has(linkId)) s.delete(linkId); else s.add(linkId);
+      return s;
+    });
   }
 
   isProductSelected(productId: number): boolean {
@@ -639,14 +692,15 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isHeaderDropdownOpen.set(false);
   }
 
-  selectAllRelatedProducts(): void {
-    const products = this.relatedProducts();
-    this.selectedRelatedProductIds.set(new Set(products.map(p => p.id)));
+  selectAllLinks(): void {
+    const type = this.activeRelationType();
+    if (type) this.selectedLinkIdsByType[type].set(new Set(this.activeLinks().map(l => l.id)));
     this.isRelatedHeaderDropdownOpen.set(false);
   }
 
-  selectNoneRelatedProducts(): void {
-    this.selectedRelatedProductIds.set(new Set());
+  selectNoneLinks(): void {
+    const type = this.activeRelationType();
+    if (type) this.selectedLinkIdsByType[type].set(new Set());
     this.isRelatedHeaderDropdownOpen.set(false);
   }
 
@@ -755,100 +809,78 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.cdr.markForCheck();
   }
 
-  // Related products actions
+  // Alternative / replacement parts — add actions always target the ACTIVE tab's relation type
   addSelectedProducts(): void {
     const selected = this.selectedProductIds();
-    const available = this.filteredAvailableProducts();
-    const related = this.relatedProducts();
-    const productId = this.product().id;
-    if (!productId) return;
-
-    const toAdd = available.filter(p => selected.has(p.id));
-
-    toAdd.forEach((p, i) => {
-      const childProductId = p.id;
-      this.productProductLinkService.createLink({
-        parentProductId: productId,
-        childProductId,
-        ord: related.length + i + 1
-      }).pipe(takeUntil(this.destroy$)).subscribe({
-        next: (link) => {
-          this.relatedProducts.update(current => [
-            ...current,
-            { ...p, id: link.id, sortOrder: link.ord ?? current.length + 1 }
-          ]);
-          this.relatedChildProductIds.update(ids => { const s = new Set(ids); s.add(childProductId); return s; });
-          this.linkToProductMap.set(link.id, childProductId);
-          this.cdr.markForCheck();
-        },
-        error: (err) => this.logger.error('Error adding related product:', err)
-      });
-    });
-
+    this.addLinks(this.filteredAvailableProducts().filter(p => selected.has(p.id)));
     this.selectedProductIds.set(new Set());
   }
 
   addProduct(product: RelatedProduct): void {
-    const related = this.relatedProducts();
-    const productId = this.product().id;
-    const childProductId = product.id;
-    if (!productId || this.relatedChildProductIds().has(childProductId)) return;
+    this.addLinks([product]);
+  }
 
-    this.productProductLinkService.createLink({
-      parentProductId: productId,
-      childProductId,
-      ord: related.length + 1
-    }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (link) => {
-        this.relatedProducts.update(current => [
-          ...current,
-          { ...product, id: link.id, sortOrder: link.ord ?? current.length + 1 }
-        ]);
-        this.relatedChildProductIds.update(ids => { const s = new Set(ids); s.add(childProductId); return s; });
-        this.linkToProductMap.set(link.id, childProductId);
-        this.cdr.markForCheck();
-      },
-      error: (err) => this.logger.error('Error adding related product:', err)
+  private addLinks(products: RelatedProduct[]): void {
+    const relationType = this.activeRelationType();
+    const parentProductId = this.product().id;
+    if (!relationType || !parentProductId) return;
+
+    const linked = this.linkedChildProductIds();
+    const links = this.linksByType[relationType];
+    // ord is display-only: append after the highest ord of this type.
+    const nextOrd = links().reduce((max, l) => Math.max(max, l.sortOrder), 0) + 1;
+
+    products.filter(p => !linked.has(p.id)).forEach((product, i) => {
+      this.productProductLinkService.createLink({
+        parentProductId,
+        childProductId: product.id,
+        relationType,
+        ord: nextOrd + i
+      }).pipe(takeUntil(this.destroy$)).subscribe({
+        next: (link) => {
+          links.update(rows => [...rows, this.toLinkedProduct(link, product)]);
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.logger.error('Error adding product link:', err);
+          this.toastService.error(`Could not add ${product.name || product.code}: ${this.errorDetail(err)}`);
+        }
+      });
     });
   }
 
-  removeProduct(product: RelatedProduct): void {
-    const linkId = product.id;
-    this.productProductLinkService.deleteLink(String(linkId))
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          const childId = this.linkToProductMap.get(linkId);
-          this.relatedProducts.update(products => products.filter(p => p.id !== linkId));
-          if (childId) {
-            this.relatedChildProductIds.update(ids => { const s = new Set(ids); s.delete(childId); return s; });
-            this.linkToProductMap.delete(linkId);
-          }
-          this.cdr.markForCheck();
-        },
-        error: (err) => this.logger.error('Error removing related product:', err)
-      });
+  removeLink(link: LinkedProduct): void {
+    this.removeLinks([link.id], link.relationType);
   }
 
-  removeSelectedRelatedProducts(): void {
-    const selectedIds = this.selectedRelatedProductIds();
-    selectedIds.forEach(linkId => {
+  removeSelectedLinks(): void {
+    const type = this.activeRelationType();
+    if (!type) return;
+    this.removeLinks([...this.selectedLinkIdsByType[type]()], type);
+  }
+
+  private removeLinks(linkIds: number[], relationType: ProductLinkRelationType): void {
+    const links = this.linksByType[relationType];
+    const selected = this.selectedLinkIdsByType[relationType];
+    linkIds.forEach(linkId => {
       this.productProductLinkService.deleteLink(String(linkId))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
-            const childId = this.linkToProductMap.get(linkId);
-            this.relatedProducts.update(products => products.filter(p => p.id !== linkId));
-            if (childId) {
-              this.relatedChildProductIds.update(ids => { const s = new Set(ids); s.delete(childId); return s; });
-              this.linkToProductMap.delete(linkId);
-            }
+            links.update(rows => rows.filter(r => r.id !== linkId));
+            selected.update(ids => { const s = new Set(ids); s.delete(linkId); return s; });
             this.cdr.markForCheck();
           },
-          error: (err) => this.logger.error('Error removing related product:', err)
+          error: (err) => {
+            this.logger.error('Error removing product link:', err);
+            this.toastService.error(`Could not remove link: ${this.errorDetail(err)}`);
+          }
         });
     });
-    this.selectedRelatedProductIds.set(new Set());
+  }
+
+  private errorDetail(error: any): string {
+    return error?.error?.detail || error?.error?.message || error?.message || 'Unknown error';
   }
 
   // Sort
@@ -939,8 +971,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       },
       error: (error) => {
         this.logger.error('[ProductSave] Error:', error);
-        const detail = error?.error?.detail || error?.error?.message || error?.message || 'Unknown error';
-        this.toastService.error(`Failed to save: ${detail}`);
+        this.toastService.error(`Failed to save: ${this.errorDetail(error)}`);
       }
     });
   }
@@ -1090,45 +1121,123 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.activeImageDropdown.set(null);
   }
 
-  uploadImage(): void {
-    this.imageFileInput?.nativeElement?.click();
+  // Gallery upload — shared by the dropzone (filesSelected) and the drop-anywhere grid area.
+  uploadImages(files: File[]): void {
+    if (!this.product().id) {
+      this.toastService.warning('Save the product first to upload images');
+      return;
+    }
+    if (this.uploadProgress()) {
+      this.toastService.warning('An upload is still running — please wait for it to finish');
+      return;
+    }
+    const valid = this.validateImageFiles(files);
+    if (valid.length === 0) return;
+
+    const totalBytes = valid.reduce((sum, f) => sum + f.size, 0);
+    const loadedBytes = new Map<File, number>();
+    const updatePercent = () => {
+      const loaded = [...loadedBytes.values()].reduce((sum, n) => sum + n, 0);
+      const percent = totalBytes ? Math.round((loaded / totalBytes) * 100) : 100;
+      this.uploadProgress.update(p => p && { ...p, percent });
+      this.cdr.markForCheck();
+    };
+    let uploadedAny = false;
+    this.uploadProgress.set({ done: 0, total: valid.length, percent: 0 });
+
+    from(valid).pipe(
+      mergeMap(file => this.uploadImage(file, loaded => { loadedBytes.set(file, loaded); updatePercent(); }), MAX_CONCURRENT_UPLOADS),
+      takeUntil(this.destroy$),
+      finalize(() => {
+        this.uploadProgress.set(null);
+        this.cdr.markForCheck();
+      })
+    ).subscribe({
+      next: ({ file, media }) => {
+        if (media) {
+          uploadedAny = true;
+          this.galleryImages.update(images => [...images, {
+            id: media.id,
+            name: media.filename || file.name,
+            url: media.filePath ? `${environment.apiBaseUrl}${media.filePath}` : '',
+            isPrimary: false
+          }]);
+        }
+        loadedBytes.set(file, file.size);
+        this.uploadProgress.update(p => p && { ...p, done: p.done + 1 });
+        updatePercent();
+      },
+      complete: () => {
+        if (uploadedAny) this.updateProductMedia();
+      }
+    });
   }
 
-  onImageFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length) return;
+  /** Uploads one file; resolves with media=null on failure (after a toast) so the batch keeps going. */
+  private uploadImage(file: File, onProgress: (loaded: number) => void): Observable<{ file: File; media: MediaItem | null }> {
+    return this.mediaService.uploadFile(file).pipe(
+      tap(event => {
+        if (event.type === HttpEventType.UploadProgress) onProgress(event.loaded);
+      }),
+      filter((event): event is HttpResponse<MediaItem> => event.type === HttpEventType.Response),
+      map(event => ({ file, media: event.body })),
+      catchError(err => {
+        this.logger.error('Error uploading image:', err);
+        this.toastService.error(`Failed to upload ${file.name}: ${this.errorDetail(err)}`);
+        return of({ file, media: null });
+      })
+    );
+  }
 
-    const productId = this.product().id;
-    if (!productId) return;
-
-    const files = Array.from(input.files);
-    let uploaded = 0;
-
-    files.forEach(file => {
-      this.mediaService.uploadFile(file)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (httpEvent) => {
-            if (httpEvent.type === HttpEventType.Response && httpEvent.body) {
-              const media = httpEvent.body;
-              this.galleryImages.update(images => [...images, {
-                id: media.id,
-                name: media.filename || file.name,
-                url: media.filePath ? `${environment.apiBaseUrl}${media.filePath}` : '',
-                isPrimary: false
-              }]);
-              uploaded++;
-              if (uploaded === files.length) {
-                this.updateProductMedia();
-              }
-              this.cdr.markForCheck();
-            }
-          },
-          error: (err) => this.logger.error('Error uploading image:', err)
-        });
+  /** Client-side mirror of the backend limits: per-file toast for wrong type / over 5 MB, the rest is uploaded. */
+  private validateImageFiles(files: File[]): File[] {
+    return files.filter(file => {
+      if (!IMAGE_MIME_TYPES.includes(file.type)) {
+        this.toastService.error(`${file.name}: unsupported file type${file.type ? ` (${file.type})` : ''}. Allowed: JPEG, PNG, GIF, WebP`);
+        return false;
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        this.toastService.error(`${file.name}: ${(file.size / 1024 / 1024).toFixed(1)} MB exceeds the ${MAX_IMAGE_SIZE / 1024 / 1024} MB limit`);
+        return false;
+      }
+      return true;
     });
+  }
 
-    input.value = '';
+  /** Files the dropzone itself refused (over its size cap, or beyond maxFiles in one selection). */
+  onImagesRejected(rejected: RejectedFile[]): void {
+    const skipped = rejected.filter(r => r.reason === 'count').length;
+    if (skipped > 0) {
+      this.toastService.error(`Only ${MAX_IMAGES_PER_UPLOAD} images can be uploaded at once — ${skipped} file${skipped === 1 ? ' was' : 's were'} skipped`);
+    }
+    this.validateImageFiles(rejected.filter(r => r.reason === 'size').map(r => r.file));
+  }
+
+  // Drop-anywhere on the gallery grid. Non-file drags (text, links) are ignored so they keep default behaviour.
+  private static hasFiles(event: DragEvent): boolean {
+    return Array.from(event.dataTransfer?.types ?? []).includes('Files');
+  }
+
+  onGalleryDragOver(event: DragEvent): void {
+    if (!ProductsEditComponent.hasFiles(event)) return;
+    event.preventDefault(); // required for the drop event to fire
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    this.isDraggingOverGallery.set(!!this.product().id);
+  }
+
+  onGalleryDragLeave(event: DragEvent): void {
+    // dragleave also fires when moving between child elements — only clear when really leaving the area
+    const related = event.relatedTarget as Node | null;
+    if (related && (event.currentTarget as HTMLElement).contains(related)) return;
+    this.isDraggingOverGallery.set(false);
+  }
+
+  onGalleryDrop(event: DragEvent): void {
+    this.isDraggingOverGallery.set(false);
+    if (!ProductsEditComponent.hasFiles(event)) return;
+    event.preventDefault();
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    if (files.length > 0) this.uploadImages(files);
   }
 
   async downloadAllImages(): Promise<void> {

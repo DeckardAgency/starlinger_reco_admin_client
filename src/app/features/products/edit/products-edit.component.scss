@@ -216,6 +216,65 @@
   }
 }
 
+// Dropzone at the top of the Gallery tab (ui-file-upload) + batch upload progress
+.gallery-upload {
+  padding: 16px 16px 0;
+  background: white;
+
+  &__notice {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 20px;
+    color: #71717a;
+  }
+}
+
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+
+  &__bar {
+    flex: 1;
+    height: 6px;
+    background: #e4e4e7;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    background: #dc2626;
+    border-radius: 3px;
+    transition: width 0.2s ease;
+  }
+
+  &__text {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    line-height: 16px;
+    color: #71717a;
+    white-space: nowrap;
+  }
+}
+
+// The grid (and its empty state) is a drop target as well; highlighted while files hover over it
+.gallery-dropzone {
+  min-height: 120px;
+  border-radius: 0 0 8px 8px;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+
+  &--active {
+    background: #fef2f2;
+    box-shadow: inset 0 0 0 2px #dc2626;
+  }
+}
+
 .gallery-grid {
   display: flex;
   flex-wrap: wrap;
