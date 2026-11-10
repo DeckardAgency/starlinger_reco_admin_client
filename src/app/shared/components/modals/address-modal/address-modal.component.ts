@@ -105,7 +105,10 @@ export class AddressModalComponent implements OnChanges {
     }
     if (changes['isOpen'] && this.isOpen) {
       if (this.address) {
-        this.addressForm.patchValue({
+        // reset(), not patchValue(): a prefilled "Add" (e.g. delivery preselected from the
+        // client's missing-address banner) must not inherit touched/error state from an
+        // earlier open of the same modal instance.
+        this.addressForm.reset({
           street: this.address.street || '',
           city: this.address.city || '',
           postalCode: this.address.postalCode || '',

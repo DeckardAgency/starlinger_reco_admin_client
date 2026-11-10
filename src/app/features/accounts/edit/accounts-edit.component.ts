@@ -231,7 +231,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Address modal state
   isAddressModalOpen = signal(false);
-  selectedAddress = signal<Address | null>(null);
+  /** Address being edited, or id-less prefill values for a new one (modal stays in "Add" mode). */
+  selectedAddress = signal<AddressFormData | null>(null);
   isAddressSaving = signal(false);
   countries = signal<CountryOption[]>([]);
 
@@ -1064,10 +1065,13 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.cdr.markForCheck();
   }
 
-  /** From the missing-address banner: show the Addresses tab and open the form. */
+  /** From the missing-address banner: Addresses tab + the form with "Delivery address" preselected. */
   onAddDeliveryAddress(): void {
     this.activeTab.set('addresses');
-    this.openAddressModal();
+    // No id → the modal stays in "Add" mode; only the delivery toggle is prefilled.
+    this.selectedAddress.set({ street: '', city: '', postalCode: '', countryId: '', isBilling: false, isDelivery: true });
+    this.isAddressModalOpen.set(true);
+    this.cdr.markForCheck();
   }
 
   closeAddressModal(): void {
