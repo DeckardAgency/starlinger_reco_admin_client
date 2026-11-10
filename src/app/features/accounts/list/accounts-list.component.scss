@@ -58,3 +58,10 @@
     padding-bottom: 76px;
   }
 }
+
+.status-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}

@@ -146,7 +146,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
       { key: 'vatNumber', label: 'VAT Number', sortable: true, width: '120px' },
       { key: 'name', label: 'Name', sortable: true },
       { key: 'email', label: 'Email', sortable: true, width: '180px' },
-      { key: 'status', label: 'Status', sortable: true, width: '100px', template: this.statusTemplate },
+      { key: 'status', label: 'Status', sortable: true, width: '190px', template: this.statusTemplate },
       { key: 'purchaseLimit', label: 'Purchase limit', sortable: true, width: '130px', template: this.purchaseLimitTemplate, align: 'right' },
       { key: 'amountSpent', label: 'Amount spent', sortable: true, width: '130px', template: this.amountSpentTemplate, align: 'right' },
       { key: 'actions', label: '', sortable: false, width: '56px', template: this.actionsTemplate }
@@ -205,6 +205,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
       name: client.name,
       email: client.email || '',
       status: client.isActive ? 'active' : 'inactive',
+      hasActiveDeliveryAddress: client.hasActiveDeliveryAddress,
       purchaseLimit: client.purchaseLimit ? parseFloat(client.purchaseLimit) : undefined,
       amountSpent: client.amountSpent ? parseFloat(client.amountSpent) : undefined,
       createdAt: client.createdAt,

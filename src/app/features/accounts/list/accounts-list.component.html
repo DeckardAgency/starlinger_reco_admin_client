@@ -52,9 +52,17 @@
 
 <!-- Status Template -->
 <ng-template #statusTemplate let-row>
-  <ui-badge [variant]="row.status === 'active' ? 'success' : 'danger'" [rounded]="true">
-    {{ row.status === 'active' ? 'Active' : 'Inactive' }}
-  </ui-badge>
+  <div class="status-cell">
+    <ui-badge [variant]="row.status === 'active' ? 'success' : 'danger'" [rounded]="true">
+      {{ row.status === 'active' ? 'Active' : 'Inactive' }}
+    </ui-badge>
+    <!-- Server-computed flag; strict false so an older API (no flag) shows nothing -->
+    @if (row.hasActiveDeliveryAddress === false) {
+      <ui-badge variant="warning" [rounded]="true" title="Users of this client cannot place orders until a delivery address is added">
+        No delivery address
+      </ui-badge>
+    }
+  </div>
 </ng-template>
 
 <!-- Purchase Limit Template -->

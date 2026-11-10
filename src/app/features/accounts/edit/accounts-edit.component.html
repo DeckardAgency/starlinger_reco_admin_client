@@ -33,6 +33,21 @@
 
   <!-- Main Content -->
   <div class="page-content">
+    <!-- Without an active delivery address this client's users cannot place orders -->
+    @if (missingDeliveryAddress()) {
+      <div class="notice notice--warning" role="status">
+        <ui-icon name="warning" size="md" class="notice__icon"></ui-icon>
+        <div class="notice__body">
+          <strong>No active delivery address.</strong>
+          Users of this client cannot place orders until one is added.
+        </div>
+        <button type="button" class="btn btn--outline notice__action" (click)="onAddDeliveryAddress()">
+          <span>Add address</span>
+          <ui-icon name="plus" size="sm"></ui-icon>
+        </button>
+      </div>
+    }
+
     <!-- Form Cards -->
     <div class="form-cards">
       <!-- Basic Information Card -->

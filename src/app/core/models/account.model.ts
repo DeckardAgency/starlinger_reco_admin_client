@@ -5,6 +5,8 @@ export interface Account {
   name: string;
   email: string;
   status: 'active' | 'inactive';
+  // Server-computed; false = no active delivery address → users cannot place orders
+  hasActiveDeliveryAddress?: boolean;
   purchaseLimit?: number;
   amountSpent?: number;
   createdAt?: string;

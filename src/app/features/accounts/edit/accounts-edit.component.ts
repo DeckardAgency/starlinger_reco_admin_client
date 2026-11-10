@@ -40,6 +40,7 @@ interface Address {
   country: string;
   isBilling: boolean;
   isDelivery: boolean;
+  isActive: boolean;
 }
 
 interface ShopOrder {
@@ -162,6 +163,16 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Addresses data - starts empty, loaded in edit mode
   addresses = signal<Address[]>([]);
+  /** False until the client's addresses were fetched, so the warning never flashes while loading. */
+  addressesLoaded = signal(false);
+  /**
+   * Mirrors the server's Client.hasActiveDeliveryAddress, but derived from the loaded
+   * list so it clears the moment an address is added here. Users of such a client
+   * cannot place orders (checkout needs a shipping address).
+   */
+  missingDeliveryAddress = computed(() =>
+    this.isEditMode() && this.addressesLoaded() && !this.addresses().some(a => a.isActive && a.isDelivery)
+  );
 
   // Shop orders data - starts empty, loaded in edit mode (server-side paginated)
   shopOrders = signal<ShopOrder[]>([]);
@@ -276,6 +287,11 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         // Only allow in-app admin targets, never external/arbitrary URLs.
         const rt = qp.get('returnTo');
         this.returnTo.set(rt && rt.startsWith('/admin/') ? rt : null);
+        // ?tab=addresses: after creating a client we land here so the next step
+        // (adding the delivery address it needs) is in front of the admin.
+        if (qp.get('tab') === 'addresses') {
+          this.activeTab.set('addresses');
+        }
       });
 
     // Subscribe to route param changes to handle navigation between add/edit
@@ -365,6 +381,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.account.set({ ...EMPTY_ACCOUNT });
     this.clientUsers.set([]);
     this.addresses.set([]);
+    this.addressesLoaded.set(false);
     this.shopOrders.set([]);
     this.ordersPage.set(1);
     this.ordersTotalItems.set(0);
@@ -449,11 +466,14 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.addressService.getAddressesByClient(clientId).subscribe({
       next: (addresses) => {
         this.addresses.set(this.mapClientAddressesToAddresses(addresses));
+        this.addressesLoaded.set(true);
         this.cdr.markForCheck();
       },
       error: (err) => {
         this.logger.error('Error loading addresses:', err);
         this.addresses.set([]);
+        // Unknown state — don't claim the client has no address
+        this.addressesLoaded.set(false);
       }
     });
   }
@@ -491,7 +511,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       countryId: addr.country?.id ? String(addr.country.id) : '',
       country: addr.country?.name ?? '',
       isBilling: addr.isBilling,
-      isDelivery: addr.isDelivery
+      isDelivery: addr.isDelivery,
+      isActive: addr.isActive ?? true
     }));
   }
 
@@ -783,7 +804,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           // After creating, navigate to edit page for the new client, keeping
           // the referring-page context so a later Back/Save still returns there
           this.router.navigate(['/admin/clients', result.id, 'edit'], {
-            queryParams: this.returnTo() ? { returnTo: this.returnTo() } : {}
+            queryParams: { tab: 'addresses', ...(this.returnTo() ? { returnTo: this.returnTo() } : {}) }
           });
         }
         // If editing and not navigating, just stay on page (data already saved)
@@ -1041,6 +1062,12 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedAddress.set(address || null);
     this.isAddressModalOpen.set(true);
     this.cdr.markForCheck();
+  }
+
+  /** From the missing-address banner: show the Addresses tab and open the form. */
+  onAddDeliveryAddress(): void {
+    this.activeTab.set('addresses');
+    this.openAddressModal();
   }
 
   closeAddressModal(): void {

@@ -81,6 +81,9 @@ export interface Client {
     isClientAgent?: boolean;
     // Number of clients this agent manages (read-only, server-computed)
     managedClientCount?: number;
+    // Read-only, server-computed: at least one active delivery address exists. Without
+    // one the client's users cannot place orders (checkout needs a shipping address).
+    hasActiveDeliveryAddress?: boolean;
     createdAt: string;
     updatedAt: string;
 }
