@@ -233,3 +233,35 @@
     }
   }
 }
+
+// Warning banner (e.g. user without a functional role)
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+
+  &--warning {
+    background-color: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-left: 3px solid #d97706;
+    color: #92400e;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+  }
+
+  &__body {
+    flex: 1;
+
+    strong {
+      font-weight: 600;
+    }
+  }
+}

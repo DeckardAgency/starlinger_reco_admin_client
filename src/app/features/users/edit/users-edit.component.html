@@ -34,6 +34,16 @@
   } @else {
   <!-- Page Content -->
   <div class="page-content">
+    <!-- ROLE_USER only: can sign in, cannot use the webshop. Saving assigns the selected role. -->
+    @if (isEditMode() && !loadedUserHasRole()) {
+      <div class="notice notice--warning" role="status">
+        <ui-icon name="warning" size="md" class="notice__icon"></ui-icon>
+        <div class="notice__body">
+          <strong>This user has no role.</strong>
+          They can sign in but cannot use the webshop. Choose a role below and save.
+        </div>
+      </div>
+    }
     <div class="form-cards">
       <!-- Left Column -->
       <div class="form-column form-column--left">

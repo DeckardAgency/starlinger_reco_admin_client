@@ -6,6 +6,7 @@ import { Subject, debounceTime, distinctUntilChanged, of, switchMap, catchError 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
+import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import {
   ListHeaderComponent,
@@ -34,6 +35,7 @@ interface RoleOption {
   selector: 'app-users-list',
   standalone: true,
   imports: [
+    BadgeComponent,
     CommonModule,
     FormsModule,
     RouterModule,
@@ -234,7 +236,8 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     // not read as regular webshop clients in the list.
     if (roles.includes('ROLE_FINANCE')) return 'finance';
     if (roles.includes('ROLE_CLIENT')) return 'client';
-    return 'client';
+    // ROLE_USER only: can log in, can do nothing — the list flags it as "No role".
+    return null;
   }
 
   ngAfterViewInit(): void {

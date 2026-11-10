@@ -112,7 +112,14 @@
 
   <!-- Role Template -->
   <ng-template #roleTemplate let-row>
-    <span>{{ formatRole(row.role) }}</span>
+    @if (row.role) {
+      <span>{{ formatRole(row.role) }}</span>
+    } @else {
+      <!-- No functional role: the account can sign in but cannot use the webshop -->
+      <ui-badge variant="warning" [rounded]="true" title="This user can sign in but cannot use the webshop until a role is assigned">
+        No role
+      </ui-badge>
+    }
   </ng-template>
 
   <!-- Actions Template -->

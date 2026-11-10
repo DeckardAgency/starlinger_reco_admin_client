@@ -137,7 +137,14 @@ export class UsersEditComponent implements OnInit {
     });
   }
 
+  /** False when the loaded user holds no functional role (ROLE_USER only) — see the banner. */
+  loadedUserHasRole = signal(true);
+
   private mapUserToAdminUser(user: User): AdminUser {
+    const roles = user.roles ?? [];
+    this.loadedUserHasRole.set(
+      ['ROLE_ADMIN', 'ROLE_CLIENT_ADMIN', 'ROLE_USER_CLIENT_AGENT', 'ROLE_CLIENT', 'ROLE_FINANCE'].some(r => roles.includes(r))
+    );
     return {
       id: user.id,
       firstName: user.firstName ?? '',
