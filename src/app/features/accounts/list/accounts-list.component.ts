@@ -57,6 +57,12 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   @ViewChild('amountSpentTemplate') amountSpentTemplate!: TemplateRef<any>;
 
   searchQuery = signal('');
+  /** 'missing-address' → server-side hasActiveDeliveryAddress=false (clients whose users cannot order). */
+  addressFilter = 'all';
+  addressFilterOptions = [
+    { value: 'all', label: 'All clients' },
+    { value: 'missing-address', label: 'Missing delivery address' }
+  ];
   isLoading = signal(true);
   sortColumn = signal<string | null>(null);
   sortDirection = signal<'asc' | 'desc' | null>(null);
@@ -174,6 +180,12 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     this.loadRequest$.next();
   }
 
+  onAddressFilterChange(value: string): void {
+    this.addressFilter = value;
+    this.currentPage.set(1);
+    this.loadClients();
+  }
+
   private buildLoadParams(): Record<string, string | number | boolean> {
     const params: Record<string, string | number | boolean> = {
       page: this.currentPage(),
@@ -183,6 +195,10 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     const query = this.searchQuery().trim();
     if (query) {
       params['search'] = query;
+    }
+
+    if (this.addressFilter === 'missing-address') {
+      params['hasActiveDeliveryAddress'] = false;
     }
 
     const sortCol = this.sortColumn();

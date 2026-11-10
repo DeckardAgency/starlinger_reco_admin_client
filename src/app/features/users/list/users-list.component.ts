@@ -97,7 +97,8 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     { value: USER_ROLES.CLIENT, label: 'Client' },
     { value: USER_ROLES.USER_CLIENT_AGENT, label: 'Client Agent' },
     { value: USER_ROLES.FINANCE, label: 'Finance' },
-    { value: USER_ROLES.USER, label: 'User' }
+    // Accounts without any functional role (can sign in, cannot use the webshop)
+    { value: 'none', label: 'No role' }
   ];
 
   // Dropdown state
@@ -199,8 +200,10 @@ export class UsersListComponent implements OnInit, AfterViewInit {
       params['hasClient'] = false;
     }
 
-    // Apply role filter
-    if (this.roleFilter !== 'all') {
+    // Apply role filter ('none' = server-side hasRole=false, see NoRoleFilter)
+    if (this.roleFilter === 'none') {
+      params['hasRole'] = false;
+    } else if (this.roleFilter !== 'all') {
       params['roles'] = this.roleFilter;
     }
 

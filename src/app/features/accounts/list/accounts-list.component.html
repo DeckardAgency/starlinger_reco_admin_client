@@ -22,6 +22,22 @@
       </app-column-selector>
     </ui-list-header>
 
+    <!-- Filters Row -->
+    <div class="filters-row">
+      <div class="filter-group">
+        <label class="filter-label">Delivery address:</label>
+        <select
+          class="filter-select"
+          [ngModel]="addressFilter"
+          (ngModelChange)="onAddressFilterChange($event)"
+        >
+          @for (option of addressFilterOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
     <div class="table-container">
       @if (isLoading()) {
         <p>Loading clients...</p>
