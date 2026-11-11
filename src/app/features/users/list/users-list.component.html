@@ -28,6 +28,18 @@
       </app-column-selector>
     </ui-list-header>
 
+    <!-- Attention: accounts that can sign in but cannot use the webshop -->
+    @if (noRoleCount() > 0 && roleFilter !== 'none') {
+      <div class="notice" role="status">
+        <ui-icon name="warning" size="md" class="notice__icon"></ui-icon>
+        <div class="notice__body">
+          <strong>{{ noRoleCount() }} {{ noRoleCount() === 1 ? 'user has' : 'users have' }} no role.</strong>
+          They can sign in but cannot use the webshop until a role is assigned.
+        </div>
+        <button type="button" class="notice__action" (click)="onRoleFilterChange('none')">Show them</button>
+      </div>
+    }
+
     <!-- Filters Row -->
     <div class="filters-row">
       <div class="filter-group">

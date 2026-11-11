@@ -202,11 +202,9 @@
 
   // Dropdown
   &__dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    margin-top: 4px;
+    // Placed from the trigger's viewport rect (see positionDropdown) so scrolling
+    // ancestors such as modal bodies can't clip it; left/width/top|bottom are inline.
+    position: fixed;
     max-height: 250px;
     background: #FFFFFF;
     border: 1px solid #E4E4E7;

@@ -22,6 +22,18 @@
       </app-column-selector>
     </ui-list-header>
 
+    <!-- Attention: clients whose users cannot order -->
+    @if (missingAddressCount() > 0 && addressFilter !== 'missing-address') {
+      <div class="notice" role="status">
+        <ui-icon name="warning" size="md" class="notice__icon"></ui-icon>
+        <div class="notice__body">
+          <strong>{{ missingAddressCount() }} {{ missingAddressCount() === 1 ? 'client has' : 'clients have' }} no active delivery address.</strong>
+          Their users cannot place orders until one is added.
+        </div>
+        <button type="button" class="notice__action" (click)="onAddressFilterChange('missing-address')">Show them</button>
+      </div>
+    }
+
     <!-- Filters Row -->
     <div class="filters-row">
       <div class="filter-group">

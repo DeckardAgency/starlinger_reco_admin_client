@@ -7,6 +7,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
+import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { Account } from '@core/models/account.model';
 import { ClientService } from '@core/services/http/client.service';
 import { Client } from '@core/models/client.model';
@@ -24,6 +25,7 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
   selector: 'app-accounts-list',
   standalone: true,
   imports: [
+    IconComponent,
     CommonModule,
     FormsModule,
     RouterModule,
@@ -59,6 +61,8 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   searchQuery = signal('');
   /** 'missing-address' → server-side hasActiveDeliveryAddress=false (clients whose users cannot order). */
   addressFilter = 'all';
+  /** Clients without an active delivery address (their users cannot order) — shown above the table. */
+  missingAddressCount = signal(0);
   addressFilterOptions = [
     { value: 'all', label: 'All clients' },
     { value: 'missing-address', label: 'Missing delivery address' }
@@ -124,6 +128,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.loadAttentionCount();
     this.loadClients();
   }
 
@@ -186,6 +191,15 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     this.loadClients();
   }
 
+  private loadAttentionCount(): void {
+    this.clientService.getClients({ hasActiveDeliveryAddress: false, itemsPerPage: 1 })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(response => {
+        this.missingAddressCount.set(response.totalClients || 0);
+        this.cdr.markForCheck();
+      });
+  }
+
   private buildLoadParams(): Record<string, string | number | boolean> {
     const params: Record<string, string | number | boolean> = {
       page: this.currentPage(),
@@ -245,6 +259,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   }
 
   onRefresh(): void {
+    this.loadAttentionCount();
     this.loadClients();
   }
 

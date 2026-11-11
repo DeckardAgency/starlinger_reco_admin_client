@@ -75,7 +75,7 @@
 
   <!-- Dropdown -->
   @if (isOpen()) {
-    <div class="ui-select__dropdown" @dropdownAnimation>
+    <div class="ui-select__dropdown" [ngStyle]="dropdownStyle()" @dropdownAnimation>
       @if (searchable()) {
         <div class="ui-select__search">
           <input

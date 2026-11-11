@@ -1,3 +1,4 @@
+@use '../../../ui-kit/admin-shared' as admin;
 :host {
   display: flex;
   flex-direction: column;
@@ -111,4 +112,8 @@
     outline: none;
     border-color: #18181b;
   }
+}
+
+.notice {
+  @include admin.notice-warning;
 }
