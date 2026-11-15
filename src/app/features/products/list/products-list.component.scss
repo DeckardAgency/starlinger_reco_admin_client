@@ -43,6 +43,13 @@
   --data-table-row-hover-background: white;
 }
 
+.status-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
 .empty-state {
   padding: 24px;
   text-align: center;

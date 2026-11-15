@@ -34,6 +34,7 @@ interface ProductDetail {
   code: string;
   name: string;
   active: boolean;
+  inStock: boolean;
   url: string;
   quantity: number;
   quantityStep: number;
@@ -96,6 +97,7 @@ const EMPTY_PRODUCT: ProductDetail = {
   code: '',
   name: '',
   active: false,
+  inStock: true,
   url: '',
   quantity: 0,
   quantityStep: 1,
@@ -461,6 +463,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       code: p.partNo ?? '',
       name: p.name ?? '',
       active: p.isActive ?? true,
+      inStock: p.inStock ?? true,
       url: p.slug ?? '',
       quantity: p.qty ?? 0,
       quantityStep: p.qtyStep ?? 1,
@@ -575,6 +578,10 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Toggle handlers
   onActiveChange(value: boolean): void {
     this.product.update(p => ({ ...p, active: value }));
+  }
+
+  onInStockChange(value: boolean): void {
+    this.product.update(p => ({ ...p, inStock: value }));
   }
 
   // Field update handlers
@@ -934,6 +941,7 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       partNo: product.code,
       slug: product.url || undefined,
       isActive: product.active,
+      inStock: product.inStock,
       qty: product.quantity ?? null,
       qtyStep: product.quantityStep ?? null,
       quoteItemLimit: product.quoteItemLimit ?? null,

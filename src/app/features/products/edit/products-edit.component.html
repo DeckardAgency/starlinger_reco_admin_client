@@ -43,7 +43,14 @@
             [checked]="product().active"
             (toggleChange)="onActiveChange($event)">
           </ui-toggle>
+          <ui-toggle
+            label="In stock"
+            labelPosition="left"
+            [checked]="product().inStock"
+            (toggleChange)="onInStockChange($event)">
+          </ui-toggle>
         </div>
+        <p class="card__toggles-hint">Inactive products are hidden from the shop. Out-of-stock products stay visible but cannot be ordered.</p>
 
         <div class="card__fields">
           <ui-form-field label="Name" layout="horizontal" [error]="getError('name')">

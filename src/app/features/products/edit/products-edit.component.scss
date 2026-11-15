@@ -117,6 +117,15 @@
       gap: 12px;
     }
   }
+
+  // Short explanation of what the Active / In stock toggles do
+  &__toggles-hint {
+    margin: -8px 0 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    line-height: 16px;
+    color: #71717a;
+  }
 }
 
 // =============================================================================
