@@ -1,14 +1,14 @@
 import { Component, ChangeDetectionStrategy, ChangeDetectorRef, inject, signal, computed, TemplateRef, ViewChild, AfterViewInit, OnInit, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, of, switchMap, catchError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
-import { Account } from '@core/models/account.model';
+import { Account, AccountKind } from '@core/models/account.model';
 import { ClientService } from '@core/services/http/client.service';
 import { Client } from '@core/models/client.model';
 import { AlertService } from '@services/alert.service';
@@ -45,6 +45,7 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
 export class AccountsListComponent implements OnInit, AfterViewInit {
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private clientService = inject(ClientService);
   private alertService = inject(AlertService);
   private destroyRef = inject(DestroyRef);
@@ -58,13 +59,26 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   @ViewChild('purchaseLimitTemplate') purchaseLimitTemplate!: TemplateRef<any>;
   @ViewChild('amountSpentTemplate') amountSpentTemplate!: TemplateRef<any>;
 
+  /**
+   * Which section this list serves (route `data.kind`). Customers and agents are
+   * both Client API records, split by `isClientAgent`; agents never order for
+   * themselves, so the delivery-address attention bits only apply to customers.
+   */
+  kind = signal<AccountKind>('customer');
+  isAgentList = computed(() => this.kind() === 'agent');
+  /** 'Customers' / 'Agents' */
+  kindLabel = computed(() => this.isAgentList() ? 'Agents' : 'Customers');
+  /** 'customer' / 'agent' */
+  kindNoun = computed(() => this.isAgentList() ? 'agent' : 'customer');
+  basePath = computed(() => this.isAgentList() ? '/admin/agents' : '/admin/customers');
+
   searchQuery = signal('');
-  /** 'missing-address' → server-side hasActiveDeliveryAddress=false (clients whose users cannot order). */
+  /** 'missing-address' → server-side hasActiveDeliveryAddress=false (customers whose users cannot order). */
   addressFilter = 'all';
-  /** Clients without an active delivery address (their users cannot order) — shown above the table. */
+  /** Customers without an active delivery address (their users cannot order) — shown above the table. */
   missingAddressCount = signal(0);
   addressFilterOptions = [
-    { value: 'all', label: 'All clients' },
+    { value: 'all', label: 'All customers' },
     { value: 'missing-address', label: 'Missing delivery address' }
   ];
   isLoading = signal(true);
@@ -72,8 +86,8 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   sortDirection = signal<'asc' | 'desc' | null>(null);
   openDropdownId: string | null = null;
 
-  // Column selector
-  readonly COLUMN_STORAGE_KEY = 'clients';
+  // Column selector ('clients' keeps the settings customers were saved under before the split)
+  columnStorageKey = computed(() => this.isAgentList() ? 'agents' : 'clients');
   columnDefs: ColumnDefinition[] = [];
   private allColumns: TableColumn[] = [];
   columns: TableColumn[] = [];
@@ -128,8 +142,20 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
-    this.loadAttentionCount();
-    this.loadClients();
+    // The same component serves /customers and /agents; re-read on every change.
+    this.route.data
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(data => {
+        this.kind.set(data['kind'] === 'agent' ? 'agent' : 'customer');
+        this.addressFilter = 'all';
+        this.missingAddressCount.set(0);
+        this.currentPage.set(1);
+        if (this.statusTemplate) {
+          this.initColumns(); // columns differ per kind; first run happens in ngAfterViewInit
+        }
+        this.loadAttentionCount();
+        this.loadClients();
+      });
   }
 
   ngAfterViewInit(): void {
@@ -145,11 +171,12 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
       { key: 'name', label: 'Name', visible: true, locked: true },
       { key: 'email', label: 'Email', visible: true },
       { key: 'status', label: 'Status', visible: true },
+      ...(this.isAgentList() ? [{ key: 'managedClientCount', label: 'Customers', visible: true }] : []),
       { key: 'purchaseLimit', label: 'Purchase limit', visible: true },
       { key: 'amountSpent', label: 'Amount spent', visible: true }
     ];
 
-    this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
+    this.columnDefs = this.columnSettingsService.loadColumns(this.columnStorageKey(), defaultColumnDefs);
 
     this.allColumns = [
       { key: 'id', label: 'Id', sortable: true, width: '80px' },
@@ -158,6 +185,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
       { key: 'name', label: 'Name', sortable: true },
       { key: 'email', label: 'Email', sortable: true, width: '180px' },
       { key: 'status', label: 'Status', sortable: true, width: '190px', template: this.statusTemplate },
+      ...(this.isAgentList() ? [{ key: 'managedClientCount', label: 'Customers', width: '110px', align: 'right' } as TableColumn] : []),
       { key: 'purchaseLimit', label: 'Purchase limit', sortable: true, width: '130px', template: this.purchaseLimitTemplate, align: 'right' },
       { key: 'amountSpent', label: 'Amount spent', sortable: true, width: '130px', template: this.amountSpentTemplate, align: 'right' },
       { key: 'actions', label: '', sortable: false, width: '56px', template: this.actionsTemplate }
@@ -168,7 +196,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
 
   onColumnsChange(columns: ColumnDefinition[]): void {
     this.columnDefs = columns;
-    this.columnSettingsService.saveColumns(this.COLUMN_STORAGE_KEY, columns);
+    this.columnSettingsService.saveColumns(this.columnStorageKey(), columns);
     this.applyColumnVisibility();
     this.cdr.markForCheck();
   }
@@ -191,8 +219,12 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
     this.loadClients();
   }
 
+  /** Customers only: agents never order for themselves, so they need no delivery address. */
   private loadAttentionCount(): void {
-    this.clientService.getClients({ hasActiveDeliveryAddress: false, itemsPerPage: 1 })
+    if (this.isAgentList()) {
+      return;
+    }
+    this.clientService.getClients({ isClientAgent: false, hasActiveDeliveryAddress: false, itemsPerPage: 1 })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(response => {
         this.missingAddressCount.set(response.totalClients || 0);
@@ -203,7 +235,8 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   private buildLoadParams(): Record<string, string | number | boolean> {
     const params: Record<string, string | number | boolean> = {
       page: this.currentPage(),
-      itemsPerPage: this.itemsPerPage()
+      itemsPerPage: this.itemsPerPage(),
+      isClientAgent: this.isAgentList()
     };
 
     const query = this.searchQuery().trim();
@@ -238,6 +271,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
       hasActiveDeliveryAddress: client.hasActiveDeliveryAddress,
       purchaseLimit: client.purchaseLimit ? parseFloat(client.purchaseLimit) : undefined,
       amountSpent: client.amountSpent ? parseFloat(client.amountSpent) : undefined,
+      managedClientCount: client.managedClientCount ?? 0,
       createdAt: client.createdAt,
       updatedAt: client.updatedAt
     };
@@ -282,7 +316,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   }
 
   onAddAccount(): void {
-    this.router.navigate(['/admin/clients/new']);
+    this.router.navigate([this.basePath(), 'new']);
   }
 
   toggleDropdown(accountId: number | string): void {
@@ -298,7 +332,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
   onActionClick(event: { action: TableAction; row: unknown }): void {
     const account = event.row as Account;
     if (event.action.id === 'edit') {
-      this.router.navigate(['/admin/clients', account.id, 'edit']);
+      this.router.navigate([this.basePath(), account.id, 'edit']);
     } else if (event.action.id === 'delete') {
       this.deleteClient(account);
     }

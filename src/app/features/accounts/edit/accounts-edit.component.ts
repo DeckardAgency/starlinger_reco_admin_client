@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, finalize, debounceTime, switchMap, tap } from 'rxjs';
+import { Subject, combineLatest, takeUntil, finalize, debounceTime, switchMap, tap } from 'rxjs';
 
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
 import { TabsComponent, TabItem } from '@app/ui-kit/molecules/tabs/tabs.component';
@@ -19,7 +19,7 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { ModalComponent } from '@app/ui-kit/organisms/modal/modal.component';
 import { AddressModalComponent, AddressFormData } from '../../../shared/components/modals/address-modal/address-modal.component';
-import { Account } from '@core/models/account.model';
+import { Account, AccountKind } from '@core/models/account.model';
 import { ClientService } from '@core/services/http/client.service';
 import { OrderService } from '@core/services/http/order.service';
 import { AddressService } from '@core/services/http/address.service';
@@ -151,6 +151,22 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   isEditMode = signal(false);
   accountId = signal<string | null>(null);
 
+  /**
+   * Customer or agent. For a NEW company it comes from the route (`data.kind`:
+   * which section you add from) and locks the Agent toggle; for an existing one
+   * it is derived from the loaded `isClientAgent`, so legacy /admin/clients/:id
+   * links still land on the right kind. Updated on save (the toggle stays
+   * editable in edit mode), so Back / Save return to the list of the saved kind.
+   */
+  kind = signal<AccountKind>('customer');
+  /** 'Customers' / 'Agents' — breadcrumb */
+  kindLabel = computed(() => this.kind() === 'agent' ? 'Agents' : 'Customers');
+  listUrl = computed(() => this.kind() === 'agent' ? '/admin/agents/list' : '/admin/customers/list');
+  pageTitle = computed(() => {
+    const noun = this.kind() === 'agent' ? 'agent' : 'customer';
+    return this.isEditMode() ? noun.charAt(0).toUpperCase() + noun.slice(1) : `Add ${noun}`;
+  });
+
   // Where Back / "Save and continue" land when this page was opened from another
   // admin page (e.g. an agent's "Managed clients" tab). Only in-app targets.
   private returnTo = signal<string | null>(null);
@@ -171,7 +187,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
    * cannot place orders (checkout needs a shipping address).
    */
   missingDeliveryAddress = computed(() =>
-    this.isEditMode() && this.addressesLoaded() && !this.addresses().some(a => a.isActive && a.isDelivery)
+    this.isEditMode() && this.kind() === 'customer' && this.addressesLoaded() && !this.addresses().some(a => a.isActive && a.isDelivery)
   );
 
   // Shop orders data - starts empty, loaded in edit mode (server-side paginated)
@@ -186,7 +202,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Manual entries data - starts empty, loaded in edit mode
   manualEntries = signal<ShopOrder[]>([]);
 
-  // Tabs configuration — "Managed clients" only shows for client agents
+  // Tabs configuration — "Customers" only shows for agents
   tabs = computed<TabItem[]>(() => {
     const base: TabItem[] = [
       { id: 'users', label: 'Users' },
@@ -295,20 +311,23 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       });
 
-    // Subscribe to route param changes to handle navigation between add/edit
-    this.route.paramMap
+    // Subscribe to route param/data changes to handle navigation between add/edit
+    // (and between the customers and agents sections, which share this component)
+    combineLatest([this.route.paramMap, this.route.data])
       .pipe(takeUntil(this.destroy$))
-      .subscribe(params => {
+      .subscribe(([params, data]) => {
+        const routeKind: AccountKind = data['kind'] === 'agent' ? 'agent' : 'customer';
         const accountId = params.get('id');
         if (accountId && accountId !== 'new') {
           this.accountId.set(accountId);
           this.isEditMode.set(true);
+          this.kind.set(routeKind); // provisional until the company is loaded
           this.loadAccount(accountId);
         } else {
-          // New account mode - reset to empty state
+          // New account mode - reset to empty state of the section we add from
           this.accountId.set(null);
           this.isEditMode.set(false);
-          this.resetForm();
+          this.resetForm(routeKind);
         }
       });
   }
@@ -378,7 +397,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.destroy$.complete();
   }
 
-  private resetForm(): void {
+  private resetForm(kind: AccountKind): void {
+    this.kind.set(kind);
     this.account.set({ ...EMPTY_ACCOUNT });
     this.clientUsers.set([]);
     this.addresses.set([]);
@@ -389,7 +409,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.ordersClientCode = null;
     this.manualEntries.set([]);
     this.isActive.set(true);
-    this.isClientAgent.set(false);
+    this.isClientAgent.set(kind === 'agent');
     this.managedClients.set([]);
     this.activeTab.set('users');
     this.touched.set({});
@@ -397,9 +417,14 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.cdr.markForCheck();
   }
 
-  /** Where Back / "Save and continue" land: the referring page when given, else the clients list. */
+  /** Where Back / "Save and continue" land: the referring page when given, else the list of this kind. */
   private exitUrl(): string {
-    return this.returnTo() ?? '/admin/clients/list';
+    return this.returnTo() ?? this.listUrl();
+  }
+
+  /** Detail page of a company in the section matching its kind. */
+  private detailUrl(id: number | string, kind: AccountKind = this.kind()): string {
+    return `/admin/${kind === 'agent' ? 'agents' : 'customers'}/${id}/edit`;
   }
 
   private serializeForm(account: Account, isActive: boolean, isClientAgent: boolean): string {
@@ -444,6 +469,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.manualEntries.set([]);
         this.isActive.set(client.isActive ?? true);
         this.isClientAgent.set(client.isClientAgent ?? false);
+        this.kind.set(client.isClientAgent ? 'agent' : 'customer');
         this.setManagedClientsFromDetail(client);
         this.markClean();
         this.isLoading.set(false);
@@ -799,12 +825,14 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       next: (result) => {
         this.toastService.success('Saved successfully');
         this.markClean();
+        // The toggle may have moved the company to the other section
+        this.kind.set(this.isClientAgent() ? 'agent' : 'customer');
         if (navigateToList) {
           this.router.navigateByUrl(this.exitUrl());
         } else if (isCreating && result?.id) {
-          // After creating, navigate to edit page for the new client, keeping
+          // After creating, navigate to edit page for the new company, keeping
           // the referring-page context so a later Back/Save still returns there
-          this.router.navigate(['/admin/clients', result.id, 'edit'], {
+          this.router.navigate([this.detailUrl(result.id)], {
             queryParams: { tab: 'addresses', ...(this.returnTo() ? { returnTo: this.returnTo() } : {}) }
           });
         }
@@ -835,11 +863,11 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     const id = this.accountId();
     if (!id) return;
     this.router.navigate(['/admin/users/new'], {
-      queryParams: { clientId: id, returnTo: `/admin/clients/${id}/edit` }
+      queryParams: { clientId: id, returnTo: this.detailUrl(id) }
     });
   }
 
-  // ---- Managed clients (client-agent only) ----
+  // ---- Managed clients = the agent's customers (agents only) ----
 
   /**
    * Build the managed-clients table from the detail response. Prefer the
@@ -876,8 +904,9 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Debounced server-side lookup for the picker: partial name match, first 50
-   * sorted by name. switchMap drops stale responses while the user keeps typing.
+   * Debounced server-side lookup for the picker: customers only (an agent cannot
+   * manage another agent), partial name match, first 50 sorted by name.
+   * switchMap drops stale responses while the user keeps typing.
    */
   private setupManagedClientSearch(): void {
     this.managedClientSearch$.pipe(
@@ -889,6 +918,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       switchMap(term => this.clientService.getClients({
         page: 1,
         itemsPerPage: 50,
+        isClientAgent: false,
         'order[name]': 'asc',
         ...(term ? { name: term } : {})
       })),
@@ -937,12 +967,12 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  /** Open the managed client's own detail page; its Back / Save return to this agent. */
+  /** Open the customer's own detail page; its Back / Save return to this agent. */
   private openManagedClient(row: { id: number }): void {
     const agentId = this.accountId();
     if (!agentId || !this.confirmLeaveIfDirty()) return;
-    this.router.navigate(['/admin/clients', row.id, 'edit'], {
-      queryParams: { returnTo: `/admin/clients/${agentId}/edit` }
+    this.router.navigate([this.detailUrl(row.id, 'customer')], {
+      queryParams: { returnTo: this.detailUrl(agentId, 'agent') }
     });
   }
 

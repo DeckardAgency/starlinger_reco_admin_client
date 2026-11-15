@@ -1,12 +1,12 @@
 <div class="clients-page">
-  <ui-breadcrumbs variant="page-header" separator="line" [items]="[{ label: 'Clients' }]"></ui-breadcrumbs>
+  <ui-breadcrumbs variant="page-header" separator="line" [items]="[{ label: kindLabel() }]"></ui-breadcrumbs>
 
   <main class="page-content">
     <ui-list-header
-      title="All clients"
+      [title]="'All ' + kindLabel().toLowerCase()"
       [searchQuery]="searchQuery()"
       (searchQueryChange)="onSearchQueryChange($event)"
-      addButtonLabel="Add client"
+      [addButtonLabel]="'Add ' + kindNoun()"
       (add)="onAddAccount()"
       [showRefreshButton]="true"
       [isRefreshLoading]="isLoading()"
@@ -17,44 +17,47 @@
     >
       <app-column-selector
         [columns]="columnDefs"
-        [storageKey]="COLUMN_STORAGE_KEY"
+        [storageKey]="columnStorageKey()"
         (columnsChange)="onColumnsChange($event)">
       </app-column-selector>
     </ui-list-header>
 
-    <!-- Attention: clients whose users cannot order -->
-    @if (missingAddressCount() > 0 && addressFilter !== 'missing-address') {
-      <div class="notice" role="status">
-        <ui-icon name="warning" size="md" class="notice__icon"></ui-icon>
-        <div class="notice__body">
-          <strong>{{ missingAddressCount() }} {{ missingAddressCount() === 1 ? 'client has' : 'clients have' }} no active delivery address.</strong>
-          Their users cannot place orders until one is added.
+    <!-- Customers only — agents never order for themselves -->
+    @if (!isAgentList()) {
+      <!-- Attention: customers whose users cannot order -->
+      @if (missingAddressCount() > 0 && addressFilter !== 'missing-address') {
+        <div class="notice" role="status">
+          <ui-icon name="warning" size="md" class="notice__icon"></ui-icon>
+          <div class="notice__body">
+            <strong>{{ missingAddressCount() }} {{ missingAddressCount() === 1 ? 'customer has' : 'customers have' }} no active delivery address.</strong>
+            Their users cannot place orders until one is added.
+          </div>
+          <button type="button" class="notice__action" (click)="onAddressFilterChange('missing-address')">Show them</button>
         </div>
-        <button type="button" class="notice__action" (click)="onAddressFilterChange('missing-address')">Show them</button>
+      }
+
+      <!-- Filters Row -->
+      <div class="filters-row">
+        <div class="filter-group">
+          <label class="filter-label">Delivery address:</label>
+          <select
+            class="filter-select"
+            [ngModel]="addressFilter"
+            (ngModelChange)="onAddressFilterChange($event)"
+          >
+            @for (option of addressFilterOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </div>
       </div>
     }
 
-    <!-- Filters Row -->
-    <div class="filters-row">
-      <div class="filter-group">
-        <label class="filter-label">Delivery address:</label>
-        <select
-          class="filter-select"
-          [ngModel]="addressFilter"
-          (ngModelChange)="onAddressFilterChange($event)"
-        >
-          @for (option of addressFilterOptions; track option.value) {
-            <option [value]="option.value">{{ option.label }}</option>
-          }
-        </select>
-      </div>
-    </div>
-
     <div class="table-container">
       @if (isLoading()) {
-        <p>Loading clients...</p>
+        <p>Loading {{ kindLabel().toLowerCase() }}...</p>
       } @else if (clients().length === 0) {
-        <p class="empty-state">No clients found</p>
+        <p class="empty-state">No {{ kindLabel().toLowerCase() }} found</p>
       } @else {
         <ui-data-table
           [columns]="columns"
@@ -84,9 +87,9 @@
     <ui-badge [variant]="row.status === 'active' ? 'success' : 'danger'" [rounded]="true">
       {{ row.status === 'active' ? 'Active' : 'Inactive' }}
     </ui-badge>
-    <!-- Server-computed flag; strict false so an older API (no flag) shows nothing -->
-    @if (row.hasActiveDeliveryAddress === false) {
-      <ui-badge variant="warning" [rounded]="true" title="Users of this client cannot place orders until a delivery address is added">
+    <!-- Customers only; server-computed flag, strict false so an older API (no flag) shows nothing -->
+    @if (!isAgentList() && row.hasActiveDeliveryAddress === false) {
+      <ui-badge variant="warning" [rounded]="true" title="Users of this customer cannot place orders until a delivery address is added">
         No delivery address
       </ui-badge>
     }
@@ -117,7 +120,7 @@
 
 <!-- Mobile Footer -->
 <ui-mobile-footer
-  primaryLabel="Add client"
+  [primaryLabel]="'Add ' + kindNoun()"
   primaryIcon="plus"
   [showSecondary]="false"
   (primaryClick)="onAddAccount()"

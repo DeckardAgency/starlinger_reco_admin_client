@@ -45,9 +45,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     quickActions = [
         {
             icon: 'users',
-            label: 'Clients',
-            description: 'Manage clients',
-            route: '/admin/clients/list',
+            label: 'Customers',
+            description: 'Manage customers',
+            route: '/admin/customers/list',
             color: '#10b981'
         },
         {

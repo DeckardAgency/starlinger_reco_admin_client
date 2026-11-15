@@ -6,7 +6,7 @@
   } @else if (loadError()) {
     <div class="page-content">
       <p class="error-message">{{ loadError() }}</p>
-      <button type="button" class="btn btn--outline" (click)="goBack()">Back to clients</button>
+      <button type="button" class="btn btn--outline" (click)="goBack()">Back to {{ kindLabel().toLowerCase() }}</button>
     </div>
   } @else {
   <!-- Page Header with Breadcrumb -->
@@ -14,14 +14,14 @@
     variant="page-header"
     separator="chevron"
     [items]="[
-      { label: 'Clients', route: '/admin/clients' },
+      { label: kindLabel(), route: listUrl() },
       { label: isEditMode() ? 'Edit' : 'Add' }
     ]"
   ></ui-breadcrumbs>
 
   <!-- Detail Header -->
   <ui-detail-header
-    [title]="isEditMode() ? 'Client detail' : 'New client'"
+    [title]="pageTitle()"
     [isEditMode]="isEditMode()"
     [showSaveAndContinue]="true"
     [showDiscard]="false"
@@ -33,13 +33,13 @@
 
   <!-- Main Content -->
   <div class="page-content">
-    <!-- Without an active delivery address this client's users cannot place orders -->
+    <!-- Customers only: without an active delivery address their users cannot place orders -->
     @if (missingDeliveryAddress()) {
       <div class="notice notice--warning" role="status">
         <ui-icon name="warning" size="md" class="notice__icon"></ui-icon>
         <div class="notice__body">
           <strong>No active delivery address.</strong>
-          Users of this client cannot place orders until one is added.
+          Users of this customer cannot place orders until one is added.
         </div>
         <button type="button" class="btn btn--outline notice__action" (click)="onAddDeliveryAddress()">
           <span>Add address</span>
@@ -63,12 +63,14 @@
             [checked]="isActive()"
             (toggleChange)="onActiveChange($event)">
           </ui-toggle>
+          <!-- New: locked, the kind is chosen by the section you add from (Customers / Agents) -->
           <ui-toggle
             label="Agent"
             labelPosition="left"
             labelMinWidth="100px"
             labelColor="#71717a"
             [checked]="isClientAgent()"
+            [disabled]="!isEditMode()"
             (toggleChange)="onClientAgentChange($event)">
           </ui-toggle>
         </div>
