@@ -79,6 +79,8 @@ interface ShopOrderDetail {
   trackingUrl: string;
   cancellationReason: string;
   dispatchedAt: string;
+  /** ISO datetime, '' until the order was paid (read-only, server-set). */
+  paidAt: string;
   priceWithoutTax: number;
   totalPrice: number;
   priceTax: number;
@@ -118,6 +120,7 @@ const EMPTY_ORDER: ShopOrderDetail = {
   trackingUrl: '',
   cancellationReason: '',
   dispatchedAt: '',
+  paidAt: '',
   priceWithoutTax: 0,
   totalPrice: 0,
   priceTax: 0,
@@ -213,6 +216,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     { value: 'new', label: 'New' },
     { value: 'in_process', label: 'In process' },
     { value: 'waiting_for_payment', label: 'Waiting for payment' },
+    { value: 'paid', label: 'Paid' },
     { value: 'ready_for_shipment', label: 'Ready for shipment' },
     { value: 'shipped', label: 'Shipped' },
     { value: 'delivered', label: 'Delivered' },
@@ -666,6 +670,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       trackingUrl: (o as any).trackingUrl ?? '',
       cancellationReason: (o as any).cancellationReason ?? '',
       dispatchedAt: (o as any).dispatchedAt ?? '',
+      paidAt: o.paidAt ?? '',
       priceWithoutTax: o.totalAmount ?? 0,
       totalPrice: (o.totalAmount ?? 0) + (o.totalTax ?? 0),
       priceTax: o.totalTax ?? 0,
@@ -1095,6 +1100,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       'new': 'info',
       'in_process': 'warning',
       'waiting_for_payment': 'orange',
+      'paid': 'success',
       'ready_for_shipment': 'teal',
       'shipped': 'blue',
       'delivered': 'success',

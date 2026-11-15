@@ -79,6 +79,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
         'new': '#3B0075',
         'in_process': '#AD7F00',
         'waiting_for_payment': '#C2410C',
+        'paid': '#15803d',
         'ready_for_shipment': '#0F766E',
         'shipped': '#1D4ED8',
         'delivered': '#237804',

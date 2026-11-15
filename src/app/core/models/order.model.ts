@@ -73,7 +73,10 @@ export interface Order {
     '@type': string;
     id: number;
     orderNumber: string;
+    /** draft | new | in_process | waiting_for_payment | paid | ready_for_shipment | shipped | delivered | canceled | reversal */
     status: string;
+    /** Read-only; set by the server when the order reaches `paid`. */
+    paidAt?: string | null;
     totalAmount: number;
     subtotalBeforeDiscount?: number;
     totalDiscount?: number;

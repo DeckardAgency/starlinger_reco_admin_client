@@ -271,6 +271,15 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   });
   isValid = computed(() => Object.keys(this.errors()).length === 0);
 
+  /**
+   * Purchase limit minus open (unpaid) payments; null when no limit is set.
+   * `amountSpent` is server-computed from unpaid orders and read-only here.
+   */
+  remainingLimit = computed<number | null>(() => {
+    const { purchaseLimit = 0, amountSpent = 0 } = this.account();
+    return purchaseLimit > 0 ? purchaseLimit - amountSpent : null;
+  });
+
   // Table actions
   userActions: TableAction[] = [
     { id: 'edit', label: 'Edit', icon: 'pencil' },
@@ -609,6 +618,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       'new': 'New',
       'in_process': 'In process',
       'waiting_for_payment': 'Waiting for payment',
+      'paid': 'Paid',
       'ready_for_shipment': 'Ready for shipment',
       'shipped': 'Shipped',
       'delivered': 'Delivered',
@@ -624,6 +634,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       'new': 'info',
       'in_process': 'warning',
       'waiting_for_payment': 'orange',
+      'paid': 'success',
       'ready_for_shipment': 'teal',
       'shipped': 'blue',
       'delivered': 'success',

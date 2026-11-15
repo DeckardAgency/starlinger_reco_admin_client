@@ -173,7 +173,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
       { key: 'status', label: 'Status', visible: true },
       ...(this.isAgentList() ? [{ key: 'managedClientCount', label: 'Customers', visible: true }] : []),
       { key: 'purchaseLimit', label: 'Purchase limit', visible: true },
-      { key: 'amountSpent', label: 'Amount spent', visible: true }
+      { key: 'amountSpent', label: 'Open payments', visible: true }
     ];
 
     this.columnDefs = this.columnSettingsService.loadColumns(this.columnStorageKey(), defaultColumnDefs);
@@ -187,7 +187,7 @@ export class AccountsListComponent implements OnInit, AfterViewInit {
       { key: 'status', label: 'Status', sortable: true, width: '190px', template: this.statusTemplate },
       ...(this.isAgentList() ? [{ key: 'managedClientCount', label: 'Customers', width: '110px', align: 'right' } as TableColumn] : []),
       { key: 'purchaseLimit', label: 'Purchase limit', sortable: true, width: '130px', template: this.purchaseLimitTemplate, align: 'right' },
-      { key: 'amountSpent', label: 'Amount spent', sortable: true, width: '130px', template: this.amountSpentTemplate, align: 'right' },
+      { key: 'amountSpent', label: 'Open payments', sortable: true, width: '130px', template: this.amountSpentTemplate, align: 'right' },
       { key: 'actions', label: '', sortable: false, width: '56px', template: this.actionsTemplate }
     ];
 

@@ -31,6 +31,9 @@
           <ui-badge [variant]="getStatusBadgeVariant(order().status)">
             {{ statusLabelFor(order().status) }}
           </ui-badge>
+          @if (order().paidAt) {
+            <span class="section-header__meta">Paid on {{ order().paidAt | date:'medium' }}</span>
+          }
         </div>
       </div>
       <div class="section-header__actions">
