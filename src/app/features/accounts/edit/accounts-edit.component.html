@@ -64,7 +64,7 @@
             (toggleChange)="onActiveChange($event)">
           </ui-toggle>
           <ui-toggle
-            label="Client agent"
+            label="Agent"
             labelPosition="left"
             labelMinWidth="100px"
             labelColor="#71717a"
@@ -210,7 +210,7 @@
           <ui-data-table
             [columns]="managedClientsColumns"
             [data]="managedClients()"
-            emptyMessage="No managed clients"
+            emptyMessage="No customers assigned"
           ></ui-data-table>
         </div>
 
@@ -398,7 +398,7 @@
 <ui-modal
   [isOpen]="isManagedClientModalOpen()"
   (isOpenChange)="isManagedClientModalOpen.set($event)"
-  title="Add managed clients"
+  title="Add customers"
   size="md"
 >
   <div class="user-modal">
@@ -407,7 +407,7 @@
         <ui-icon name="search" size="sm"></ui-icon>
         <input
           type="text"
-          placeholder="Search clients..."
+          placeholder="Search customers..."
           [value]="managedClientSearchQuery()"
           (input)="onManagedClientSearchChange($event)"
         >
@@ -415,9 +415,9 @@
     </div>
 
     @if (isLoadingAvailableClients()) {
-      <div class="user-modal__loading">Loading clients...</div>
+      <div class="user-modal__loading">Loading customers...</div>
     } @else if (filteredAvailableClients().length === 0) {
-      <div class="user-modal__empty">No clients available to add</div>
+      <div class="user-modal__empty">No customers available to add</div>
     } @else {
       <div class="user-modal__list">
         @for (client of filteredAvailableClients(); track client.id) {

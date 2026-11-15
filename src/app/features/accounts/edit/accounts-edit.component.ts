@@ -194,7 +194,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       { id: 'shop-orders', label: 'Shop orders' }
     ];
     if (this.isClientAgent()) {
-      base.push({ id: 'managed-clients', label: 'Managed clients' });
+      base.push({ id: 'managed-clients', label: 'Customers' });
     }
     return base;
   });
@@ -488,7 +488,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           email: u.email ?? '',
           role: (u.roles || []).includes('ROLE_ADMIN') ? 'Admin' :
                 (u.roles || []).includes('ROLE_CLIENT_ADMIN') ? 'Client Admin' :
-                (u.roles || []).includes('ROLE_USER_CLIENT_AGENT') ? 'Client Agent' :
+                (u.roles || []).includes('ROLE_USER_CLIENT_AGENT') ? 'Agent' :
                 (u.roles || []).includes('ROLE_FINANCE') ? 'Finance' :
                 (u.roles || []).includes('ROLE_CLIENT') ? 'Client' : 'User',
           isActive: u.isActive ?? true
@@ -652,7 +652,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'addresses': return 'Add address';
       case 'shop-orders': return 'Add order';
       case 'manual-entries': return 'Add entry';
-      case 'managed-clients': return 'Add client';
+      case 'managed-clients': return 'Add customer';
       default: return 'Add';
     }
   });
@@ -960,12 +960,12 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     const managedClients = this.managedClients().map(c => `/api/v1/clients/${c.id}`);
     this.clientService.updateClient(clientId, { managedClients } as any).subscribe({
       next: () => {
-        this.toastService.success('Managed clients updated');
+        this.toastService.success('Customers updated');
         this.cdr.markForCheck();
       },
       error: (err) => {
         this.logger.error('Error updating managed clients:', err);
-        this.toastService.error('Failed to update managed clients');
+        this.toastService.error('Failed to update customers');
       }
     });
   }
@@ -997,7 +997,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
             email: u.email ?? '',
             role: (u.roles || []).includes('ROLE_ADMIN') ? 'Admin' :
                   (u.roles || []).includes('ROLE_CLIENT_ADMIN') ? 'Client Admin' :
-                  (u.roles || []).includes('ROLE_USER_CLIENT_AGENT') ? 'Client Agent' :
+                  (u.roles || []).includes('ROLE_USER_CLIENT_AGENT') ? 'Agent' :
                   (u.roles || []).includes('ROLE_FINANCE') ? 'Finance' :
                   (u.roles || []).includes('ROLE_CLIENT') ? 'Client' : 'User'
           }));

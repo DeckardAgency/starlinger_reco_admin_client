@@ -99,7 +99,7 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     { value: USER_ROLES.ADMIN, label: 'Admin' },
     { value: USER_ROLES.CLIENT_ADMIN, label: 'Client Admin' },
     { value: USER_ROLES.CLIENT, label: 'Client' },
-    { value: USER_ROLES.USER_CLIENT_AGENT, label: 'Client Agent' },
+    { value: USER_ROLES.USER_CLIENT_AGENT, label: 'Agent' },
     { value: USER_ROLES.FINANCE, label: 'Finance' },
     // Accounts without any functional role (can sign in, cannot use the webshop)
     { value: 'none', label: 'No role' }
