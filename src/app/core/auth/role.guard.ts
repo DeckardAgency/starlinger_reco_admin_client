@@ -5,8 +5,9 @@ import { AuthService } from '@core/auth/auth.service';
 import { USER_ROLES } from '@core/models/auth.model';
 
 /**
- * RoleGuard - Protects routes based on user roles
- * Simply redirects users to the correct area based on their role
+ * RoleGuard - Protects routes based on user roles.
+ * This app only has an admin area: an authenticated user without the required
+ * role is logged out and sent to the login page with a "no access" message.
  */
 @Injectable({
     providedIn: 'root'
@@ -39,23 +40,9 @@ export class RoleGuard {
             return true;
         }
 
-        // Wrong area - redirect to correct area based on role
-        return this.getHomeUrlForUser(user.roles);
-    }
-
-    /**
-     * Get the home URL for a user based on their roles
-     */
-    getHomeUrlForUser(userRoles: string[]): UrlTree {
-        if (userRoles.includes(USER_ROLES.ADMIN)) {
-            return this.router.createUrlTree(['/admin/dashboard']);
-        }
-        if (userRoles.includes(USER_ROLES.CLIENT_ADMIN)) {
-            return this.router.createUrlTree(['/customer-admin/orders']);
-        }
-        if (userRoles.includes(USER_ROLES.CLIENT)) {
-            return this.router.createUrlTree(['/customer/dashboard']);
-        }
-        return this.router.createUrlTree(['/login']);
+        // No access: there is no other area in this app to send the user to, so end
+        // the session (otherwise /login would bounce an authenticated user around).
+        this.authService.logout();
+        return this.router.createUrlTree(['/login'], { queryParams: { reason: 'no-access' } });
     }
 }

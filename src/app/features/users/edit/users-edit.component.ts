@@ -15,6 +15,8 @@ import { UserService } from '@core/services/http/user.service';
 import { User } from '@core/models';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { LoggerService } from '@core/services/logger.service';
+import { AuthService } from '@core/auth/auth.service';
+import { passwordPolicyError } from '@core/auth/password-policy';
 
 const EMPTY_USER: AdminUser = {
   id: 0,
@@ -49,6 +51,7 @@ export class UsersEditComponent implements OnInit {
   private userService = inject(UserService);
   private toastService = inject(ToastService);
   private logger = inject(LoggerService);
+  private authService = inject(AuthService);
 
   isEditMode = signal(false);
   userId = signal<string | null>(null);
@@ -62,6 +65,18 @@ export class UsersEditComponent implements OnInit {
   repeatPassword = signal('');
   showPassword = signal(false);
   showRepeatPassword = signal(false);
+  // Only asked for (and sent) when the logged-in admin changes their OWN password
+  currentPassword = signal('');
+  showCurrentPassword = signal(false);
+
+  /** True when the logged-in admin is editing their own account. */
+  isSelf = computed(() => {
+    const me = this.authService.getCurrentUser();
+    return this.isEditMode() && !!me && String(me.id) === String(this.userId());
+  });
+
+  // Field errors reported by the backend (422 violations), keyed like `errors`
+  serverErrors = signal<Record<string, string>>({});
 
   // Role options
   roleOptions: AdminUserRoleOption[] = ADMIN_USER_ROLE_OPTIONS;
@@ -75,10 +90,16 @@ export class UsersEditComponent implements OnInit {
     if (!user.lastName?.trim()) errs['lastName'] = 'Last name is required';
     if (!user.email?.trim()) errs['email'] = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) errs['email'] = 'Invalid email format';
-    // Password is optional on create: leaving it empty sends an invitation email
-    // and the user sets their own password via the emailed link.
-    if (this.password() && this.repeatPassword() && this.password() !== this.repeatPassword()) {
-      errs['repeatPassword'] = 'Passwords do not match';
+    // Password is optional: left empty, create sends an invitation email (the user
+    // sets their own password via the link) and edit leaves the password unchanged.
+    const password = this.password();
+    if (password) {
+      const policyError = passwordPolicyError(password);
+      if (policyError) errs['password'] = policyError;
+      if (password !== this.repeatPassword()) errs['repeatPassword'] = 'Passwords do not match';
+      if (this.isSelf() && !this.currentPassword()) {
+        errs['currentPassword'] = 'Enter your current password to change it';
+      }
     }
     return errs;
   });
@@ -180,15 +201,58 @@ export class UsersEditComponent implements OnInit {
 
   // Validation methods
   markAllTouched(): void {
-    this.touched.set({ firstName: true, lastName: true, email: true, password: true, repeatPassword: true });
+    this.touched.set({ firstName: true, lastName: true, email: true, password: true, repeatPassword: true, currentPassword: true });
   }
 
   markFieldTouched(field: string): void {
     this.touched.update(t => ({ ...t, [field]: true }));
+    // The value changed, so the backend's verdict on the old value no longer applies
+    if (this.serverErrors()[field]) {
+      this.serverErrors.update(e => ({ ...e, [field]: '' }));
+    }
   }
 
   getError(field: string): string {
-    return this.touched()[field] ? (this.errors()[field] || '') : '';
+    const clientError = this.touched()[field] ? (this.errors()[field] || '') : '';
+    return clientError || this.serverErrors()[field] || '';
+  }
+
+  /** Password fields to send: nothing when left empty (invite on create / unchanged on edit). */
+  private passwordPayload(): Record<string, unknown> {
+    if (!this.password()) return {};
+    return {
+      plainPassword: this.password(),
+      // The backend requires the current password only for a self-service change
+      ...(this.isSelf() ? { currentPassword: this.currentPassword() } : {})
+    };
+  }
+
+  /**
+   * Show a save failure: 422 violations go inline under their field (the API's
+   * `plainPassword` is this form's `password`), everything else to the toast.
+   */
+  private handleSaveError(error: any): void {
+    this.logger.error('Error saving user:', error);
+    const fieldMap: Record<string, string> = { plainPassword: 'password' };
+    const known = ['firstName', 'lastName', 'email', 'password', 'currentPassword'];
+    const violations: Array<{ propertyPath?: string; message?: string }> =
+      error?.status === 422 && Array.isArray(error?.error?.violations) ? error.error.violations : [];
+
+    const fieldErrors: Record<string, string> = {};
+    for (const v of violations) {
+      const field = fieldMap[v.propertyPath ?? ''] ?? v.propertyPath ?? '';
+      if (known.includes(field) && v.message && !fieldErrors[field]) {
+        fieldErrors[field] = v.message;
+      }
+    }
+    this.serverErrors.set(fieldErrors);
+
+    if (Object.keys(fieldErrors).length > 0) {
+      this.toastService.error('Failed to save user: please check the highlighted fields');
+      return;
+    }
+    const detail = error?.error?.detail;
+    this.toastService.error(typeof detail === 'string' && detail.trim() ? `Failed to save user: ${detail}` : 'Failed to save user');
   }
 
   onFirstNameChange(event: Event): void {
@@ -228,6 +292,16 @@ export class UsersEditComponent implements OnInit {
 
   togglePasswordVisibility(): void {
     this.showPassword.update(v => !v);
+  }
+
+  onCurrentPasswordChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.currentPassword.set(input.value);
+    this.markFieldTouched('currentPassword');
+  }
+
+  toggleCurrentPasswordVisibility(): void {
+    this.showCurrentPassword.update(v => !v);
   }
 
   toggleRepeatPasswordVisibility(): void {
@@ -287,13 +361,10 @@ export class UsersEditComponent implements OnInit {
       email: user.email,
       // Optional display/login alias; null clears it (it is NOT derived from email)
       username: user.username?.trim() || null,
-      roles: this.mapAdminRoleToRoles(user.role)
+      roles: this.mapAdminRoleToRoles(user.role),
+      // Password only if set (create or password change)
+      ...this.passwordPayload()
     };
-
-    // Include plainPassword only if set (for create or password change)
-    if (this.password()) {
-      data['plainPassword'] = this.password();
-    }
 
     // Created from a client's Users tab: assign that company right away
     if (!this.isEditMode() && this.presetClientId()) {
@@ -310,10 +381,7 @@ export class UsersEditComponent implements OnInit {
         this.toastService.success('Saved successfully');
         this.router.navigateByUrl(this.exitUrl());
       },
-      error: (error) => {
-        this.logger.error('Error saving user:', error);
-        this.toastService.error('Failed to save user');
-      }
+      error: (error) => this.handleSaveError(error)
     });
   }
 
@@ -341,12 +409,9 @@ export class UsersEditComponent implements OnInit {
       email: user.email,
       // Optional display/login alias; null clears it (it is NOT derived from email)
       username: user.username?.trim() || null,
-      roles: this.mapAdminRoleToRoles(user.role)
+      roles: this.mapAdminRoleToRoles(user.role),
+      ...this.passwordPayload()
     };
-
-    if (this.password()) {
-      data['plainPassword'] = this.password();
-    }
 
     // Created from a client's Users tab: assign that company right away
     if (!this.isEditMode() && this.presetClientId()) {
@@ -361,6 +426,13 @@ export class UsersEditComponent implements OnInit {
     operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (response) => {
         this.toastService.success('Saved successfully');
+        this.serverErrors.set({});
+        if (this.isEditMode()) {
+          // The password change (if any) is done - don't resend it on the next save
+          this.password.set('');
+          this.repeatPassword.set('');
+          this.currentPassword.set('');
+        }
         if (!this.isEditMode() && response?.id) {
           // Keep the referring-page context so a later Save still returns there
           this.router.navigate(['/admin/users', response.id, 'edit'], {
@@ -368,10 +440,7 @@ export class UsersEditComponent implements OnInit {
           });
         }
       },
-      error: (error) => {
-        this.logger.error('Error saving user:', error);
-        this.toastService.error('Failed to save user');
-      }
+      error: (error) => this.handleSaveError(error)
     });
   }
 

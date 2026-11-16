@@ -102,7 +102,7 @@ test.describe('Authentication', () => {
     await page.goto('/forgot-password');
     await page.waitForLoadState('networkidle');
 
-    await page.locator('input[name="username"]').fill('admin@starlinger.com');
+    await page.locator('input[name="username"]').fill(TEST_USERS.admin.email);
     await page.locator('ui-button[type="submit"]').click();
 
     // The component simulates a 1.5s API call, then shows success state

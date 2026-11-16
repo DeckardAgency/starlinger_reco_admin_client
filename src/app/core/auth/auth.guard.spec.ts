@@ -1,15 +1,13 @@
-import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
+import { Router, ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
-import { LoginModalService } from '@services/login-modal.service';
 import { LoggerService } from '@services/logger.service';
 
 describe('AuthGuard', () => {
   let guard: AuthGuard;
   let authService: jasmine.SpyObj<AuthService>;
   let router: jasmine.SpyObj<Router>;
-  let loginModalService: jasmine.SpyObj<LoginModalService>;
   let loggerService: jasmine.SpyObj<LoggerService>;
 
   beforeEach(() => {
@@ -19,8 +17,7 @@ describe('AuthGuard', () => {
       'isClientArchived',
       'logout'
     ]);
-    const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
-    const loginModalServiceSpy = jasmine.createSpyObj('LoginModalService', ['open', 'setReturnUrl']);
+    const routerSpy = jasmine.createSpyObj('Router', ['navigate', 'createUrlTree']);
     const loggerServiceSpy = jasmine.createSpyObj('LoggerService', ['createLogger']);
 
     loggerServiceSpy.createLogger.and.returnValue({
@@ -35,7 +32,6 @@ describe('AuthGuard', () => {
         AuthGuard,
         { provide: AuthService, useValue: authServiceSpy },
         { provide: Router, useValue: routerSpy },
-        { provide: LoginModalService, useValue: loginModalServiceSpy },
         { provide: LoggerService, useValue: loggerServiceSpy }
       ]
     });
@@ -43,7 +39,6 @@ describe('AuthGuard', () => {
     guard = TestBed.inject(AuthGuard);
     authService = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
     router = TestBed.inject(Router) as jasmine.SpyObj<Router>;
-    loginModalService = TestBed.inject(LoginModalService) as jasmine.SpyObj<LoginModalService>;
     loggerService = TestBed.inject(LoggerService) as jasmine.SpyObj<LoggerService>;
   });
 
@@ -70,32 +65,28 @@ describe('AuthGuard', () => {
       expect(router.navigate).not.toHaveBeenCalled();
     });
 
-    it('should redirect when user is not authenticated', fakeAsync(() => {
+    it('should redirect to /login when user is not authenticated', () => {
+      const loginTree = {} as UrlTree;
+      router.createUrlTree.and.returnValue(loginTree);
       authService.isAuthenticated.and.returnValue(false);
 
       const result = guard.canActivate(mockRoute, mockState);
 
-      expect(result).toBe(false);
-      expect(loginModalService.setReturnUrl).toHaveBeenCalledWith('/dashboard');
+      expect(result).toBe(loginTree);
+      expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/login']);
+    });
 
-      // The loginModalService.open() is called in a setTimeout(100ms)
-      tick(100);
-      expect(loginModalService.open).toHaveBeenCalled();
-    }));
-
-    it('should handle archived client and logout', fakeAsync(() => {
+    it('should log out an archived client and redirect to /login with the reason', () => {
+      const loginTree = {} as UrlTree;
+      router.createUrlTree.and.returnValue(loginTree);
       authService.isAuthenticated.and.returnValue(true);
       authService.isClientArchived.and.returnValue(true);
 
       const result = guard.canActivate(mockRoute, mockState);
 
-      expect(result).toBe(false);
+      expect(result).toBe(loginTree);
       expect(authService.logout).toHaveBeenCalled();
-      expect(router.navigate).toHaveBeenCalledWith(['/']);
-
-      // The loginModalService.open() is called in a setTimeout(100ms)
-      tick(100);
-      expect(loginModalService.open).toHaveBeenCalled();
-    }));
+      expect(router.createUrlTree).toHaveBeenCalledOnceWith(['/login'], { queryParams: { reason: 'archived' } });
+    });
   });
 });

@@ -7,6 +7,7 @@ import { NgIf } from '@angular/common';
 import { filter } from 'rxjs/operators';
 import { SidebarService } from '@services/sidebar.service';
 import { AuthService } from '@core/auth/auth.service';
+import { IdleTimeoutService } from '@core/auth/idle-timeout.service';
 import { MobileMenuComponent } from './layout/mobile-menu/mobile-menu.component';
 import { ToastContainerComponent } from './ui-kit/organisms/toast-container/toast-container.component';
 import { AlertComponent } from './shared/components/alert/alert.component';
@@ -37,6 +38,7 @@ export class AppComponent implements OnInit {
 
   private destroyRef = inject(DestroyRef);
   private cdr = inject(ChangeDetectorRef);
+  private idleTimeout = inject(IdleTimeoutService);
 
   constructor(
     public sidebarService: SidebarService,
@@ -52,6 +54,7 @@ export class AppComponent implements OnInit {
       this.currentRoute = url;
       this.isAuthPage = this.authRoutes.some(route => url.startsWith(route));
       this.is404Page = url === '/404' || url.startsWith('/404?');
+      this.idleTimeout.notifyNavigation();
       this.cdr.markForCheck();
     });
 
@@ -65,6 +68,12 @@ export class AppComponent implements OnInit {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(isAuth => {
       this.isAuthenticated = isAuth;
+      // Watch for inactivity only while a session exists
+      if (isAuth) {
+        this.idleTimeout.start();
+      } else {
+        this.idleTimeout.stop();
+      }
       this.cdr.markForCheck();
     });
   }

@@ -1446,31 +1446,8 @@ export const ICON_HISTORY = `<svg xmlns="http://www.w3.org/2000/svg" width="20" 
 // DEVELOPMENT USER (for auth service)
 // =============================================================================
 
-export const DUMMY_USER_CREDENTIALS = {
-  email: 'recouser@starlinger.com',
-  password: 'recouser123!'
-};
-
-export const mockDevelopmentUser = {
-  id: 0,
-  email: DUMMY_USER_CREDENTIALS.email,
-  username: DUMMY_USER_CREDENTIALS.email,
-  roles: ['ROLE_USER', 'ROLE_CLIENT'] as string[],
-  firstName: 'Reco',
-  lastName: 'Developer',
-  phoneNumber: '+43 1 234 5678',
-  isActive: true,
-  client: {
-    '@id': '/api/clients/dev-001',
-    '@type': 'Client',
-    id: 0,
-    name: 'Starlinger Development',
-    code: 'STL-DEV',
-    isActive: true,
-    isArchived: false,
-    maxActiveUsers: 10
-  }
-};
+// Moved to core/auth/dev-user.ts so production code never imports this file.
+export { DUMMY_USER_CREDENTIALS, mockDevelopmentUser } from '@core/auth/dev-user';
 
 // =============================================================================
 // PRODUCT GENERATION HELPERS (for ProductService)

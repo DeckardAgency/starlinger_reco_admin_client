@@ -8,5 +8,7 @@ export const environment = {
   apiPath: '/api/v1', // for API endpoints
   serverUrl: 'https://admin-webshop.grafit.net', // for server-side rendering
   useDummyAuth: false,
-  useMocks: false
+  useMocks: false,
+  // Automatic logout after this many minutes without user activity (IdleTimeoutService)
+  idleTimeoutMinutes: 30
 };

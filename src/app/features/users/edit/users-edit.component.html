@@ -97,15 +97,37 @@
         <div class="form-card">
           <h2 class="form-card__title">Password</h2>
           <div class="form-card__content">
+            <!-- Current password: only when changing your own password -->
+            @if (isSelf()) {
+              <ui-form-field label="Current password" layout="horizontal" [required]="!!password()" [error]="getError('currentPassword')"
+                             hint="Required to change your own password.">
+                <div class="input-with-icon">
+                  <input
+                    [type]="showCurrentPassword() ? 'text' : 'password'"
+                    [value]="currentPassword()"
+                    (input)="onCurrentPasswordChange($event)"
+                    placeholder="Enter current password"
+                    autocomplete="current-password"
+                  />
+                  <button class="input-icon-btn" (click)="toggleCurrentPasswordVisibility()" type="button">
+                    <ui-icon [name]="showCurrentPassword() ? 'eye-off' : 'eye'" size="md" color="#71717A"></ui-icon>
+                  </button>
+                </div>
+              </ui-form-field>
+            }
+
             <!-- Password -->
-            <ui-form-field label="Password" layout="horizontal" [error]="getError('password')"
-                           [hint]="isEditMode() ? '' : 'Leave empty to email the user an invitation — they set their own password.'">
+            <ui-form-field [label]="isSelf() ? 'New password' : 'Password'" layout="horizontal" [error]="getError('password')"
+                           [hint]="isEditMode()
+                             ? 'Leave empty to keep the current password. At least 8 characters with an uppercase letter, a lowercase letter and a digit.'
+                             : 'Leave empty to email the user an invitation — they set their own password. Otherwise at least 8 characters with an uppercase letter, a lowercase letter and a digit.'">
               <div class="input-with-icon">
                 <input
                   [type]="showPassword() ? 'text' : 'password'"
                   [value]="password()"
                   (input)="onPasswordChange($event)"
                   placeholder="Enter password"
+                  autocomplete="new-password"
                 />
                 <button class="input-icon-btn" (click)="togglePasswordVisibility()" type="button">
                   <ui-icon [name]="showPassword() ? 'eye-off' : 'eye'" size="md" color="#71717A"></ui-icon>
@@ -114,13 +136,14 @@
             </ui-form-field>
 
             <!-- Repeat Password -->
-            <ui-form-field label="Repeat password" layout="horizontal" [required]="!isEditMode()" [error]="getError('repeatPassword')">
+            <ui-form-field label="Repeat password" layout="horizontal" [required]="!!password()" [error]="getError('repeatPassword')">
               <div class="input-with-icon">
                 <input
                   [type]="showRepeatPassword() ? 'text' : 'password'"
                   [value]="repeatPassword()"
                   (input)="onRepeatPasswordChange($event)"
                   placeholder="Repeat password"
+                  autocomplete="new-password"
                 />
                 <button class="input-icon-btn" (click)="toggleRepeatPasswordVisibility()" type="button">
                   <ui-icon [name]="showRepeatPassword() ? 'eye-off' : 'eye'" size="md" color="#71717A"></ui-icon>

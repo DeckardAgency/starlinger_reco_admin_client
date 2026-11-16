@@ -6,12 +6,12 @@ import { User } from '@core/models';
 import { environment } from '@env/environment';
 import { AuthResponse } from '@models/api/auth-api.model';
 import { LoggerService, ScopedLogger } from '@services/logger.service';
-import { DUMMY_USER_CREDENTIALS, mockDevelopmentUser } from '@core/mocks/mock-data';
+import { DUMMY_USER_CREDENTIALS, mockDevelopmentUser } from './dev-user';
 
 // Re-export for backward compatibility
 export type { AuthResponse };
 
-// Use centralized mock data
+// Local-only dev user (see dev-user.ts) - nothing from core/mocks is imported here
 const DUMMY_USER_EMAIL = DUMMY_USER_CREDENTIALS.email;
 const DUMMY_USER_PASSWORD = DUMMY_USER_CREDENTIALS.password;
 const DUMMY_USER: User = mockDevelopmentUser as User;

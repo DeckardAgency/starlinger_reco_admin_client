@@ -1,3 +1,5 @@
+import { TEST_USERS } from './test-data';
+
 const API_BASE = 'http://localhost:8000/api/v1';
 const LOGIN_URL = 'http://localhost:8000/api/login_check';
 
@@ -10,8 +12,8 @@ async function getToken(): Promise<string> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      username: 'admin@starlinger.com',
-      password: 'recouser123!',
+      username: TEST_USERS.admin.email,
+      password: TEST_USERS.admin.password,
     }),
   });
 
