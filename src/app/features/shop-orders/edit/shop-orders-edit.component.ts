@@ -216,12 +216,12 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     { value: 'new', label: 'New' },
     { value: 'in_process', label: 'In process' },
     { value: 'waiting_for_payment', label: 'Waiting for payment' },
-    { value: 'paid', label: 'Paid' },
     { value: 'ready_for_shipment', label: 'Ready for shipment' },
     { value: 'shipped', label: 'Shipped' },
     { value: 'delivered', label: 'Delivered' },
     { value: 'canceled', label: 'Canceled' },
-    { value: 'reversal', label: 'Reversal' }
+    { value: 'reversal', label: 'Reversal' },
+    { value: 'paid', label: 'Paid' }
   ];
 
   get statusOptions(): SelectOption[] {
