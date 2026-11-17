@@ -963,7 +963,8 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
 
   canBookDhl = computed(() => {
     const carrier = this.effectiveCarrier().toLowerCase();
-    return this.order().status === 'ready_for_shipment'
+    // Booked once the ERP has scheduled the order (in process), before picking; prepayment waits for "paid".
+    return ['in_process', 'paid', 'ready_for_shipment'].includes(this.order().status)
       && !this.activeDhlShipment()
       && (carrier === '' || carrier === 'dhl');
   });
@@ -1012,6 +1013,8 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
           const lines = [body.message, ...(body.errors ?? []), ...(body.details ?? [])].filter((l): l is string => !!l);
           this.dhlErrors.set(lines.length ? Array.from(new Set(lines)) : [this.dhlErrorMessage(err, 'DHL booking failed.')]);
           this.toastService.error(this.dhlErrorMessage(err, 'DHL booking failed.'));
+          // A refusal by DHL is stored as a failed shipment — show it on the card behind the modal
+          this.loadDhlShipment(id);
         },
       });
   }

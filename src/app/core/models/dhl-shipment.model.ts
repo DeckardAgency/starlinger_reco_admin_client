@@ -61,6 +61,10 @@ export interface DhlPrefill {
   isCustomsDeclarable: boolean;
   productCode: string;
   plannedShippingDate: string;
+  /** HH:MM, origin local time — when the parcel is ready at the warehouse */
+  plannedShippingTime: string;
+  /** Free text printed on the label next to the order number (ERP delivery/shipment numbers) */
+  reference: string;
   labelFormat: DhlLabelFormat;
   packages: DhlPackage[];
   description: string;
@@ -78,8 +82,17 @@ export interface DhlPrefill {
 
 export interface DhlShipment {
   id: number;
-  status: 'booked' | 'cancelled';
-  awb: string;
+  /** IRI of the order, e.g. "/api/v1/orders/123" */
+  order: string;
+  /** failed = DHL refused the request; kept with errorMessage so it can be corrected and requested again */
+  status: 'booked' | 'cancelled' | 'failed';
+  awb: string | null;
+  reference: string | null;
+  errorMessage: string | null;
+  /** Flat order fields for the shipments list */
+  orderNumber: string | null;
+  orderStatus: string | null;
+  customerName: string | null;
   productCode: string;
   productName: string | null;
   plannedShippingAt: string;
@@ -103,6 +116,11 @@ export interface DhlShipment {
   cancelledAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DhlShipmentsCollection {
+  member: DhlShipment[];
+  totalItems: number;
 }
 
 /** Order fields every booking action returns so the page never saves stale tracking/status back. */

@@ -6,7 +6,8 @@ import {
   DhlBookingResponse,
   DhlPickupBookingInput,
   DhlPrefill,
-  DhlShipment
+  DhlShipment,
+  DhlShipmentsCollection
 } from '@core/models/dhl-shipment.model';
 
 /**
@@ -20,7 +21,14 @@ export class DhlShipmentService {
     headers: new HttpHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/ld+json' })
   };
 
-  /** Latest shipment of an order (booked or cancelled), or null. */
+  /** Shipments list (admin): API Platform collection with `order.orderNumber`, `status`, `awb` filters. */
+  list(params: Record<string, string | number | boolean>): Observable<DhlShipmentsCollection> {
+    let httpParams = new HttpParams();
+    Object.entries(params).forEach(([k, v]) => { httpParams = httpParams.set(k, String(v)); });
+    return this.http.get<DhlShipmentsCollection>(`${this.base}/dhl_shipments`, { params: httpParams, headers: this.jsonLd.headers });
+  }
+
+  /** Latest shipment of an order (booked, failed or cancelled), or null. */
   getLatestForOrder(orderId: number | string): Observable<DhlShipment | null> {
     const params = new HttpParams()
       .set('order.id', String(orderId))

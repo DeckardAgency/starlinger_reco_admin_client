@@ -1,0 +1,110 @@
+<div class="shipments-page">
+  <ui-breadcrumbs variant="page-header" separator="line" [items]="[{ label: 'DHL shipments' }]"></ui-breadcrumbs>
+
+  <main class="page-content">
+    <ui-list-header
+      title="DHL shipments"
+      icon="truck"
+      [count]="totalItems()"
+      [showAddButton]="false"
+      [showSearch]="true"
+      searchWidth="260px"
+      [searchQuery]="searchQuery()"
+      (searchQueryChange)="onSearchChange($event)"
+    ></ui-list-header>
+
+    <div class="table-container">
+      <ui-tabs
+        [tabs]="tabs"
+        [activeTab]="activeTab()"
+        (tabChange)="onTabChange($event)"
+        variant="underline"
+      ></ui-tabs>
+
+      @if (isLoading()) {
+        <div class="loading-state">Loading DHL shipments…</div>
+      } @else if (shipments().length === 0) {
+        <div class="empty-state">
+          @if (activeTab() === 'all' && !searchQuery()) {
+            No DHL shipments yet. Open an order that is in process and use "Request DHL".
+          } @else {
+            No shipments match.
+          }
+        </div>
+      } @else {
+        <ui-data-table
+          [columns]="columns"
+          [data]="shipments()"
+          [sortColumn]="sortColumn()"
+          [sortDirection]="sortDirection()"
+          (sort)="onSortChange($event)"
+          emptyMessage="No DHL shipments"
+        ></ui-data-table>
+      }
+    </div>
+
+    <ui-table-footer
+      [showingFrom]="showingFrom()"
+      [showingTo]="showingTo()"
+      [totalItems]="totalItems()"
+      [showPagination]="true"
+      [currentPage]="currentPage()"
+      [itemsPerPage]="itemsPerPage()"
+      (pageChange)="onPageChange($event)"
+    ></ui-table-footer>
+  </main>
+</div>
+
+<ng-template #createdTemplate let-row>
+  <span class="cell__secondary">{{ formatDateTime(row.createdAt) }}</span>
+</ng-template>
+
+<ng-template #orderTemplate let-row>
+  <div class="cell">
+    <a class="cell__primary" href="javascript:void(0)" (click)="openOrder(row)">{{ row.orderNumber || '—' }}</a>
+    <span class="cell__secondary">{{ row.customerName || '' }}{{ row.customerName && row.orderStatus ? ' · ' : '' }}{{ orderStatusLabel(row.orderStatus) }}</span>
+  </div>
+</ng-template>
+
+<ng-template #awbTemplate let-row>
+  @if (row.awb && trackingUrl(row.awb); as url) {
+    <a class="cell__primary" [href]="url" target="_blank" rel="noopener noreferrer">{{ row.awb }} ↗</a>
+  } @else {
+    <span class="cell__secondary">—</span>
+  }
+</ng-template>
+
+<ng-template #statusTemplate let-row>
+  <div class="cell">
+    <div><ui-badge [variant]="statusVariant(row.status)">{{ statusLabel(row.status) }}</ui-badge></div>
+    @if (row.status === 'failed' && row.errorMessage) {
+      <span class="cell__error">{{ row.errorMessage }}</span>
+    } @else if (row.reference) {
+      <span class="cell__secondary">Ref. {{ row.reference }}</span>
+    }
+  </div>
+</ng-template>
+
+<ng-template #plannedTemplate let-row>
+  <span class="cell__secondary">{{ formatDateTime(row.plannedShippingAt) }}</span>
+</ng-template>
+
+<ng-template #packagesTemplate let-row>
+  <span class="cell__secondary">{{ row.packages?.length || 0 }} · {{ row.totalWeight }} kg</span>
+</ng-template>
+
+<ng-template #pickupTemplate let-row>
+  <span class="cell__secondary" [title]="row.pickupError || ''">{{ pickupText(row) }}</span>
+</ng-template>
+
+<ng-template #actionsTemplate let-row>
+  <div class="row-actions">
+    @if (hasLabel(row)) {
+      <button class="btn btn--outline btn--sm" type="button" (click)="printLabel(row)">
+        <ui-icon name="printer" size="sm"></ui-icon>
+        <span>Print label</span>
+      </button>
+    }
+    <button class="btn btn--outline btn--sm" type="button" (click)="openOrder(row)">Open order</button>
+  </div>
+</ng-template>

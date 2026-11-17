@@ -234,6 +234,14 @@ export const routes: Routes = [
         title: 'Admin | Delivery Type Detail'
       },
 
+      // DHL shipments (Express bookings requested from the order page)
+      { path: 'dhl-shipments', redirectTo: 'dhl-shipments/list', pathMatch: 'full' },
+      {
+        path: 'dhl-shipments/list',
+        loadComponent: () => import('@features/dhl-shipments/list/dhl-shipments-list.component').then(m => m.DhlShipmentsListComponent),
+        title: 'Admin | DHL shipments'
+      },
+
       // Warehouses
       { path: 'warehouses', redirectTo: 'warehouses/list', pathMatch: 'full' },
       {

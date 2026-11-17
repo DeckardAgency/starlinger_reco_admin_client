@@ -557,6 +557,11 @@
     background: #fafafa;
   }
 
+  &--failed {
+    border-color: #fecaca;
+    background: #fff7f7;
+  }
+
   &__header {
     display: flex;
     justify-content: space-between;

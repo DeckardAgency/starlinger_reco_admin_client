@@ -7,6 +7,7 @@ import {
   Output,
   SimpleChanges,
   computed,
+  inject,
   signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -14,6 +15,7 @@ import { ModalComponent } from '@app/ui-kit/organisms/modal/modal.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
+import { AlertService } from '@services/alert.service';
 import { SelectComponent, SelectOption } from '@app/ui-kit/atoms/select/select.component';
 import {
   DHL_INCOTERMS,
@@ -54,6 +56,8 @@ export class DhlShipmentModalComponent implements OnChanges {
 
   @Output() closeModal = new EventEmitter<void>();
   @Output() book = new EventEmitter<DhlPrefill>();
+
+  private alertService = inject(AlertService);
 
   form = signal<DhlPrefill | null>(null);
 
@@ -117,7 +121,7 @@ export class DhlShipmentModalComponent implements OnChanges {
     this.form.update(f => f && ({ ...f, [which]: { ...f[which], [field]: value } }));
   }
 
-  updateField(field: 'plannedShippingDate' | 'description', event: Event): void {
+  updateField(field: 'plannedShippingDate' | 'plannedShippingTime' | 'reference' | 'description', event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.form.update(f => f && ({ ...f, [field]: value }));
   }
@@ -190,9 +194,15 @@ export class DhlShipmentModalComponent implements OnChanges {
     if (!this.saving) this.closeModal.emit();
   }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
     const f = this.form();
-    if (f && !this.saving) this.book.emit(f);
+    if (!f || this.saving) return;
+    // Same "Please confirm!" step the warehouse team knows from the old parcel form.
+    const ok = await this.alertService.confirm(
+      'Request a DHL Express shipment for this order? A waybill and label will be created.',
+      'Request DHL'
+    );
+    if (ok) this.book.emit(f);
   }
 
   // --- display helpers ----------------------------------------------------

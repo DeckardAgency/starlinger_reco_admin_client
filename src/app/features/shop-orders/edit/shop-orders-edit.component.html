@@ -48,7 +48,7 @@
         @if (canBookDhl()) {
           <button class="btn btn--primary" [disabled]="dhlPrefillLoading()" (click)="openDhlModal()">
             <ui-icon name="truck" size="sm"></ui-icon>
-            <span>{{ dhlPrefillLoading() ? 'Preparing…' : 'Create DHL shipment' }}</span>
+            <span>{{ dhlPrefillLoading() ? 'Preparing…' : 'Request DHL' }}</span>
           </button>
         }
         <button class="btn btn--primary" [disabled]="isSaving()" (click)="onSave()">
@@ -296,13 +296,13 @@
 
     <!-- DHL Express shipment (booked via MyDHL from this page) -->
     @if (dhlShipment(); as shipment) {
-      <div class="dhl-card" [class.dhl-card--cancelled]="shipment.status !== 'booked'">
+      <div class="dhl-card" [class.dhl-card--cancelled]="shipment.status === 'cancelled'" [class.dhl-card--failed]="shipment.status === 'failed'">
         <div class="dhl-card__header">
           <div class="dhl-card__title-group">
             <ui-icon name="truck" size="md" color="#71717A"></ui-icon>
             <h2 class="dhl-card__title">DHL Express shipment</h2>
-            <ui-badge [variant]="shipment.status === 'booked' ? 'success' : 'secondary'">
-              {{ shipment.status === 'booked' ? 'Booked' : 'Cancelled' }}
+            <ui-badge [variant]="shipment.status === 'booked' ? 'success' : shipment.status === 'failed' ? 'danger' : 'secondary'">
+              {{ shipment.status === 'booked' ? 'Booked' : shipment.status === 'failed' ? 'Request failed' : 'Cancelled' }}
             </ui-badge>
             @if (shipment.isCustomsDeclarable) {
               <ui-badge variant="info">Customs</ui-badge>
@@ -336,17 +336,24 @@
               @if (shipment.status === 'booked' && order().trackingUrl) {
                 <a [href]="order().trackingUrl" target="_blank" rel="noopener noreferrer">{{ shipment.awb }} ↗</a>
               } @else {
-                {{ shipment.awb }}
+                {{ shipment.awb || '—' }}
               }
             </dd>
           </div>
+          <div><dt>Reference</dt><dd>{{ shipment.reference || '—' }}</dd></div>
           <div><dt>Product</dt><dd>{{ shipment.productName || 'DHL Express' }} ({{ shipment.productCode }})</dd></div>
-          <div><dt>Shipping date</dt><dd>{{ formatDate(shipment.plannedShippingAt) }}</dd></div>
+          <div><dt>Shipping date</dt><dd>{{ formatDateTime(shipment.plannedShippingAt) }}</dd></div>
           <div><dt>Estimated delivery</dt><dd>{{ shipment.estimatedDeliveryAt ? formatDate(shipment.estimatedDeliveryAt) : '—' }}</dd></div>
           <div><dt>Packages</dt><dd>{{ shipment.packages.length }} · {{ shipment.totalWeight }} kg</dd></div>
           <div><dt>DHL price</dt><dd>{{ shipment.price ? shipment.price + ' ' + (shipment.currency || '') : '—' }}</dd></div>
           <div><dt>Receiver</dt><dd>{{ shipment.receiver.companyName }}, {{ shipment.receiver.postalCode }} {{ shipment.receiver.cityName }} ({{ shipment.receiver.countryCode }})</dd></div>
           <div><dt>Label</dt><dd>{{ shipment.labelFormat === 'thermal' ? '4×6" thermal' : 'A4' }}</dd></div>
+          @if (shipment.status === 'failed') {
+            <div class="dhl-card__wide">
+              <dt>DHL refused the request</dt>
+              <dd><span class="dhl-card__error">{{ shipment.errorMessage || 'No reason returned.' }}</span> Correct the data and use "Request DHL" again.</dd>
+            </div>
+          }
           <div class="dhl-card__wide">
             <dt>Courier pickup</dt>
             <dd>

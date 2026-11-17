@@ -83,6 +83,11 @@
               <span class="dhl__label">Shipping date<span class="dhl__req">*</span></span>
               <input type="date" [value]="f.plannedShippingDate" (input)="updateField('plannedShippingDate', $event)">
             </label>
+            <label class="dhl__field">
+              <span class="dhl__label">Shipping time</span>
+              <input type="time" [value]="f.plannedShippingTime" (input)="updateField('plannedShippingTime', $event)">
+              <span class="dhl__hint">When the parcel is ready at the warehouse</span>
+            </label>
             <div class="dhl__field">
               <span class="dhl__label">Label format</span>
               <div class="dhl__radios">
@@ -97,6 +102,11 @@
             <label class="dhl__field">
               <span class="dhl__label">Content description</span>
               <input type="text" maxlength="70" [value]="f.description" (input)="updateField('description', $event)">
+            </label>
+            <label class="dhl__field">
+              <span class="dhl__label">Reference number</span>
+              <input type="text" maxlength="35" placeholder="e.g. EA2068302 ZGL EA4109536" [value]="f.reference" (input)="updateField('reference', $event)">
+              <span class="dhl__hint">Printed on the label next to the order number</span>
             </label>
           </div>
         </section>
@@ -197,7 +207,7 @@
       <div class="dhl__footer">
         <button type="button" class="btn btn--ghost" (click)="onClose()" [disabled]="saving">Cancel</button>
         <button type="button" class="btn btn--primary" (click)="onSubmit()" [disabled]="saving">
-          @if (saving) { <span>Booking with DHL…</span> } @else { <span>Book shipment</span><ui-icon name="truck" size="sm" color="white"></ui-icon> }
+          @if (saving) { <span>Requesting…</span> } @else { <span>Request DHL</span><ui-icon name="truck" size="sm" color="white"></ui-icon> }
         </button>
       </div>
     </div>
