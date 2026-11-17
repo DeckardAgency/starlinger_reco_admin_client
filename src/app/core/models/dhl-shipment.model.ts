@@ -167,4 +167,8 @@ export const DHL_PRODUCTS: Array<{ value: string; label: string }> = [
   { value: 'K', label: 'Express 9:00 (K/E)' },
   { value: 'W', label: 'Economy Select (W/H)' },
   { value: '7', label: 'Express Easy (7/8)' },
+  // Same origin and destination country: DHL sells domestic codes instead of U/T/K
+  { value: 'N', label: 'Express Domestic (N)' },
+  { value: '1', label: 'Express Domestic 12:00 (1)' },
+  { value: 'I', label: 'Express Domestic 9:00 (I)' },
 ];
