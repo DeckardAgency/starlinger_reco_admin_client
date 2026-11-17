@@ -59,6 +59,19 @@
           </ui-select>
         </ui-form-field>
 
+        @if (deliveryType().carrierCode === 'DHL') {
+          <ui-form-field label="DHL product" layout="horizontal"
+                         hint="Service booked when an admin creates a DHL Express shipment for an order with this delivery type.">
+            <ui-select
+              variant="pill"
+              [options]="dhlProductOptions"
+              [value]="deliveryType().dhlProductCode || ''"
+              placeholder="Express Worldwide (default)"
+              (selectChange)="onDhlProductChange($event)">
+            </ui-select>
+          </ui-form-field>
+        }
+
         <ui-form-field label="Gross factor" layout="horizontal">
           <input type="text" [value]="deliveryType().grossFactor || ''" (input)="onGrossFactorChange($event)" placeholder="1.00">
         </ui-form-field>

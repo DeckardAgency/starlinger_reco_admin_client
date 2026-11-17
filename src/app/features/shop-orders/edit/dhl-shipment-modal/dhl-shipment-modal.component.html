@@ -1,0 +1,205 @@
+<ui-modal [isOpen]="isOpen" (isOpenChange)="!$event && onClose()" [showClose]="false" [closeOnBackdrop]="false" size="xl">
+  @if (form(); as f) {
+    <div class="dhl">
+      <div class="dhl__header">
+        <div class="dhl__title-group">
+          <ui-icon name="truck" size="md" color="#71717A"></ui-icon>
+          <h3 class="dhl__title">Create DHL Express shipment</h3>
+          @if (orderNumber) {
+            <span class="dhl__order">Order {{ orderNumber }}</span>
+          }
+          @if (f.isTestEnvironment) {
+            <ui-badge variant="warning">DHL test system — nothing real is booked</ui-badge>
+          }
+          @if (f.isCustomsDeclarable) {
+            <ui-badge variant="info">Customs shipment (outside EU)</ui-badge>
+          }
+        </div>
+        <button type="button" class="dhl__close" (click)="onClose()" [disabled]="saving" aria-label="Close">
+          <ui-icon name="close" size="md"></ui-icon>
+        </button>
+      </div>
+
+      <div class="dhl__body">
+        @if (errors.length > 0) {
+          <div class="dhl__notice dhl__notice--error">
+            <ui-icon name="error" size="sm"></ui-icon>
+            <ul>
+              @for (e of errors; track e) { <li>{{ e }}</li> }
+            </ul>
+          </div>
+        } @else if (f.issues.length > 0) {
+          <div class="dhl__notice dhl__notice--warning">
+            <ui-icon name="warning" size="sm"></ui-icon>
+            <div>
+              <strong>Please complete before booking:</strong>
+              <ul>
+                @for (i of f.issues; track i) { <li>{{ i }}</li> }
+              </ul>
+            </div>
+          </div>
+        }
+
+        <!-- Shipper / receiver -->
+        <div class="dhl__parties">
+          @for (party of parties; track party) {
+            <section class="dhl__section">
+              <h4 class="dhl__section-title">{{ party === 'shipper' ? 'Shipper (warehouse)' : 'Receiver (customer)' }}</h4>
+              <div class="dhl__grid">
+                @for (field of partyFields; track field.key) {
+                  <label class="dhl__field" [class.dhl__field--half]="field.width === 'half'">
+                    <span class="dhl__label">{{ field.label }}@if (field.required) {<span class="dhl__req">*</span>}</span>
+                    <input
+                      type="text"
+                      [value]="f[party][field.key]"
+                      [class.dhl__input--missing]="field.required && !f[party][field.key]"
+                      [attr.maxlength]="field.key === 'countryCode' ? 2 : 100"
+                      (input)="updateParty(party, field.key, $event)">
+                  </label>
+                }
+              </div>
+            </section>
+          }
+        </div>
+
+        <!-- Shipment -->
+        <section class="dhl__section">
+          <h4 class="dhl__section-title">Shipment</h4>
+          <div class="dhl__grid dhl__grid--4">
+            <label class="dhl__field">
+              <span class="dhl__label">DHL product<span class="dhl__req">*</span></span>
+              <ui-select variant="pill" [options]="productOptions()" [value]="f.productCode" placeholder="Select product" (selectChange)="setProduct($event)"></ui-select>
+              @if (f.rateError) {
+                <span class="dhl__hint dhl__hint--warn">Prices unavailable: {{ f.rateError }}</span>
+              } @else if (selectedRate(); as rate) {
+                <span class="dhl__hint">
+                  {{ money(rate.price, rate.currency) }}
+                  @if (rate.estimatedDeliveryAt) { · delivery {{ shortDate(rate.estimatedDeliveryAt) }} }
+                  @if (rate.pickupCutoffAt) { · pickup cut-off {{ shortTime(rate.pickupCutoffAt) }} }
+                </span>
+              }
+            </label>
+            <label class="dhl__field">
+              <span class="dhl__label">Shipping date<span class="dhl__req">*</span></span>
+              <input type="date" [value]="f.plannedShippingDate" (input)="updateField('plannedShippingDate', $event)">
+            </label>
+            <div class="dhl__field">
+              <span class="dhl__label">Label format</span>
+              <div class="dhl__radios">
+                @for (lf of labelFormats; track lf.value) {
+                  <label class="dhl__radio">
+                    <input type="radio" name="labelFormat" [checked]="f.labelFormat === lf.value" (change)="setLabelFormat(lf.value)">
+                    {{ lf.label }}
+                  </label>
+                }
+              </div>
+            </div>
+            <label class="dhl__field">
+              <span class="dhl__label">Content description</span>
+              <input type="text" maxlength="70" [value]="f.description" (input)="updateField('description', $event)">
+            </label>
+          </div>
+        </section>
+
+        <!-- Packages -->
+        <section class="dhl__section">
+          <div class="dhl__section-head">
+            <h4 class="dhl__section-title">Packages <span class="dhl__muted">(kg / cm)</span></h4>
+            <span class="dhl__muted">Total {{ totalWeight() | number:'1.0-3' }} kg</span>
+          </div>
+          <table class="dhl__table">
+            <thead>
+              <tr><th>#</th><th>Weight (kg)*</th><th>Length*</th><th>Width*</th><th>Height*</th><th></th></tr>
+            </thead>
+            <tbody>
+              @for (p of f.packages; track $index; let i = $index) {
+                <tr>
+                  <td class="dhl__muted">{{ i + 1 }}</td>
+                  <td><input type="number" min="0.001" step="0.001" [value]="p.weight ?? ''" [class.dhl__input--missing]="!p.weight" (input)="updatePackage(i, 'weight', $event)"></td>
+                  <td><input type="number" min="1" step="1" [value]="p.length ?? ''" [class.dhl__input--missing]="!p.length" (input)="updatePackage(i, 'length', $event)"></td>
+                  <td><input type="number" min="1" step="1" [value]="p.width ?? ''" [class.dhl__input--missing]="!p.width" (input)="updatePackage(i, 'width', $event)"></td>
+                  <td><input type="number" min="1" step="1" [value]="p.height ?? ''" [class.dhl__input--missing]="!p.height" (input)="updatePackage(i, 'height', $event)"></td>
+                  <td class="dhl__row-actions">
+                    <button type="button" class="dhl__icon-btn" title="Duplicate" (click)="copyPackage(i)"><ui-icon name="copy" size="sm"></ui-icon></button>
+                    <button type="button" class="dhl__icon-btn" title="Remove" [disabled]="f.packages.length === 1" (click)="removePackage(i)"><ui-icon name="trash" size="sm"></ui-icon></button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <button type="button" class="btn btn--outline btn--sm" (click)="addPackage()">
+            <ui-icon name="plus" size="sm"></ui-icon><span>Add package</span>
+          </button>
+        </section>
+
+        <!-- Customs -->
+        @if (f.isCustomsDeclarable) {
+          <section class="dhl__section">
+            <div class="dhl__section-head">
+              <h4 class="dhl__section-title">Customs declaration</h4>
+              <span class="dhl__muted">Declared value {{ declaredValue() | number:'1.2-2' }} {{ f.currency }}</span>
+            </div>
+            <div class="dhl__grid dhl__grid--4">
+              <label class="dhl__field">
+                <span class="dhl__label">Incoterm<span class="dhl__req">*</span></span>
+                <ui-select variant="pill" [options]="incotermOptions" [value]="f.incoterm" (selectChange)="setIncoterm($event)"></ui-select>
+              </label>
+            </div>
+            <p class="dhl__hint">HS code and country of origin entered here are saved on the product, so each part is only entered once.</p>
+            <table class="dhl__table dhl__table--lines">
+              <thead>
+                <tr><th>Item</th><th>Qty*</th><th>Unit price ({{ f.currency }})*</th><th>HS code*</th><th>Origin*</th><th>Net kg*</th></tr>
+              </thead>
+              <tbody>
+                @for (l of f.lineItems; track $index; let i = $index) {
+                  <tr>
+                    <td><input type="text" maxlength="70" [value]="l.description" [title]="lineLabel(l)" (input)="updateLine(i, 'description', $event)"></td>
+                    <td class="dhl__col-s"><input type="number" min="1" step="1" [value]="l.quantity" (input)="updateLine(i, 'quantity', $event)"></td>
+                    <td class="dhl__col-m"><input type="number" min="0" step="0.01" [value]="l.unitPrice" (input)="updateLine(i, 'unitPrice', $event)"></td>
+                    <td class="dhl__col-m"><input type="text" inputmode="numeric" maxlength="10" placeholder="e.g. 84779080" [value]="l.hsCode" [class.dhl__input--missing]="!l.hsCode" (input)="updateLine(i, 'hsCode', $event)"></td>
+                    <td class="dhl__col-s"><input type="text" maxlength="2" placeholder="AT" [value]="l.countryOfOrigin" [class.dhl__input--missing]="!l.countryOfOrigin" (input)="updateLine(i, 'countryOfOrigin', $event)"></td>
+                    <td class="dhl__col-s"><input type="number" min="0.001" step="0.001" [value]="l.netWeight ?? ''" [class.dhl__input--missing]="!l.netWeight" (input)="updateLine(i, 'netWeight', $event)"></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </section>
+        }
+
+        <!-- Pickup -->
+        <section class="dhl__section">
+          <div class="dhl__section-head">
+            <h4 class="dhl__section-title">Courier pickup</h4>
+            <ui-toggle label="Request a courier pickup" labelPosition="left" [checked]="f.pickup.requested" (toggleChange)="togglePickup($event)"></ui-toggle>
+          </div>
+          @if (f.pickup.requested) {
+            <div class="dhl__grid dhl__grid--4">
+              <label class="dhl__field">
+                <span class="dhl__label">Ready from</span>
+                <input type="time" [value]="f.pickup.readyTime" (input)="updatePickup('readyTime', $event)">
+              </label>
+              <label class="dhl__field">
+                <span class="dhl__label">Closes at</span>
+                <input type="time" [value]="f.pickup.closeTime" (input)="updatePickup('closeTime', $event)">
+              </label>
+              <label class="dhl__field dhl__field--wide">
+                <span class="dhl__label">Pickup location</span>
+                <input type="text" maxlength="80" placeholder="e.g. Reception, Gate 2" [value]="f.pickup.location" (input)="updatePickup('location', $event)">
+              </label>
+            </div>
+            <p class="dhl__hint">Booked on the shipping date. DHL needs a window of at least 90 minutes; if DHL rejects it, the shipment stays booked and the pickup can be retried.</p>
+          } @else {
+            <p class="dhl__hint">No pickup is requested — the parcel goes with the regular daily collection or is dropped off.</p>
+          }
+        </section>
+      </div>
+
+      <div class="dhl__footer">
+        <button type="button" class="btn btn--ghost" (click)="onClose()" [disabled]="saving">Cancel</button>
+        <button type="button" class="btn btn--primary" (click)="onSubmit()" [disabled]="saving">
+          @if (saving) { <span>Booking with DHL…</span> } @else { <span>Book shipment</span><ui-icon name="truck" size="sm" color="white"></ui-icon> }
+        </button>
+      </div>
+    </div>
+  }
+</ui-modal>

@@ -13,6 +13,7 @@ export interface Warehouse {
   officeName: string;
   address: string;
   city: string;
+  postalCode?: string | null;
   country: string | null;
   phone: string;
   email: string;

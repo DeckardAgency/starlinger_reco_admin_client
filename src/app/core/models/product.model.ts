@@ -20,6 +20,9 @@ export interface Product {
   unit: string;
   price: number;
   weight: string;
+  /** Customs (DHL Express exports outside the EU) */
+  hsCode?: string | null;
+  countryOfOrigin?: string | null;
   technicalDescription: string;
   machineText: string;
   statistic: string;

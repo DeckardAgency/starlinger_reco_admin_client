@@ -39,6 +39,8 @@ interface ProductDetail {
   quoteItemLimit: number;
   fixedQuantity: number;
   weight: string;
+  hsCode: string;
+  countryOfOrigin: string;
   productGroup: string;
   productType: string;
   catalogCode: string;
@@ -82,6 +84,8 @@ const EMPTY_PRODUCT: ProductDetail = {
   quoteItemLimit: 0,
   fixedQuantity: 0,
   weight: '',
+  hsCode: '',
+  countryOfOrigin: '',
   productGroup: '',
   productType: '',
   catalogCode: '',
@@ -412,6 +416,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       quoteItemLimit: p.quoteItemLimit ?? 0,
       fixedQuantity: p.fixedQty ?? 0,
       weight: p.weight ?? '',
+      hsCode: p.hsCode ?? '',
+      countryOfOrigin: p.countryOfOrigin ?? '',
       productGroup: String(p.productGroupId ?? ''),
       productType: p.productType ?? '',
       catalogCode: p.catalogCode ?? '',
@@ -907,6 +913,8 @@ export class ProductsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       quoteItemLimit: product.quoteItemLimit ?? null,
       fixedQty: product.fixedQuantity ?? null,
       weight: product.weight || null,
+      hsCode: product.hsCode.replace(/[^0-9]/g, '') || null,
+      countryOfOrigin: product.countryOfOrigin.trim().toUpperCase() || null,
       productGroupId: product.productGroup ? parseInt(product.productGroup, 10) : null,
       productType: product.productType || null,
       catalogCode: product.catalogCode || null,

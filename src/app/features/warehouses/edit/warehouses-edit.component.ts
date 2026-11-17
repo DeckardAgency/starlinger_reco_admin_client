@@ -31,6 +31,7 @@ interface WarehouseDetail {
   contactPerson: string;
   address: string;
   city: string;
+  postalCode: string;
   phone: string;
   email: string;
   url: string;
@@ -47,6 +48,7 @@ const EMPTY_WAREHOUSE: WarehouseDetail = {
   contactPerson: '',
   address: '',
   city: '',
+  postalCode: '',
   phone: '',
   email: '',
   url: '',
@@ -195,6 +197,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
           contactPerson: warehouse.contactPerson || '',
           address: warehouse.address || '',
           city: warehouse.city || '',
+          postalCode: warehouse.postalCode || '',
           phone: warehouse.phone || '',
           email: warehouse.email || '',
           url: warehouse.url || '',
@@ -268,6 +271,7 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
       contactPerson: w.contactPerson || null,
       address: w.address || null,
       city: w.city || null,
+      postalCode: w.postalCode || null,
       phone: w.phone || null,
       email: w.email || null,
       url: w.url || null,
@@ -351,6 +355,11 @@ export class WarehousesEditComponent implements OnInit, OnDestroy, AfterViewInit
   onCityChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.warehouse.update(w => ({ ...w, city: input.value }));
+  }
+
+  onPostalCodeChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.warehouse.update(w => ({ ...w, postalCode: input.value }));
   }
 
   onPhoneChange(event: Event): void {

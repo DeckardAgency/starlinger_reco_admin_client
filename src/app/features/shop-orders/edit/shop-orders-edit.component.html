@@ -42,6 +42,12 @@
           <ui-icon name="printer" size="sm"></ui-icon>
           <span>Print</span>
         </button>
+        @if (canBookDhl()) {
+          <button class="btn btn--primary" [disabled]="dhlPrefillLoading()" (click)="openDhlModal()">
+            <ui-icon name="truck" size="sm"></ui-icon>
+            <span>{{ dhlPrefillLoading() ? 'Preparing…' : 'Create DHL shipment' }}</span>
+          </button>
+        }
         <button class="btn btn--primary" [disabled]="isSaving()" (click)="onSave()">
           <span>Save</span>
           <ui-icon name="save" size="sm"></ui-icon>
@@ -215,7 +221,7 @@
           <ng-container *ngIf="showTrackingFields()">
             <ui-form-field label="Tracking number" layout="horizontal">
               <div class="input-with-warning">
-                <input type="text" [value]="order().trackingNumber" (input)="onTrackingNumberChange($event)" placeholder="e.g. 00340434292135100068">
+                <input type="text" [value]="order().trackingNumber" (input)="onTrackingNumberChange($event)" placeholder="e.g. 8501813320 (DHL Express waybill)">
                 @if (!order().trackingNumber && (order().status === 'shipped' || order().status === 'delivered')) {
                   <span class="input-warning-icon" tabindex="0">⚠
                     <span class="input-warning-tooltip" role="tooltip">
@@ -269,6 +275,86 @@
         </div>
       </div>
     </div>
+
+    <!-- DHL Express shipment (booked via MyDHL from this page) -->
+    @if (dhlShipment(); as shipment) {
+      <div class="dhl-card" [class.dhl-card--cancelled]="shipment.status !== 'booked'">
+        <div class="dhl-card__header">
+          <div class="dhl-card__title-group">
+            <ui-icon name="truck" size="md" color="#71717A"></ui-icon>
+            <h2 class="dhl-card__title">DHL Express shipment</h2>
+            <ui-badge [variant]="shipment.status === 'booked' ? 'success' : 'secondary'">
+              {{ shipment.status === 'booked' ? 'Booked' : 'Cancelled' }}
+            </ui-badge>
+            @if (shipment.isCustomsDeclarable) {
+              <ui-badge variant="info">Customs</ui-badge>
+            }
+          </div>
+          <div class="dhl-card__actions">
+            @for (type of shipment.documentTypes; track type) {
+              <button class="btn btn--outline" (click)="onDhlDocument(type)">
+                <ui-icon name="printer" size="sm"></ui-icon>
+                <span>{{ type === 'label' ? 'Print label' : type === 'invoice' ? 'Commercial invoice' : type }}</span>
+              </button>
+            }
+            @if (shipment.status === 'booked') {
+              @if (shipment.pickupConfirmationNumber && !shipment.pickupCancelledAt) {
+                <button class="btn btn--outline" [disabled]="dhlBusy()" (click)="onCancelPickup()">Cancel pickup</button>
+              } @else {
+                <button class="btn btn--outline" [disabled]="dhlBusy()" (click)="openPickupModal()">
+                  <ui-icon name="calendar" size="sm"></ui-icon>
+                  <span>Book pickup</span>
+                </button>
+              }
+              <button class="btn btn--outline btn--danger" [disabled]="dhlBusy()" (click)="onCancelDhlShipment()">Cancel shipment</button>
+            }
+          </div>
+        </div>
+
+        <dl class="dhl-card__grid">
+          <div>
+            <dt>Waybill (AWB)</dt>
+            <dd>
+              @if (shipment.status === 'booked' && order().trackingUrl) {
+                <a [href]="order().trackingUrl" target="_blank" rel="noopener noreferrer">{{ shipment.awb }} ↗</a>
+              } @else {
+                {{ shipment.awb }}
+              }
+            </dd>
+          </div>
+          <div><dt>Product</dt><dd>{{ shipment.productName || 'DHL Express' }} ({{ shipment.productCode }})</dd></div>
+          <div><dt>Shipping date</dt><dd>{{ formatDate(shipment.plannedShippingAt) }}</dd></div>
+          <div><dt>Estimated delivery</dt><dd>{{ shipment.estimatedDeliveryAt ? formatDate(shipment.estimatedDeliveryAt) : '—' }}</dd></div>
+          <div><dt>Packages</dt><dd>{{ shipment.packages.length }} · {{ shipment.totalWeight }} kg</dd></div>
+          <div><dt>DHL price</dt><dd>{{ shipment.price ? shipment.price + ' ' + (shipment.currency || '') : '—' }}</dd></div>
+          <div><dt>Receiver</dt><dd>{{ shipment.receiver.companyName }}, {{ shipment.receiver.postalCode }} {{ shipment.receiver.cityName }} ({{ shipment.receiver.countryCode }})</dd></div>
+          <div><dt>Label</dt><dd>{{ shipment.labelFormat === 'thermal' ? '4×6" thermal' : 'A4' }}</dd></div>
+          <div class="dhl-card__wide">
+            <dt>Courier pickup</dt>
+            <dd>
+              @if (shipment.pickupConfirmationNumber && !shipment.pickupCancelledAt) {
+                Booked — confirmation <strong>{{ shipment.pickupConfirmationNumber }}</strong>
+                @if (shipment.pickupReadyAt) {
+                  · {{ formatDateTime(shipment.pickupReadyAt) }}{{ shipment.pickupCloseTime ? ' – ' + shipment.pickupCloseTime : '' }}
+                }
+              } @else if (shipment.pickupCancelledAt) {
+                Cancelled {{ formatDateTime(shipment.pickupCancelledAt) }}
+              } @else if (shipment.pickupError) {
+                <span class="dhl-card__error">Not booked — {{ shipment.pickupError }}</span>
+              } @else {
+                Not requested
+              }
+            </dd>
+          </div>
+          @if (shipment.warnings.length) {
+            <div class="dhl-card__wide"><dt>DHL notes</dt><dd>{{ shipment.warnings.join(' · ') }}</dd></div>
+          }
+          @if (shipment.cancelledAt) {
+            <div class="dhl-card__wide"><dt>Cancelled</dt><dd>{{ formatDateTime(shipment.cancelledAt) }}</dd></div>
+          }
+        </dl>
+      </div>
+    }
 
     <!-- Tracking timeline (full-width section, shown when tracking is active) -->
     <div class="tracking-section" *ngIf="showTrackingFields()">
@@ -407,6 +493,42 @@
   </div>
   }
 </div>
+
+<!-- DHL booking modal -->
+<app-dhl-shipment-modal
+  [isOpen]="dhlModalOpen()"
+  [prefill]="dhlPrefill()"
+  [orderNumber]="order().internalRef"
+  [saving]="dhlBooking()"
+  [errors]="dhlErrors()"
+  (closeModal)="dhlModalOpen.set(false)"
+  (book)="onDhlBook($event)">
+</app-dhl-shipment-modal>
+
+<!-- Courier pickup for an already booked DHL shipment -->
+<ui-modal [isOpen]="pickupModalOpen()" (isOpenChange)="pickupModalOpen.set($event)" title="Book courier pickup" size="sm">
+  <div class="pickup-form">
+    <ui-form-field label="Pickup date" layout="horizontal">
+      <input type="date" [value]="pickupForm().date" (input)="updatePickupForm('date', $event)">
+    </ui-form-field>
+    <ui-form-field label="Ready from" layout="horizontal">
+      <input type="time" [value]="pickupForm().readyTime" (input)="updatePickupForm('readyTime', $event)">
+    </ui-form-field>
+    <ui-form-field label="Closes at" layout="horizontal">
+      <input type="time" [value]="pickupForm().closeTime" (input)="updatePickupForm('closeTime', $event)">
+    </ui-form-field>
+    <ui-form-field label="Location" layout="horizontal">
+      <input type="text" maxlength="80" [value]="pickupForm().location" (input)="updatePickupForm('location', $event)" placeholder="e.g. Reception, Gate 2">
+    </ui-form-field>
+    <p class="pickup-form__hint">DHL needs a window of at least 90 minutes, and a same-day pickup must be booked before the local courier cut-off (13:00 at Weissenbach).</p>
+  </div>
+  <div modalFooter class="pickup-form__footer">
+    <button class="btn btn--ghost" (click)="pickupModalOpen.set(false)" [disabled]="dhlBusy()">Cancel</button>
+    <button class="btn btn--primary" (click)="onBookPickup()" [disabled]="dhlBusy()">
+      <span>{{ dhlBusy() ? 'Booking…' : 'Book pickup' }}</span>
+    </button>
+  </div>
+</ui-modal>
 
 <!-- Templates for custom cell rendering -->
 <ng-template #unitPriceTemplate let-row>

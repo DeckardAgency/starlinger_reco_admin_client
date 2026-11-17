@@ -22,6 +22,10 @@ import { Client, ClientAddress } from '@core/models/client.model';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { AlertService } from '@services/alert.service';
 import { LoggerService } from '@core/services/logger.service';
+import { DhlShipmentService } from '@core/services/http/dhl-shipment.service';
+import { DhlApiError, DhlBookingResponse, DhlPrefill, DhlShipment } from '@core/models/dhl-shipment.model';
+import { DhlShipmentModalComponent } from './dhl-shipment-modal/dhl-shipment-modal.component';
+import { ModalComponent } from '@app/ui-kit/organisms/modal/modal.component';
 
 // Interfaces
 interface OrderProduct {
@@ -143,7 +147,9 @@ const EMPTY_ORDER: ShopOrderDetail = {
     FormFieldComponent,
     IconComponent,
     DataTableComponent,
-    SelectComponent
+    SelectComponent,
+    DhlShipmentModalComponent,
+    ModalComponent
   ],
   templateUrl: './shop-orders-edit.component.html',
   styleUrls: ['./shop-orders-edit.component.scss'],
@@ -159,6 +165,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private userService = inject(UserService);
   private clientService = inject(ClientService);
   private addressService = inject(AddressService);
+  private dhlService = inject(DhlShipmentService);
   private toastService = inject(ToastService);
   private alertService = inject(AlertService);
   private logger = inject(LoggerService);
@@ -547,6 +554,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
           occurredAt: e.occurredAt,
           source: e.source ?? 'manual',
         })));
+        this.loadDhlShipment(order.id);
         // Load contacts and addresses based on client
         const clientCode = (order.user as { client?: { code?: string } })?.client?.code;
         const clientId = (order.user as { client?: { id?: number } })?.client?.id;
@@ -900,6 +908,192 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
         this.isRefreshingTracking.set(false);
       }
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // DHL Express shipment: booking, label, courier pickup (admin only)
+  // ---------------------------------------------------------------------------
+  /** Latest shipment of the order — booked or cancelled — for the DHL card. */
+  dhlShipment = signal<DhlShipment | null>(null);
+  dhlModalOpen = signal(false);
+  dhlPrefill = signal<DhlPrefill | null>(null);
+  dhlPrefillLoading = signal(false);
+  dhlBooking = signal(false);
+  dhlErrors = signal<string[]>([]);
+  /** Pickup / cancel request in flight */
+  dhlBusy = signal(false);
+  pickupModalOpen = signal(false);
+  pickupForm = signal({ date: '', readyTime: '13:00', closeTime: '16:00', location: 'Reception' });
+
+  activeDhlShipment = computed(() => {
+    const s = this.dhlShipment();
+    return s && s.status === 'booked' ? s : null;
+  });
+
+  canBookDhl = computed(() => {
+    const carrier = this.effectiveCarrier().toLowerCase();
+    return this.order().status === 'ready_for_shipment'
+      && !this.activeDhlShipment()
+      && (carrier === '' || carrier === 'dhl');
+  });
+
+  private loadDhlShipment(orderId: number): void {
+    if (!orderId) return;
+    this.dhlService.getLatestForOrder(orderId).subscribe({
+      next: (shipment) => { this.dhlShipment.set(shipment); this.cdr.markForCheck(); },
+      error: (err) => this.logger.error('[DHL] Failed to load shipment', err),
+    });
+  }
+
+  openDhlModal(): void {
+    const id = this.order().id;
+    if (!id || this.dhlPrefillLoading()) return;
+    this.dhlErrors.set([]);
+    this.dhlPrefillLoading.set(true);
+    this.dhlService.prefill(id)
+      .pipe(finalize(() => { this.dhlPrefillLoading.set(false); this.cdr.markForCheck(); }))
+      .subscribe({
+        next: (prefill) => { this.dhlPrefill.set(prefill); this.dhlModalOpen.set(true); },
+        error: (err) => this.toastService.error(this.dhlErrorMessage(err, 'Could not prepare the DHL shipment.')),
+      });
+  }
+
+  onDhlBook(input: DhlPrefill): void {
+    const id = this.order().id;
+    if (!id || this.dhlBooking()) return;
+    this.dhlBooking.set(true);
+    this.dhlErrors.set([]);
+    this.dhlService.book(id, input)
+      .pipe(finalize(() => { this.dhlBooking.set(false); this.cdr.markForCheck(); }))
+      .subscribe({
+        next: (res) => {
+          this.dhlModalOpen.set(false);
+          this.applyDhlResponse(res);
+          this.toastService.success(`DHL shipment booked — waybill ${res.shipment.awb}.`);
+          if (res.shipment.pickupError) {
+            this.toastService.warning(`Shipment booked, but the pickup was not: ${res.shipment.pickupError}`);
+          }
+          // The tracking entry and log line are written server-side — reload to show them
+          setTimeout(() => this.loadOrder(String(id)), 800);
+        },
+        error: (err) => {
+          const body = (err?.error ?? {}) as DhlApiError;
+          const lines = [body.message, ...(body.errors ?? []), ...(body.details ?? [])].filter((l): l is string => !!l);
+          this.dhlErrors.set(lines.length ? Array.from(new Set(lines)) : [this.dhlErrorMessage(err, 'DHL booking failed.')]);
+          this.toastService.error(this.dhlErrorMessage(err, 'DHL booking failed.'));
+        },
+      });
+  }
+
+  onDhlDocument(type: string): void {
+    const s = this.dhlShipment();
+    if (!s) return;
+    this.dhlService.downloadDocument(s.id, type).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      },
+      error: (err) => {
+        this.logger.error('[DHL] Document download failed', err);
+        this.toastService.error('Could not download the document.');
+      },
+    });
+  }
+
+  openPickupModal(): void {
+    const s = this.activeDhlShipment();
+    if (!s) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const planned = (s.plannedShippingAt || '').slice(0, 10);
+    this.pickupForm.set({
+      date: planned && planned >= today ? planned : today,
+      readyTime: '13:00',
+      closeTime: s.pickupCloseTime || '16:00',
+      location: 'Reception',
+    });
+    this.pickupModalOpen.set(true);
+  }
+
+  updatePickupForm(field: 'date' | 'readyTime' | 'closeTime' | 'location', event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.pickupForm.update(f => ({ ...f, [field]: value }));
+  }
+
+  onBookPickup(): void {
+    const s = this.activeDhlShipment();
+    if (!s || this.dhlBusy()) return;
+    this.dhlBusy.set(true);
+    this.dhlService.bookPickup(s.id, this.pickupForm())
+      .pipe(finalize(() => { this.dhlBusy.set(false); this.cdr.markForCheck(); }))
+      .subscribe({
+        next: (res) => {
+          this.pickupModalOpen.set(false);
+          this.applyDhlResponse(res);
+          this.toastService.success(`Pickup booked — confirmation ${res.shipment.pickupConfirmationNumber}.`);
+        },
+        error: (err) => {
+          // The error is stored on the shipment (pickupError) — reload so the card shows it
+          this.loadDhlShipment(this.order().id);
+          this.toastService.error(this.dhlErrorMessage(err, 'Pickup booking failed.'));
+        },
+      });
+  }
+
+  async onCancelPickup(): Promise<void> {
+    const s = this.activeDhlShipment();
+    if (!s || this.dhlBusy()) return;
+    if (!(await this.alertService.confirm('Cancel the courier pickup with DHL?', 'Cancel pickup'))) return;
+    this.dhlBusy.set(true);
+    this.dhlService.cancelPickup(s.id)
+      .pipe(finalize(() => { this.dhlBusy.set(false); this.cdr.markForCheck(); }))
+      .subscribe({
+        next: (res) => { this.applyDhlResponse(res); this.toastService.success('Pickup cancelled.'); },
+        error: (err) => this.toastService.error(this.dhlErrorMessage(err, 'Could not cancel the pickup.')),
+      });
+  }
+
+  async onCancelDhlShipment(): Promise<void> {
+    const s = this.activeDhlShipment();
+    if (!s || this.dhlBusy()) return;
+    const ok = await this.alertService.confirm(
+      `Cancel DHL shipment ${s.awb}? Any courier pickup is cancelled, the label must not be used, and the order goes back to "Ready for shipment".`,
+      'Cancel DHL shipment'
+    );
+    if (!ok) return;
+    this.dhlBusy.set(true);
+    this.dhlService.cancel(s.id)
+      .pipe(finalize(() => { this.dhlBusy.set(false); this.cdr.markForCheck(); }))
+      .subscribe({
+        next: (res) => {
+          this.applyDhlResponse(res);
+          this.toastService.success('DHL shipment cancelled.');
+          setTimeout(() => this.loadOrder(String(this.order().id)), 800);
+        },
+        error: (err) => this.toastService.error(this.dhlErrorMessage(err, 'Could not cancel the shipment.')),
+      });
+  }
+
+  /** Every booking action returns the order's status/tracking — sync the form so Save never writes stale values back. */
+  private applyDhlResponse(res: DhlBookingResponse): void {
+    this.dhlShipment.set(res.shipment);
+    const o = res.order;
+    this.order.update(current => ({
+      ...current,
+      status: o.status,
+      enableSale: o.status !== 'draft',
+      trackingNumber: o.trackingNumber ?? '',
+      trackingCarrier: o.trackingCarrier ?? '',
+      trackingUrl: o.trackingUrl ?? '',
+      dispatchedAt: o.dispatchedAt ?? '',
+    }));
+    this.selectedStatus.set(o.status);
+    this.cdr.markForCheck();
+  }
+
+  private dhlErrorMessage(err: any, fallback: string): string {
+    const body = err?.error as DhlApiError | undefined;
+    return body?.message || (typeof err?.message === 'string' && err.status ? `${fallback} (${err.status})` : fallback);
   }
 
   // Show tracking fields when order is shipped/delivered or has a tracking number

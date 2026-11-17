@@ -45,6 +45,10 @@
           <input type="text" [value]="warehouse().city || ''" (input)="onCityChange($event)" placeholder="Enter city">
         </ui-form-field>
 
+        <ui-form-field label="Postal code" layout="horizontal" hint="Required as the DHL Express shipper / pickup address.">
+          <input type="text" [value]="warehouse().postalCode || ''" (input)="onPostalCodeChange($event)" placeholder="e.g. 2564">
+        </ui-form-field>
+
         <ui-form-field label="Phone" layout="horizontal">
           <input type="text" [value]="warehouse().phone || ''" (input)="onPhoneChange($event)" placeholder="Enter phone">
         </ui-form-field>

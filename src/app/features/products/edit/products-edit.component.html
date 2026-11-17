@@ -124,6 +124,14 @@
           <ui-form-field label="Weight" layout="horizontal">
             <input type="text" [value]="product().weight" placeholder="kg 0.00" (input)="updateProduct('weight', $event)">
           </ui-form-field>
+          <ui-form-field label="HS code" layout="horizontal"
+                         hint="Customs tariff number (6–10 digits) for DHL Express shipments outside the EU.">
+            <input type="text" inputmode="numeric" maxlength="10" [value]="product().hsCode" placeholder="e.g. 84779080" (input)="updateProduct('hsCode', $event)">
+          </ui-form-field>
+          <ui-form-field label="Country of origin" layout="horizontal"
+                         hint="2-letter ISO code of the country of manufacture, e.g. AT.">
+            <input type="text" maxlength="2" [value]="product().countryOfOrigin" placeholder="AT" (input)="updateProduct('countryOfOrigin', $event)">
+          </ui-form-field>
         </div>
       </div>
     </div>

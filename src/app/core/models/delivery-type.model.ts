@@ -14,6 +14,10 @@ export interface DeliveryType {
   allowRecurringPayment: boolean;
   readyForShop: boolean;
   useAsDefault: boolean;
+  /** DHL | DPD | GLS | UPS | OTHER */
+  carrierCode?: string | null;
+  /** MyDHL product code booked for this delivery type (null = Express Worldwide) */
+  dhlProductCode?: string | null;
   warehouse?: string;
   legacyId?: number;
   createdAt?: string;

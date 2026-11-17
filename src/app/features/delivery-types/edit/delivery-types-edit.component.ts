@@ -33,6 +33,7 @@ interface DeliveryTypeDetail {
   isActive: boolean;
   useAsDefault: boolean;
   carrierCode: string | null;
+  dhlProductCode: string | null;
   grossFactor: number;
   sortOrder: number;
   shortDescription: string;
@@ -45,6 +46,7 @@ const EMPTY_DELIVERY_TYPE: DeliveryTypeDetail = {
   isActive: false,
   useAsDefault: false,
   carrierCode: null,
+  dhlProductCode: null,
   grossFactor: 1.0,
   sortOrder: 0,
   shortDescription: '',
@@ -189,7 +191,8 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
           name: deliveryType.name || '',
           isActive: deliveryType.isActive ?? false,
           useAsDefault: deliveryType.useAsDefault ?? false,
-          carrierCode: (deliveryType as any).carrierCode ?? null,
+          carrierCode: deliveryType.carrierCode ?? null,
+          dhlProductCode: deliveryType.dhlProductCode ?? null,
           grossFactor: deliveryType.grossFactor ? Number(deliveryType.grossFactor) : 1.0,
           sortOrder: deliveryType.sortOrder || 0,
           shortDescription: deliveryType.shortDescription || '',
@@ -270,6 +273,7 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
       isActive: detail.isActive,
       useAsDefault: detail.useAsDefault,
       carrierCode: detail.carrierCode,
+      dhlProductCode: detail.carrierCode === 'DHL' ? (detail.dhlProductCode || null) : null,
       grossFactor: String(detail.grossFactor),
       sortOrder: detail.sortOrder,
       shortDescription: detail.shortDescription,
@@ -325,6 +329,21 @@ export class DeliveryTypesEditComponent implements OnInit, OnDestroy, AfterViewI
 
   clearCarrierCode(): void {
     this.deliveryType.update(d => ({ ...d, carrierCode: null }));
+  }
+
+  // DHL Express product booked for this delivery type (EU code; the dutiable
+  // counterpart is chosen server-side for non-EU destinations).
+  dhlProductOptions = [
+    { value: '', label: 'Express Worldwide (default)' },
+    { value: 'U', label: 'Express Worldwide' },
+    { value: 'T', label: 'Express 12:00' },
+    { value: 'K', label: 'Express 9:00' },
+    { value: 'W', label: 'Economy Select' },
+    { value: '7', label: 'Express Easy' }
+  ];
+
+  onDhlProductChange(value: string | number): void {
+    this.deliveryType.update(d => ({ ...d, dhlProductCode: String(value) || null }));
   }
 
   // Input handlers

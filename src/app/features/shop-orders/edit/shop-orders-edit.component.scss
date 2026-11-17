@@ -509,3 +509,126 @@
     display: block;
   }
 }
+
+// =============================================================================
+// DHL Express shipment card + pickup modal
+// =============================================================================
+.btn--ghost {
+  @include admin.btn-ghost;
+}
+
+.btn--danger {
+  color: #dc2626;
+  border-color: #fca5a5;
+
+  &:hover:not(:disabled) {
+    background: #fef2f2;
+    border-color: #dc2626;
+  }
+}
+
+.dhl-card {
+  background: #fff;
+  border: 1px solid #e4e4e7;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-top: 16px;
+
+  &--cancelled {
+    background: #fafafa;
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  &__title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: #232323;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px 24px;
+    margin: 0;
+
+    @media (max-width: 900px) {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    dt {
+      font-size: 12px;
+      color: #71717a;
+      margin-bottom: 2px;
+    }
+
+    dd {
+      margin: 0;
+      font-size: 14px;
+      color: #232323;
+      overflow-wrap: anywhere;
+    }
+
+    a {
+      color: #232323;
+      text-decoration: underline;
+    }
+  }
+
+  &__wide {
+    grid-column: 1 / -1;
+  }
+
+  &__error {
+    color: #b91c1c;
+  }
+}
+
+.pickup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 12px;
+    color: #71717a;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+}
