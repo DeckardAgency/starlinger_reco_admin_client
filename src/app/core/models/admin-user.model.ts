@@ -34,8 +34,8 @@ export const ADMIN_USER_ROLE_OPTIONS: AdminUserRoleOption[] = [
   },
   {
     id: 'client_agent',
-    name: 'Client Agent',
-    description: 'Places orders on behalf of the client companies their own company manages. The company must have the "Client agent" flag and managed clients assigned on its account.'
+    name: 'Agent',
+    description: 'Places orders on behalf of the customers their company manages. The company must be an agent (Agents section) with customers assigned.'
   },
   {
     id: 'finance',

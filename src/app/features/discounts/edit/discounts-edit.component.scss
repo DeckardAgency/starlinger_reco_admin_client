@@ -39,59 +39,87 @@
   }
 }
 
-.datepicker {
-  position: relative;
+// Discount | Markup segmented control + percent input
+.adjustment {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   width: 100%;
 
-  &__input {
-    display: flex;
-    align-items: center;
-    position: relative;
-    cursor: pointer;
+  &__kind {
+    display: inline-flex;
+    align-items: stretch;
+    height: 40px;
+    padding: 3px;
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    background: #f4f4f5;
+    box-sizing: border-box;
+  }
 
+  &__option {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 96px;
+    padding: 0 16px;
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: #52525b;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+
+    // Keep the native radio for keyboard / screen-reader access, hide it visually
     input {
-      cursor: pointer;
-      padding-right: 60px;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    &:hover {
+      color: #232323;
+    }
+
+    &:focus-within {
+      outline: 2px solid rgba(220, 38, 38, 0.25);
+      outline-offset: 1px;
+    }
+
+    &--active {
+      background: white;
+      color: #232323;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     }
   }
 
-  &__icon {
+  &__percent {
+    position: relative;
+    width: 160px;
+
+    input {
+      padding-right: 32px;
+    }
+  }
+
+  &__unit {
     position: absolute;
     right: 12px;
     top: 50%;
     transform: translateY(-50%);
+    font-size: 14px;
     color: #71717a;
     pointer-events: none;
-  }
-
-  &__clear {
-    position: absolute;
-    right: 36px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: none;
-    background: #e4e4e7;
-    border-radius: 50%;
-    cursor: pointer;
-    color: #71717a;
-
-    &:hover {
-      background: #d4d4d8;
-      color: #18181b;
-    }
-  }
-
-  &__dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: 100;
   }
 }
 

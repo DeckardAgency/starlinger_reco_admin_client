@@ -553,15 +553,6 @@ export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
       { name: 'phone', placeholder: 'Phone' },
     ],
   },
-  clientGroups: {
-    name: 'Client Groups',
-    listPath: 'client-groups',
-    apiEndpoint: '/account_groups',
-    primaryField: 'name',
-    formFields: [
-      { name: 'name', placeholder: 'Enter name', required: true },
-    ],
-  },
   products: {
     name: 'Products',
     listPath: 'products',

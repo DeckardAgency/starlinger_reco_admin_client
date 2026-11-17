@@ -1,3 +1,10 @@
+/**
+ * Which admin section a company belongs to. A company is EITHER a customer
+ * (orders for itself) OR an agent (orders on behalf of the customers it manages,
+ * never for itself) — i.e. the Client API's `isClientAgent` flag.
+ */
+export type AccountKind = 'customer' | 'agent';
+
 export interface Account {
   id: number;
   code?: string;
@@ -5,13 +12,16 @@ export interface Account {
   name: string;
   email: string;
   status: 'active' | 'inactive';
+  // Server-computed; false = no active delivery address → users cannot place orders
+  hasActiveDeliveryAddress?: boolean;
   purchaseLimit?: number;
   amountSpent?: number;
+  // Agents only; server-computed number of customers the agent manages
+  managedClientCount?: number;
   createdAt?: string;
   updatedAt?: string;
   // Extended fields for detail view
   isActive?: boolean;
-  accountGroupId?: number;
   phone?: string;
   otherPhone?: string;
   otherEmail?: string;

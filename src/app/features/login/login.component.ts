@@ -1,5 +1,5 @@
 import { Component, inject, DestroyRef, ChangeDetectionStrategy, signal } from '@angular/core';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '@core/auth/auth.service';
@@ -7,6 +7,15 @@ import { animate, style, transition, trigger } from '@angular/animations';
 import { LoggerService, ScopedLogger } from '@services/logger.service';
 import { InputComponent, ButtonComponent, CheckboxComponent, LinkComponent } from '@app/ui-kit';
 import { USER_ROLES } from '@core/models/auth.model';
+
+const NO_ACCESS_MESSAGE = 'This account does not have access to the admin area.';
+
+/** Messages for the `?reason=` the guards / idle timeout redirect here with. */
+const REASON_MESSAGES: Record<string, string> = {
+  'no-access': NO_ACCESS_MESSAGE,
+  'idle': 'You were logged out due to inactivity. Please log in again.',
+  'archived': 'Your company account has been archived. Please contact support for assistance.'
+};
 
 @Component({
   selector: 'app-login',
@@ -45,9 +54,16 @@ export class LoginComponent {
   constructor(
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private loggerService: LoggerService
   ) {
     this.logger = this.loggerService.createLogger('LoginComponent');
+
+    // Why the user was sent here (no access, idle logout, archived client), if any
+    const reason = this.route.snapshot.queryParamMap.get('reason');
+    if (reason && REASON_MESSAGES[reason]) {
+      this.errorMessage.set(REASON_MESSAGES[reason]);
+    }
 
     // If already authenticated, go to home
     if (this.authService.isAuthenticated()) {
@@ -117,19 +133,17 @@ export class LoginComponent {
   }
 
   /**
-   * Navigate to the user's home page based on role
+   * Admins go to the dashboard. This app has no area for anyone else: end the
+   * session and say so instead of navigating to a route that does not exist.
    */
   private navigateToHome(): void {
     const user = this.authService.getCurrentUser();
-    
+
     if (user?.roles?.includes(USER_ROLES.ADMIN)) {
       this.router.navigate(['/admin/dashboard']);
-    } else if (user?.roles?.includes(USER_ROLES.CLIENT_ADMIN)) {
-      this.router.navigate(['/customer-admin/orders']);
-    } else if (user?.roles?.includes(USER_ROLES.CLIENT)) {
-      this.router.navigate(['/customer/dashboard']);
     } else {
-      this.router.navigate(['/login']);
+      this.authService.logout();
+      this.errorMessage.set(NO_ACCESS_MESSAGE);
     }
   }
 }

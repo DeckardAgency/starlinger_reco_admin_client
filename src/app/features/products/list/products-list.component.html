@@ -88,6 +88,21 @@
   {{ row.price | currency:(row.currency || 'EUR'):'symbol':'1.2-2' }}
 </ng-template>
 
+<!-- Status Template -->
+<ng-template #statusTemplate let-row>
+  <div class="status-cell">
+    <ui-badge [variant]="row.isActive ? 'success' : 'danger'" [rounded]="true">
+      {{ row.isActive ? 'Active' : 'Inactive' }}
+    </ui-badge>
+    <!-- Strict false so an older API (no flag) shows nothing -->
+    @if (row.inStock === false) {
+      <ui-badge variant="warning" [rounded]="true" title="Visible in the shop but cannot be ordered">
+        Out of stock
+      </ui-badge>
+    }
+  </div>
+</ng-template>
+
 <!-- Actions Template -->
 <ng-template #actionsTemplate let-row>
   <ui-table-actions-dropdown

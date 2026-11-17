@@ -42,41 +42,53 @@ export const routes: Routes = [
         title: 'Admin | Dashboard'
       },
 
-      // Clients
-      { path: 'clients', redirectTo: 'clients/list', pathMatch: 'full' },
+      // Customers (companies that order for themselves) and Agents (companies
+      // that order on behalf of the customers they manage) share the accounts
+      // components; `data.kind` tells them which section they serve.
+      { path: 'customers', redirectTo: 'customers/list', pathMatch: 'full' },
       {
-        path: 'clients/list',
+        path: 'customers/list',
         loadComponent: () => import('@features/accounts/list/accounts-list.component').then(m => m.AccountsListComponent),
-        title: 'Admin | Clients'
+        title: 'Admin | Customers',
+        data: { kind: 'customer' }
       },
       {
-        path: 'clients/new',
+        path: 'customers/new',
         loadComponent: () => import('@features/accounts/edit/accounts-edit.component').then(m => m.AccountsEditComponent),
-        title: 'Admin | New Client'
+        title: 'Admin | New Customer',
+        data: { kind: 'customer' }
       },
       {
-        path: 'clients/:id/edit',
+        path: 'customers/:id/edit',
         loadComponent: () => import('@features/accounts/edit/accounts-edit.component').then(m => m.AccountsEditComponent),
-        title: 'Admin | Client Detail'
+        title: 'Admin | Customer Detail',
+        data: { kind: 'customer' }
       },
-
-      // Client Groups
-      { path: 'client-groups', redirectTo: 'client-groups/list', pathMatch: 'full' },
+      { path: 'agents', redirectTo: 'agents/list', pathMatch: 'full' },
       {
-        path: 'client-groups/list',
-        loadComponent: () => import('@features/account-groups/list/account-groups-list.component').then(m => m.AccountGroupsListComponent),
-        title: 'Admin | Client Groups'
-      },
-      {
-        path: 'client-groups/new',
-        loadComponent: () => import('@features/account-groups/edit/account-groups-edit.component').then(m => m.AccountGroupsEditComponent),
-        title: 'Admin | New Client Group'
+        path: 'agents/list',
+        loadComponent: () => import('@features/accounts/list/accounts-list.component').then(m => m.AccountsListComponent),
+        title: 'Admin | Agents',
+        data: { kind: 'agent' }
       },
       {
-        path: 'client-groups/:id/edit',
-        loadComponent: () => import('@features/account-groups/edit/account-groups-edit.component').then(m => m.AccountGroupsEditComponent),
-        title: 'Admin | Client Group Detail'
+        path: 'agents/new',
+        loadComponent: () => import('@features/accounts/edit/accounts-edit.component').then(m => m.AccountsEditComponent),
+        title: 'Admin | New Agent',
+        data: { kind: 'agent' }
       },
+      {
+        path: 'agents/:id/edit',
+        loadComponent: () => import('@features/accounts/edit/accounts-edit.component').then(m => m.AccountsEditComponent),
+        title: 'Admin | Agent Detail',
+        data: { kind: 'agent' }
+      },
+      // Legacy /admin/clients/... links. The detail page re-derives the kind
+      // from the loaded company, so an agent opened this way still renders as one.
+      { path: 'clients', redirectTo: 'customers/list', pathMatch: 'full' },
+      { path: 'clients/list', redirectTo: 'customers/list', pathMatch: 'full' },
+      { path: 'clients/new', redirectTo: 'customers/new', pathMatch: 'full' },
+      { path: 'clients/:id/edit', redirectTo: 'customers/:id/edit', pathMatch: 'full' },
 
       // Shop Orders
       { path: 'shop-orders', redirectTo: 'shop-orders/list', pathMatch: 'full' },

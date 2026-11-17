@@ -40,13 +40,14 @@
           </ui-form-field>
 
           <ui-form-field label="Country" [error]="getError('countryId')" [required]="true">
-            <select
-              formControlName="countryId"
-              [class.has-error]="hasError('countryId')"
-            >
-              <option value="">Select country</option>
-              <option *ngFor="let c of countries" [value]="c.id">{{ c.name }}</option>
-            </select>
+            <ui-select
+              [options]="countryOptions"
+              [value]="countryId"
+              [searchable]="true"
+              [clearable]="false"
+              placeholder="Select country"
+              (selectChange)="onCountryChange($event)">
+            </ui-select>
           </ui-form-field>
 
           <div class="toggle-fields">

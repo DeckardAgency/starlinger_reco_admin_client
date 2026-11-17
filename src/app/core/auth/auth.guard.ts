@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { Router, ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
-import { LoginModalService } from '@services/login-modal.service';
 import { LoggerService, ScopedLogger } from '@services/logger.service';
 
 @Injectable({
@@ -14,7 +13,6 @@ export class AuthGuard {
   constructor(
     private authService: AuthService,
     private router: Router,
-    private loginModalService: LoginModalService,
     private loggerService: LoggerService
   ) {
     this.logger = this.loggerService.createLogger('AuthGuard');
@@ -30,32 +28,13 @@ export class AuthGuard {
       if (this.authService.isClientArchived()) {
         this.logger.warn('User\'s client is archived. Logging out...');
         this.authService.logout();
-        this.router.navigate(['/']);
-
-        // Show login modal with message
-        setTimeout(() => {
-          this.loginModalService.open();
-        }, 100);
-
-        return false;
+        return this.router.createUrlTree(['/login'], { queryParams: { reason: 'archived' } });
       }
 
       return true;
     }
 
-    // Store the attempted URL for redirecting after login
-    const returnUrl = state.url;
-    this.loginModalService.setReturnUrl(returnUrl);
-
-    // Delay opening the modal slightly to avoid showing it during page refresh
-    // when authentication might still be in progress
-    setTimeout(() => {
-      if (!this.authService.isAuthenticated()) {
-        this.loginModalService.open();
-      }
-    }, 100);
-
-    // Return false to prevent navigation when not authenticated
-    return false;
+    // Not authenticated: send to the login page
+    return this.router.createUrlTree(['/login']);
   }
 }

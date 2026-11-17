@@ -1,18 +1,32 @@
-// Test credentials
+/**
+ * Read a required environment variable. Credentials are never committed: export
+ * them in your shell (or CI secrets) before running the suite - see e2e/README.md.
+ */
+export function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `Missing environment variable ${name}. E2E credentials are read from the environment - see e2e/README.md ("Test Credentials").`
+    );
+  }
+  return value;
+}
+
+// Test credentials (resolved lazily, so only the accounts a run actually uses are required)
 export const TEST_USERS = {
   admin: {
-    email: 'admin@starlinger.com',
-    password: 'recouser123!',
+    get email() { return requireEnv('E2E_ADMIN_EMAIL'); },
+    get password() { return requireEnv('E2E_ADMIN_PASSWORD'); },
     role: 'ROLE_ADMIN',
   },
   clientAdmin: {
-    email: 'clientadmin@starlinger.com',
-    password: 'recouser123!',
+    get email() { return requireEnv('E2E_CLIENT_ADMIN_EMAIL'); },
+    get password() { return requireEnv('E2E_CLIENT_ADMIN_PASSWORD'); },
     role: 'ROLE_CLIENT_ADMIN',
   },
   client: {
-    email: 'recouser@starlinger.com',
-    password: 'recouser123!',
+    get email() { return requireEnv('E2E_CLIENT_EMAIL'); },
+    get password() { return requireEnv('E2E_CLIENT_PASSWORD'); },
     role: 'ROLE_CLIENT',
   },
 };

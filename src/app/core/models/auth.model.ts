@@ -140,7 +140,7 @@ export function getRoleDisplayName(role: string): string {
     'ROLE_CLIENT_ADMIN': 'Customer Admin',
     'ROLE_ADMIN': 'Admin',
     'ROLE_FINANCE': 'Finance',
-    'ROLE_USER_CLIENT_AGENT': 'Client Agent'
+    'ROLE_USER_CLIENT_AGENT': 'Agent'
   };
   return roleMap[role] || role;
 }

@@ -23,6 +23,10 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
 
 interface DiscountRow extends Discount {
   status: 'active' | 'inactive';
+  /** Signed adjustment as a number: negative = discount, positive = markup. */
+  adjustment: number;
+  /** Number of clients the adjustment applies to. */
+  clientCount: number;
   selected?: boolean;
 }
 
@@ -61,6 +65,7 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
   @ViewChild('checkboxTemplate') checkboxTemplate!: TemplateRef<any>;
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
   @ViewChild('statusTemplate') statusTemplate!: TemplateRef<any>;
+  @ViewChild('adjustmentTemplate') adjustmentTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
 
   // Search state
@@ -139,8 +144,8 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
       if (response) {
         const discountRows: DiscountRow[] = (response.member || []).map(d => ({
           ...d,
-          dateValidFrom: this.formatDate(d.dateValidFrom),
-          dateValidTo: this.formatDate(d.dateValidTo),
+          adjustment: parseFloat(d.adjustmentPercent ?? '') || 0,
+          clientCount: Array.isArray(d.clients) ? d.clients.length : 0,
           status: d.isActive ? 'active' as const : 'inactive' as const,
           selected: false
         }));
@@ -183,22 +188,20 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
     const sortCol = this.sortColumn();
     const sortDir = this.sortDirection();
     if (sortCol && sortDir) {
-      params[`order[${sortCol}]`] = sortDir;
+      // Table column keys whose API sort property is named differently
+      const apiSortField = sortCol === 'adjustment' ? 'adjustmentPercent' : sortCol === 'status' ? 'isActive' : sortCol;
+      params[`order[${apiSortField}]`] = sortDir;
     }
 
     return params;
   }
 
-  private formatDate(dateString: string | null): string {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const seconds = date.getSeconds().toString().padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+  /** "−20 %" for a discount, "+20 %" for a markup (trailing decimal zeros dropped). */
+  formatAdjustment(value: number): string {
+    if (!value) return '-';
+    const magnitude = Math.abs(value);
+    const digits = Number.isInteger(magnitude) ? String(magnitude) : magnitude.toFixed(2).replace(/\.?0+$/, '');
+    return value < 0 ? `\u2212${digits} %` : `+${digits} %`;
   }
 
   private initColumns(): void {
@@ -206,9 +209,8 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
       { key: 'id', label: 'Id', visible: true },
       { key: 'name', label: 'Name', visible: true, locked: true },
       { key: 'status', label: 'Status', visible: true },
-      { key: 'priority', label: 'Priority', visible: true },
-      { key: 'dateValidFrom', label: 'Date valid from', visible: true },
-      { key: 'dateValidTo', label: 'Date valid to', visible: true }
+      { key: 'adjustment', label: 'Adjustment', visible: true },
+      { key: 'clientCount', label: 'Clients', visible: true }
     ];
 
     this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
@@ -218,9 +220,8 @@ export class DiscountsListComponent implements OnInit, AfterViewInit {
       { key: 'id', label: 'Id', sortable: true, width: '68px' },
       { key: 'name', label: 'Name', sortable: true },
       { key: 'status', label: 'Status', sortable: true, width: '96px', template: this.statusTemplate },
-      { key: 'priority', label: 'Priority', sortable: true, width: '96px' },
-      { key: 'dateValidFrom', label: 'Date valid from', sortable: true, width: '180px' },
-      { key: 'dateValidTo', label: 'Date valid to', sortable: true, width: '180px' },
+      { key: 'adjustment', label: 'Adjustment', sortable: true, width: '140px', align: 'right', template: this.adjustmentTemplate },
+      { key: 'clientCount', label: 'Clients', sortable: false, width: '96px', align: 'right' },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
 

@@ -1,3 +1,4 @@
+@use '../../../ui-kit/admin-shared' as admin;
 :host {
   display: flex;
   flex-direction: column;
@@ -104,4 +105,8 @@
   .page-content {
     padding-bottom: 76px;
   }
+}
+
+.notice {
+  @include admin.notice-warning;
 }

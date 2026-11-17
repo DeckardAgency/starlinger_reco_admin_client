@@ -233,3 +233,8 @@
     }
   }
 }
+
+// Amber attention banner (shared look, see _admin-shared.scss)
+.notice {
+  @include admin.notice-warning;
+}

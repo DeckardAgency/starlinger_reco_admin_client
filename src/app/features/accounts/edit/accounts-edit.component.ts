@@ -2,10 +2,9 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, signal, computed
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, finalize } from 'rxjs';
+import { Subject, combineLatest, takeUntil, finalize, debounceTime, switchMap, tap } from 'rxjs';
 
 import { ToggleComponent } from '@app/ui-kit/atoms/toggle/toggle.component';
-import { SelectComponent } from '@app/ui-kit/atoms/select/select.component';
 import { TabsComponent, TabItem } from '@app/ui-kit/molecules/tabs/tabs.component';
 import { BadgeComponent, BadgeVariant } from '@app/ui-kit/atoms/badge/badge.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
@@ -20,14 +19,13 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { ModalComponent } from '@app/ui-kit/organisms/modal/modal.component';
 import { AddressModalComponent, AddressFormData } from '../../../shared/components/modals/address-modal/address-modal.component';
-import { Account } from '@core/models/account.model';
+import { Account, AccountKind } from '@core/models/account.model';
 import { ClientService } from '@core/services/http/client.service';
 import { OrderService } from '@core/services/http/order.service';
 import { AddressService } from '@core/services/http/address.service';
 import { UserService } from '@core/services/http/user.service';
 import { ClientDetail, ClientAddress, ClientUser } from '@core/models/client.model';
 import { Order } from '@core/models/order.model';
-import { AccountGroupService } from '@core/services/http/account-group.service';
 import { CountryService } from '@core/services/http/country.service';
 import { LoggerService } from '@core/services/logger.service';
 import { CountryOption } from '../../../shared/components/modals/address-modal/address-modal.component';
@@ -42,6 +40,7 @@ interface Address {
   country: string;
   isBilling: boolean;
   isDelivery: boolean;
+  isActive: boolean;
 }
 
 interface ShopOrder {
@@ -59,6 +58,13 @@ interface ShopOrder {
   status: string;
   statusLabel: string;
   statusVariant: BadgeVariant;
+}
+
+/** Row of the "Managed clients" tab and of the add-client picker. */
+interface ManagedClientRow {
+  id: number;
+  name: string;
+  code: string;
 }
 
 // Default empty account for new mode
@@ -87,7 +93,6 @@ const EMPTY_ACCOUNT: Account = {
     FormsModule,
     RouterModule,
     ToggleComponent,
-    SelectComponent,
     TabsComponent,
     BadgeComponent,
     IconComponent,
@@ -114,7 +119,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   private userService = inject(UserService);
   private orderService = inject(OrderService);
   private addressService = inject(AddressService);
-  private accountGroupService = inject(AccountGroupService);
   private countryService = inject(CountryService);
   private toastService = inject(ToastService);
   private logger = inject(LoggerService);
@@ -147,6 +151,26 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   isEditMode = signal(false);
   accountId = signal<string | null>(null);
 
+  /**
+   * Customer or agent. For a NEW company it comes from the route (`data.kind`:
+   * which section you add from) and locks the Agent toggle; for an existing one
+   * it is derived from the loaded `isClientAgent`, so legacy /admin/clients/:id
+   * links still land on the right kind. Updated on save (the toggle stays
+   * editable in edit mode), so Back / Save return to the list of the saved kind.
+   */
+  kind = signal<AccountKind>('customer');
+  /** 'Customers' / 'Agents' — breadcrumb */
+  kindLabel = computed(() => this.kind() === 'agent' ? 'Agents' : 'Customers');
+  listUrl = computed(() => this.kind() === 'agent' ? '/admin/agents/list' : '/admin/customers/list');
+  pageTitle = computed(() => {
+    const noun = this.kind() === 'agent' ? 'agent' : 'customer';
+    return this.isEditMode() ? noun.charAt(0).toUpperCase() + noun.slice(1) : `Add ${noun}`;
+  });
+
+  // Where Back / "Save and continue" land when this page was opened from another
+  // admin page (e.g. an agent's "Managed clients" tab). Only in-app targets.
+  private returnTo = signal<string | null>(null);
+
   // Account data - starts empty
   account = signal<Account>({ ...EMPTY_ACCOUNT });
 
@@ -155,6 +179,16 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Addresses data - starts empty, loaded in edit mode
   addresses = signal<Address[]>([]);
+  /** False until the client's addresses were fetched, so the warning never flashes while loading. */
+  addressesLoaded = signal(false);
+  /**
+   * Mirrors the server's Client.hasActiveDeliveryAddress, but derived from the loaded
+   * list so it clears the moment an address is added here. Users of such a client
+   * cannot place orders (checkout needs a shipping address).
+   */
+  missingDeliveryAddress = computed(() =>
+    this.isEditMode() && this.kind() === 'customer' && this.addressesLoaded() && !this.addresses().some(a => a.isActive && a.isDelivery)
+  );
 
   // Shop orders data - starts empty, loaded in edit mode (server-side paginated)
   shopOrders = signal<ShopOrder[]>([]);
@@ -168,7 +202,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Manual entries data - starts empty, loaded in edit mode
   manualEntries = signal<ShopOrder[]>([]);
 
-  // Tabs configuration — "Managed clients" only shows for client agents
+  // Tabs configuration — "Customers" only shows for agents
   tabs = computed<TabItem[]>(() => {
     const base: TabItem[] = [
       { id: 'users', label: 'Users' },
@@ -176,7 +210,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       { id: 'shop-orders', label: 'Shop orders' }
     ];
     if (this.isClientAgent()) {
-      base.push({ id: 'managed-clients', label: 'Managed clients' });
+      base.push({ id: 'managed-clients', label: 'Customers' });
     }
     return base;
   });
@@ -190,19 +224,31 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   isActive = signal(true);
   isClientAgent = signal(false);
 
+  // Unsaved-change detection: serialized form state as last loaded/saved vs. now.
+  private savedSnapshot = signal('');
+  isDirty = computed(() =>
+    this.serializeForm(this.account(), this.isActive(), this.isClientAgent()) !== this.savedSnapshot()
+  );
+
   // Managed clients (client-agent only)
-  managedClients = signal<{ id: number; name: string; code: string }[]>([]);
+  managedClients = signal<ManagedClientRow[]>([]);
   isManagedClientModalOpen = signal(false);
-  availableClients = signal<{ id: number; name: string; code: string }[]>([]);
-  filteredAvailableClients = signal<{ id: number; name: string; code: string }[]>([]);
+  /** Latest server-side search results for the "Add managed clients" picker. */
+  availableClients = signal<ManagedClientRow[]>([]);
+  /** Picker candidates: search results minus this client and the already-managed ones. */
+  filteredAvailableClients = computed(() => {
+    const selfId = this.account().id;
+    const managedIds = new Set(this.managedClients().map(c => c.id));
+    return this.availableClients().filter(c => c.id !== selfId && !managedIds.has(c.id));
+  });
   managedClientSearchQuery = signal('');
   isLoadingAvailableClients = signal(false);
-  private allClients: { id: number; name: string; code: string }[] = [];
-  private allClientsLoaded = false;
+  private managedClientSearch$ = new Subject<string>();
 
   // Address modal state
   isAddressModalOpen = signal(false);
-  selectedAddress = signal<Address | null>(null);
+  /** Address being edited, or id-less prefill values for a new one (modal stays in "Add" mode). */
+  selectedAddress = signal<AddressFormData | null>(null);
   isAddressSaving = signal(false);
   countries = signal<CountryOption[]>([]);
 
@@ -225,18 +271,14 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   });
   isValid = computed(() => Object.keys(this.errors()).length === 0);
 
-  // Account group options - loaded from API
-  accountGroupOptions = signal<{ value: string; label: string }[]>([]);
-
-  // Handle account group change
-  onAccountGroupChange(value: string | number): void {
-    this.account.update(a => ({ ...a, accountGroupId: Number(value) }));
-  }
-
-  // Clear account group
-  clearAccountGroup(): void {
-    this.account.update(a => ({ ...a, accountGroupId: undefined }));
-  }
+  /**
+   * Purchase limit minus open (unpaid) payments; null when no limit is set.
+   * `amountSpent` is server-computed from unpaid orders and read-only here.
+   */
+  remainingLimit = computed<number | null>(() => {
+    const { purchaseLimit = 0, amountSpent = 0 } = this.account();
+    return purchaseLimit > 0 ? purchaseLimit - amountSpent : null;
+  });
 
   // Table actions
   userActions: TableAction[] = [
@@ -255,28 +297,46 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   ];
 
   managedClientActions: TableAction[] = [
+    { id: 'edit', label: 'Edit', icon: 'pencil' },
     { id: 'remove', label: 'Remove', icon: 'trash', variant: 'danger' }
   ];
 
   ngOnInit(): void {
-    // Load account groups and countries for dropdowns
-    this.loadAccountGroups();
+    // Load countries for dropdowns
     this.loadCountries();
+    this.setupManagedClientSearch();
 
-    // Subscribe to route param changes to handle navigation between add/edit
-    this.route.paramMap
+    // Referring-page context; re-read on every navigation (incl. agent -> managed client -> back)
+    this.route.queryParamMap
       .pipe(takeUntil(this.destroy$))
-      .subscribe(params => {
+      .subscribe(qp => {
+        // Only allow in-app admin targets, never external/arbitrary URLs.
+        const rt = qp.get('returnTo');
+        this.returnTo.set(rt && rt.startsWith('/admin/') ? rt : null);
+        // ?tab=addresses: after creating a client we land here so the next step
+        // (adding the delivery address it needs) is in front of the admin.
+        if (qp.get('tab') === 'addresses') {
+          this.activeTab.set('addresses');
+        }
+      });
+
+    // Subscribe to route param/data changes to handle navigation between add/edit
+    // (and between the customers and agents sections, which share this component)
+    combineLatest([this.route.paramMap, this.route.data])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(([params, data]) => {
+        const routeKind: AccountKind = data['kind'] === 'agent' ? 'agent' : 'customer';
         const accountId = params.get('id');
         if (accountId && accountId !== 'new') {
           this.accountId.set(accountId);
           this.isEditMode.set(true);
+          this.kind.set(routeKind); // provisional until the company is loaded
           this.loadAccount(accountId);
         } else {
-          // New account mode - reset to empty state
+          // New account mode - reset to empty state of the section we add from
           this.accountId.set(null);
           this.isEditMode.set(false);
-          this.resetForm();
+          this.resetForm(routeKind);
         }
       });
   }
@@ -346,33 +406,48 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.destroy$.complete();
   }
 
-  private resetForm(): void {
+  private resetForm(kind: AccountKind): void {
+    this.kind.set(kind);
     this.account.set({ ...EMPTY_ACCOUNT });
     this.clientUsers.set([]);
     this.addresses.set([]);
+    this.addressesLoaded.set(false);
     this.shopOrders.set([]);
     this.ordersPage.set(1);
     this.ordersTotalItems.set(0);
     this.ordersClientCode = null;
     this.manualEntries.set([]);
     this.isActive.set(true);
-    this.isClientAgent.set(false);
+    this.isClientAgent.set(kind === 'agent');
     this.managedClients.set([]);
     this.activeTab.set('users');
     this.touched.set({});
+    this.markClean();
     this.cdr.markForCheck();
   }
 
-  private loadAccountGroups(): void {
-    this.accountGroupService.getAllAccountGroups().subscribe({
-      next: (response) => {
-        this.accountGroupOptions.set(
-          (response.member || []).map(g => ({ value: String(g.id), label: g.name }))
-        );
-        this.cdr.markForCheck();
-      },
-      error: (err) => this.logger.error('Error loading account groups:', err)
-    });
+  /** Where Back / "Save and continue" land: the referring page when given, else the list of this kind. */
+  private exitUrl(): string {
+    return this.returnTo() ?? this.listUrl();
+  }
+
+  /** Detail page of a company in the section matching its kind. */
+  private detailUrl(id: number | string, kind: AccountKind = this.kind()): string {
+    return `/admin/${kind === 'agent' ? 'agents' : 'customers'}/${id}/edit`;
+  }
+
+  private serializeForm(account: Account, isActive: boolean, isClientAgent: boolean): string {
+    return JSON.stringify({ account, isActive, isClientAgent });
+  }
+
+  /** Take the current form state as the clean baseline for isDirty(). */
+  private markClean(): void {
+    this.savedSnapshot.set(this.serializeForm(this.account(), this.isActive(), this.isClientAgent()));
+  }
+
+  /** True when leaving is fine: nothing unsaved, or the user agreed to discard. */
+  private confirmLeaveIfDirty(): boolean {
+    return !this.isDirty() || confirm('You have unsaved changes. Leave this page?');
   }
 
   private loadCountries(): void {
@@ -403,7 +478,9 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
         this.manualEntries.set([]);
         this.isActive.set(client.isActive ?? true);
         this.isClientAgent.set(client.isClientAgent ?? false);
-        this.setManagedClientsFromDetail(client.managedClients);
+        this.kind.set(client.isClientAgent ? 'agent' : 'customer');
+        this.setManagedClientsFromDetail(client);
+        this.markClean();
         this.isLoading.set(false);
         this.cdr.markForCheck();
 
@@ -414,6 +491,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       },
       error: (err) => {
         this.loadError.set(err?.message || 'Client not found');
+        this.markClean(); // nothing editable was loaded, so nothing can be lost on Back
         this.isLoading.set(false);
         this.cdr.markForCheck();
       }
@@ -424,11 +502,14 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.addressService.getAddressesByClient(clientId).subscribe({
       next: (addresses) => {
         this.addresses.set(this.mapClientAddressesToAddresses(addresses));
+        this.addressesLoaded.set(true);
         this.cdr.markForCheck();
       },
       error: (err) => {
         this.logger.error('Error loading addresses:', err);
         this.addresses.set([]);
+        // Unknown state — don't claim the client has no address
+        this.addressesLoaded.set(false);
       }
     });
   }
@@ -442,7 +523,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
           email: u.email ?? '',
           role: (u.roles || []).includes('ROLE_ADMIN') ? 'Admin' :
                 (u.roles || []).includes('ROLE_CLIENT_ADMIN') ? 'Client Admin' :
-                (u.roles || []).includes('ROLE_USER_CLIENT_AGENT') ? 'Client Agent' :
+                (u.roles || []).includes('ROLE_USER_CLIENT_AGENT') ? 'Agent' :
                 (u.roles || []).includes('ROLE_FINANCE') ? 'Finance' :
                 (u.roles || []).includes('ROLE_CLIENT') ? 'Client' : 'User',
           isActive: u.isActive ?? true
@@ -466,7 +547,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       countryId: addr.country?.id ? String(addr.country.id) : '',
       country: addr.country?.name ?? '',
       isBilling: addr.isBilling,
-      isDelivery: addr.isDelivery
+      isDelivery: addr.isDelivery,
+      isActive: addr.isActive ?? true
     }));
   }
 
@@ -536,6 +618,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       'new': 'New',
       'in_process': 'In process',
       'waiting_for_payment': 'Waiting for payment',
+      'paid': 'Paid',
       'ready_for_shipment': 'Ready for shipment',
       'shipped': 'Shipped',
       'delivered': 'Delivered',
@@ -551,6 +634,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       'new': 'info',
       'in_process': 'warning',
       'waiting_for_payment': 'orange',
+      'paid': 'success',
       'ready_for_shipment': 'teal',
       'shipped': 'blue',
       'delivered': 'success',
@@ -569,7 +653,6 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       email: c.email ?? '',
       status: c.isActive ? 'active' : 'inactive',
       isActive: c.isActive,
-      accountGroupId: c.accountGroup?.id ?? undefined,
       phone: c.phoneNumber ?? '',
       otherPhone: c.otherPhone ?? '',
       otherEmail: c.otherEmail ?? '',
@@ -606,7 +689,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       case 'addresses': return 'Add address';
       case 'shop-orders': return 'Add order';
       case 'manual-entries': return 'Add entry';
-      case 'managed-clients': return 'Add client';
+      case 'managed-clients': return 'Add customer';
       default: return 'Add';
     }
   });
@@ -617,10 +700,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
 
   onClientAgentChange(value: boolean): void {
     this.isClientAgent.set(value);
-    if (value) {
-      // Preload the client list so the "Managed clients" tab/modal is ready
-      this.ensureClientsLoaded();
-    } else if (this.activeTab() === 'managed-clients') {
+    if (!value && this.activeTab() === 'managed-clients') {
       // The tab disappears when the flag is off — fall back to a visible tab
       this.activeTab.set('users');
     }
@@ -743,8 +823,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
       web: account.web?.trim() || null,
       purchaseLimit: account.purchaseLimit?.toString() || null,
       isActive: this.isActive(),
-      isClientAgent: this.isClientAgent(),
-      accountGroup: account.accountGroupId ? `/api/v1/account_groups/${account.accountGroupId}` : null
+      isClientAgent: this.isClientAgent()
     };
 
     const isCreating = !this.isEditMode() || !this.accountId();
@@ -756,11 +835,17 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
       next: (result) => {
         this.toastService.success('Saved successfully');
+        this.markClean();
+        // The toggle may have moved the company to the other section
+        this.kind.set(this.isClientAgent() ? 'agent' : 'customer');
         if (navigateToList) {
-          this.router.navigate(['/admin/clients/list']);
+          this.router.navigateByUrl(this.exitUrl());
         } else if (isCreating && result?.id) {
-          // After creating, navigate to edit page for the new client
-          this.router.navigate(['/admin/clients', result.id, 'edit']);
+          // After creating, navigate to edit page for the new company, keeping
+          // the referring-page context so a later Back/Save still returns there
+          this.router.navigate([this.detailUrl(result.id)], {
+            queryParams: { tab: 'addresses', ...(this.returnTo() ? { returnTo: this.returnTo() } : {}) }
+          });
         }
         // If editing and not navigating, just stay on page (data already saved)
       },
@@ -789,28 +874,39 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     const id = this.accountId();
     if (!id) return;
     this.router.navigate(['/admin/users/new'], {
-      queryParams: { clientId: id, returnTo: `/admin/clients/${id}/edit` }
+      queryParams: { clientId: id, returnTo: this.detailUrl(id) }
     });
   }
 
-  // ---- Managed clients (client-agent only) ----
+  // ---- Managed clients = the agent's customers (agents only) ----
 
-  /** Build the managed-clients table from the IRIs (or embedded objects) on the detail. */
-  private setManagedClientsFromDetail(raw: unknown): void {
-    const ids = (Array.isArray(raw) ? raw : [])
-      .map((m: any) => (typeof m === 'string' ? this.idFromIri(m) : m?.id))
-      .filter((id: any): id is number => typeof id === 'number' && !Number.isNaN(id));
-
-    if (ids.length === 0) {
-      this.managedClients.set([]);
+  /**
+   * Build the managed-clients table from the detail response. Prefer the
+   * server-side `managedClientSummaries` (id/name/code); fall back to the bare
+   * `managedClients` IRIs / embedded objects when the API does not send them.
+   */
+  private setManagedClientsFromDetail(client: ClientDetail): void {
+    if (Array.isArray(client.managedClientSummaries)) {
+      this.managedClients.set(
+        client.managedClientSummaries.map(s => ({ id: s.id, name: s.name, code: s.code ?? '' }))
+      );
       return;
     }
 
-    this.ensureClientsLoaded(() => {
-      const byId = new Map(this.allClients.map(c => [c.id, c]));
-      this.managedClients.set(ids.map(id => byId.get(id) ?? { id, name: `Client #${id}`, code: '' }));
-      this.cdr.markForCheck();
-    });
+    const raw: Array<string | { id?: number; name?: string; code?: string }> =
+      Array.isArray(client.managedClients) ? client.managedClients : [];
+    const rows = raw
+      .map((m): ManagedClientRow | null => {
+        if (typeof m === 'string') {
+          const id = this.idFromIri(m);
+          return Number.isNaN(id) ? null : { id, name: `Client #${id}`, code: '' };
+        }
+        return typeof m?.id === 'number'
+          ? { id: m.id, name: m.name || `Client #${m.id}`, code: m.code ?? '' }
+          : null;
+      })
+      .filter((r): r is ManagedClientRow => r !== null);
+    this.managedClients.set(rows);
   }
 
   private idFromIri(iri: string): number {
@@ -818,34 +914,39 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     return match ? Number(match[1]) : NaN;
   }
 
-  /** Fetch the full client list once (used to resolve names + populate the picker). */
-  private ensureClientsLoaded(cb?: () => void): void {
-    if (this.allClientsLoaded) {
-      cb?.();
-      return;
-    }
-    this.isLoadingAvailableClients.set(true);
-    this.clientService.getClients({ itemsPerPage: 1000, 'order[name]': 'asc' }).subscribe({
-      next: (res) => {
-        this.allClients = (res.clients || []).map(c => ({ id: c.id, name: c.name, code: c.code }));
-        this.allClientsLoaded = true;
-        this.isLoadingAvailableClients.set(false);
-        cb?.();
+  /**
+   * Debounced server-side lookup for the picker: customers only (an agent cannot
+   * manage another agent), partial name match, first 50 sorted by name.
+   * switchMap drops stale responses while the user keeps typing.
+   */
+  private setupManagedClientSearch(): void {
+    this.managedClientSearch$.pipe(
+      debounceTime(300),
+      tap(() => {
+        this.isLoadingAvailableClients.set(true);
         this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.logger.error('Error loading clients:', err);
-        this.isLoadingAvailableClients.set(false);
-        this.cdr.markForCheck();
-      }
+      }),
+      switchMap(term => this.clientService.getClients({
+        page: 1,
+        itemsPerPage: 50,
+        isClientAgent: false,
+        'order[name]': 'asc',
+        ...(term ? { name: term } : {})
+      })),
+      takeUntil(this.destroy$)
+    ).subscribe(res => {
+      this.availableClients.set((res.clients || []).map(c => ({ id: c.id, name: c.name, code: c.code })));
+      this.isLoadingAvailableClients.set(false);
+      this.cdr.markForCheck();
     });
   }
 
   openManagedClientModal(): void {
     this.isManagedClientModalOpen.set(true);
     this.managedClientSearchQuery.set('');
-    this.ensureClientsLoaded(() => this.refreshAvailableClients());
-    this.refreshAvailableClients();
+    this.availableClients.set([]);
+    this.isLoadingAvailableClients.set(true);
+    this.managedClientSearch$.next('');
   }
 
   closeManagedClientModal(): void {
@@ -853,45 +954,41 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     this.managedClientSearchQuery.set('');
   }
 
-  /** Candidates = all clients except this one and the already-managed ones. */
-  private refreshAvailableClients(): void {
-    const selfId = this.account().id;
-    const managedIds = new Set(this.managedClients().map(c => c.id));
-    this.availableClients.set(
-      this.allClients.filter(c => c.id !== selfId && !managedIds.has(c.id))
-    );
-    this.applyManagedClientFilter();
-  }
-
   onManagedClientSearchChange(event: Event): void {
-    this.managedClientSearchQuery.set((event.target as HTMLInputElement).value.toLowerCase().trim());
-    this.applyManagedClientFilter();
+    const term = (event.target as HTMLInputElement).value;
+    this.managedClientSearchQuery.set(term);
+    this.managedClientSearch$.next(term.trim());
   }
 
-  private applyManagedClientFilter(): void {
-    const q = this.managedClientSearchQuery();
-    const list = this.availableClients();
-    this.filteredAvailableClients.set(
-      !q ? list : list.filter(c => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
-    );
-  }
-
-  addManagedClient(client: { id: number; name: string; code: string }): void {
+  addManagedClient(client: ManagedClientRow): void {
     this.managedClients.update(list => [...list, client]);
-    this.refreshAvailableClients();
     this.persistManagedClients();
   }
 
   onManagedClientActionClick(event: ActionClickEvent): void {
     this.closeDropdown();
-    if (event.actionId === 'remove') {
-      this.removeManagedClient(event.row as { id: number });
+    const row = event.row as ManagedClientRow;
+    switch (event.actionId) {
+      case 'edit':
+        this.openManagedClient(row);
+        break;
+      case 'remove':
+        this.removeManagedClient(row);
+        break;
     }
+  }
+
+  /** Open the customer's own detail page; its Back / Save return to this agent. */
+  private openManagedClient(row: { id: number }): void {
+    const agentId = this.accountId();
+    if (!agentId || !this.confirmLeaveIfDirty()) return;
+    this.router.navigate([this.detailUrl(row.id, 'customer')], {
+      queryParams: { returnTo: this.detailUrl(agentId, 'agent') }
+    });
   }
 
   removeManagedClient(client: { id: number }): void {
     this.managedClients.update(list => list.filter(c => c.id !== client.id));
-    this.refreshAvailableClients();
     this.persistManagedClients();
   }
 
@@ -904,12 +1001,12 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
     const managedClients = this.managedClients().map(c => `/api/v1/clients/${c.id}`);
     this.clientService.updateClient(clientId, { managedClients } as any).subscribe({
       next: () => {
-        this.toastService.success('Managed clients updated');
+        this.toastService.success('Customers updated');
         this.cdr.markForCheck();
       },
       error: (err) => {
         this.logger.error('Error updating managed clients:', err);
-        this.toastService.error('Failed to update managed clients');
+        this.toastService.error('Failed to update customers');
       }
     });
   }
@@ -941,7 +1038,7 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
             email: u.email ?? '',
             role: (u.roles || []).includes('ROLE_ADMIN') ? 'Admin' :
                   (u.roles || []).includes('ROLE_CLIENT_ADMIN') ? 'Client Admin' :
-                  (u.roles || []).includes('ROLE_USER_CLIENT_AGENT') ? 'Client Agent' :
+                  (u.roles || []).includes('ROLE_USER_CLIENT_AGENT') ? 'Agent' :
                   (u.roles || []).includes('ROLE_FINANCE') ? 'Finance' :
                   (u.roles || []).includes('ROLE_CLIENT') ? 'Client' : 'User'
           }));
@@ -1005,6 +1102,15 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   // Address modal methods
   openAddressModal(address?: Address): void {
     this.selectedAddress.set(address || null);
+    this.isAddressModalOpen.set(true);
+    this.cdr.markForCheck();
+  }
+
+  /** From the missing-address banner: Addresses tab + the form with "Delivery address" preselected. */
+  onAddDeliveryAddress(): void {
+    this.activeTab.set('addresses');
+    // No id → the modal stays in "Add" mode; only the delivery toggle is prefilled.
+    this.selectedAddress.set({ street: '', city: '', postalCode: '', countryId: '', isBilling: false, isDelivery: true });
     this.isAddressModalOpen.set(true);
     this.cdr.markForCheck();
   }
@@ -1085,7 +1191,8 @@ export class AccountsEditComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   goBack(): void {
-    window.history.back();
+    if (!this.confirmLeaveIfDirty()) return;
+    this.router.navigateByUrl(this.exitUrl());
   }
 
   updatePurchaseLimit(event: Event): void {

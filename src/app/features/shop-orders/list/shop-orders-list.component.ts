@@ -20,7 +20,7 @@ import { Order } from '@core/models/order.model';
 import { ColumnSelectorComponent, ColumnDefinition } from '@shared/components/column-selector/column-selector.component';
 import { ColumnSettingsService } from '@core/services/column-settings.service';
 
-type OrderStatus = 'draft' | 'new' | 'in_process' | 'waiting_for_payment' | 'ready_for_shipment' | 'shipped' | 'delivered' | 'canceled' | 'reversal';
+type OrderStatus = 'draft' | 'new' | 'in_process' | 'waiting_for_payment' | 'paid' | 'ready_for_shipment' | 'shipped' | 'delivered' | 'canceled' | 'reversal';
 
 interface ShopOrder {
   id: number;
@@ -244,7 +244,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
   }
 
   private mapStatus(status: string): OrderStatus {
-    const valid: OrderStatus[] = ['draft', 'new', 'in_process', 'waiting_for_payment', 'ready_for_shipment', 'shipped', 'delivered', 'canceled', 'reversal'];
+    const valid: OrderStatus[] = ['draft', 'new', 'in_process', 'waiting_for_payment', 'paid', 'ready_for_shipment', 'shipped', 'delivered', 'canceled', 'reversal'];
     const s = (status || '').toLowerCase();
     if (valid.includes(s as OrderStatus)) return s as OrderStatus;
     if (s === 'cancelled') return 'canceled';
@@ -414,6 +414,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
       'new': 'New',
       'in_process': 'In process',
       'waiting_for_payment': 'Waiting for payment',
+      'paid': 'Paid',
       'ready_for_shipment': 'Ready for shipment',
       'shipped': 'Shipped',
       'delivered': 'Delivered',
@@ -429,6 +430,7 @@ export class ShopOrdersListComponent implements OnInit, AfterViewInit {
       'new': 'info',
       'in_process': 'warning',
       'waiting_for_payment': 'orange',
+      'paid': 'success',
       'ready_for_shipment': 'teal',
       'shipped': 'blue',
       'delivered': 'success',

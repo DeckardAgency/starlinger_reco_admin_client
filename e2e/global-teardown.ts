@@ -1,5 +1,6 @@
 import { FullConfig } from '@playwright/test';
 import * as fs from 'fs';
+import { TEST_USERS } from './fixtures/test-data';
 
 const AUTH_FILE = 'e2e/.auth/user.json';
 const API_BASE = 'http://localhost:8000/api/v1';
@@ -16,8 +17,8 @@ async function acquireFreshToken(): Promise<string | null> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        username: 'admin@starlinger.com',
-        password: 'recouser123!',
+        username: TEST_USERS.admin.email,
+        password: TEST_USERS.admin.password,
       }),
     });
     if (!response.ok) {
@@ -121,7 +122,6 @@ async function globalTeardown(config: FullConfig) {
     { path: '/delivery_prices', field: 'name' },
     { path: '/packaging_prices', field: 'name' },
     { path: '/fuel_surcharges', field: 'name' },
-    { path: '/account_groups', field: 'name' },
     { path: '/clients', field: 'name' },
     { path: '/products', field: 'name' },
     { path: '/users', field: 'firstName' },

@@ -6,7 +6,7 @@
   } @else if (loadError()) {
     <div class="page-content">
       <p class="error-message">{{ loadError() }}</p>
-      <button type="button" class="btn btn--outline" (click)="goBack()">Back to clients</button>
+      <button type="button" class="btn btn--outline" (click)="goBack()">Back to {{ kindLabel().toLowerCase() }}</button>
     </div>
   } @else {
   <!-- Page Header with Breadcrumb -->
@@ -14,14 +14,14 @@
     variant="page-header"
     separator="chevron"
     [items]="[
-      { label: 'Clients', route: '/admin/clients' },
+      { label: kindLabel(), route: listUrl() },
       { label: isEditMode() ? 'Edit' : 'Add' }
     ]"
   ></ui-breadcrumbs>
 
   <!-- Detail Header -->
   <ui-detail-header
-    [title]="isEditMode() ? 'Client detail' : 'New client'"
+    [title]="pageTitle()"
     [isEditMode]="isEditMode()"
     [showSaveAndContinue]="true"
     [showDiscard]="false"
@@ -33,6 +33,21 @@
 
   <!-- Main Content -->
   <div class="page-content">
+    <!-- Customers only: without an active delivery address their users cannot place orders -->
+    @if (missingDeliveryAddress()) {
+      <div class="notice notice--warning" role="status">
+        <ui-icon name="warning" size="md" class="notice__icon"></ui-icon>
+        <div class="notice__body">
+          <strong>No active delivery address.</strong>
+          Users of this customer cannot place orders until one is added.
+        </div>
+        <button type="button" class="btn btn--outline notice__action" (click)="onAddDeliveryAddress()">
+          <span>Add address</span>
+          <ui-icon name="plus" size="sm"></ui-icon>
+        </button>
+      </div>
+    }
+
     <!-- Form Cards -->
     <div class="form-cards">
       <!-- Basic Information Card -->
@@ -48,12 +63,14 @@
             [checked]="isActive()"
             (toggleChange)="onActiveChange($event)">
           </ui-toggle>
+          <!-- New: locked, the kind is chosen by the section you add from (Customers / Agents) -->
           <ui-toggle
-            label="Client agent"
+            label="Agent"
             labelPosition="left"
             labelMinWidth="100px"
             labelColor="#71717a"
             [checked]="isClientAgent()"
+            [disabled]="!isEditMode()"
             (toggleChange)="onClientAgentChange($event)">
           </ui-toggle>
         </div>
@@ -61,17 +78,6 @@
         <div class="card__fields">
           <ui-form-field label="Title" layout="horizontal" [error]="getError('name')" [required]="true">
             <input type="text" [value]="account().name" (input)="updateAccount('name', $event)" placeholder="Company title">
-          </ui-form-field>
-
-          <ui-form-field label="Client group" layout="horizontal">
-            <ui-select
-              variant="pill"
-              [options]="accountGroupOptions()"
-              [value]="account().accountGroupId || ''"
-              placeholder="Select group..."
-              (selectChange)="onAccountGroupChange($event)"
-              (cleared)="clearAccountGroup()">
-            </ui-select>
           </ui-form-field>
 
           <ui-form-field label="Code" layout="horizontal" [error]="getError('code')" [required]="true">
@@ -86,9 +92,16 @@
             <input type="number" [value]="account().purchaseLimit" (input)="updatePurchaseLimit($event)" placeholder="0.00" step="0.01" min="0">
           </ui-form-field>
 
-          <ui-form-field label="Amount spent" layout="horizontal">
-            <input type="text" [value]="formatCurrency(account().amountSpent)" placeholder="Amount spent" readonly>
+          <!-- Server-computed from the unpaid orders -->
+          <ui-form-field label="Open payments" layout="horizontal">
+            <input type="text" [value]="formatCurrency(account().amountSpent)" placeholder="Open payments" readonly>
           </ui-form-field>
+
+          @if (remainingLimit() !== null) {
+            <ui-form-field label="Remaining" layout="horizontal">
+              <input type="text" [value]="formatCurrency(remainingLimit() ?? undefined)" readonly>
+            </ui-form-field>
+          }
         </div>
       </div>
 
@@ -206,7 +219,7 @@
           <ui-data-table
             [columns]="managedClientsColumns"
             [data]="managedClients()"
-            emptyMessage="No managed clients"
+            emptyMessage="No customers assigned"
           ></ui-data-table>
         </div>
 
@@ -394,7 +407,7 @@
 <ui-modal
   [isOpen]="isManagedClientModalOpen()"
   (isOpenChange)="isManagedClientModalOpen.set($event)"
-  title="Add managed clients"
+  title="Add customers"
   size="md"
 >
   <div class="user-modal">
@@ -403,7 +416,7 @@
         <ui-icon name="search" size="sm"></ui-icon>
         <input
           type="text"
-          placeholder="Search clients..."
+          placeholder="Search customers..."
           [value]="managedClientSearchQuery()"
           (input)="onManagedClientSearchChange($event)"
         >
@@ -411,9 +424,9 @@
     </div>
 
     @if (isLoadingAvailableClients()) {
-      <div class="user-modal__loading">Loading clients...</div>
+      <div class="user-modal__loading">Loading customers...</div>
     } @else if (filteredAvailableClients().length === 0) {
-      <div class="user-modal__empty">No clients available to add</div>
+      <div class="user-modal__empty">No customers available to add</div>
     } @else {
       <div class="user-modal__list">
         @for (client of filteredAvailableClients(); track client.id) {

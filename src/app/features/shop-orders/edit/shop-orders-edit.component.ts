@@ -17,7 +17,7 @@ import { PaymentTypeService } from '@core/services/http/payment-type.service';
 import { UserService } from '@core/services/http/user.service';
 import { ClientService } from '@core/services/http/client.service';
 import { AddressService } from '@core/services/http/address.service';
-import { Order } from '@core/models/order.model';
+import { Order, OrderClientRef } from '@core/models/order.model';
 import { Client, ClientAddress } from '@core/models/client.model';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { AlertService } from '@services/alert.service';
@@ -83,6 +83,8 @@ interface ShopOrderDetail {
   trackingUrl: string;
   cancellationReason: string;
   dispatchedAt: string;
+  /** ISO datetime, '' until the order was paid (read-only, server-set). */
+  paidAt: string;
   priceWithoutTax: number;
   totalPrice: number;
   priceTax: number;
@@ -96,6 +98,8 @@ interface ShopOrderDetail {
   agentName: string;
   agentEmail: string;
   clientGroups: ClientGroup[];
+  /** Shared by the agent orders created in one checkout ('' when none). */
+  checkoutReference: string;
 }
 
 const EMPTY_ORDER: ShopOrderDetail = {
@@ -120,6 +124,7 @@ const EMPTY_ORDER: ShopOrderDetail = {
   trackingUrl: '',
   cancellationReason: '',
   dispatchedAt: '',
+  paidAt: '',
   priceWithoutTax: 0,
   totalPrice: 0,
   priceTax: 0,
@@ -131,7 +136,8 @@ const EMPTY_ORDER: ShopOrderDetail = {
   isAgentOrder: false,
   agentName: '',
   agentEmail: '',
-  clientGroups: []
+  clientGroups: [],
+  checkoutReference: ''
 };
 
 @Component({
@@ -221,7 +227,8 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
     { value: 'shipped', label: 'Shipped' },
     { value: 'delivered', label: 'Delivered' },
     { value: 'canceled', label: 'Canceled' },
-    { value: 'reversal', label: 'Reversal' }
+    { value: 'reversal', label: 'Reversal' },
+    { value: 'paid', label: 'Paid' }
   ];
 
   get statusOptions(): SelectOption[] {
@@ -555,9 +562,12 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
           source: e.source ?? 'manual',
         })));
         this.loadDhlShipment(order.id);
-        // Load contacts and addresses based on client
+        // Contacts come from the ordering user's own company (that is where the
+        // contact person lives); addresses and the Client dropdown come from the
+        // company the order is for — for agent orders the on-behalf-of client,
+        // not the agent's own company.
         const clientCode = (order.user as { client?: { code?: string } })?.client?.code;
-        const clientId = (order.user as { client?: { id?: number } })?.client?.id;
+        const clientId = detail.accountId ? Number(detail.accountId) : undefined;
         // Register the order's client for code lookups and make sure it is
         // present in the (typeahead-driven) account options.
         if (clientId != null && clientCode && !this.loadedClients.some(c => String(c.id) === String(clientId))) {
@@ -586,6 +596,12 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private mapOrderToDetail(o: Order): ShopOrderDetail {
     const userName = o.user ? `${(o.user as { firstName?: string }).firstName || ''} ${(o.user as { lastName?: string }).lastName || ''}`.trim() || 'Unknown' : 'Unknown';
     const partsCount = o.items?.reduce((sum, i) => sum + (i.quantity || 0), 0) ?? 0;
+    // Agent orders are placed for (and charged to) the on-behalf-of client; its
+    // addresses are the ones the order uses. Otherwise it is the user's own company.
+    const onBehalfOf = this.resolveOnBehalfOfClient(o.onBehalfOfClient);
+    const ownClient = o.user?.client;
+    const orderingClientId = onBehalfOf?.id ?? ownClient?.id;
+    const orderingClientName = onBehalfOf ? onBehalfOf.name : (ownClient?.name ?? '');
     // Build one product group per item, and simultaneously bucket them by the
     // managed client each item was ordered on behalf of (agent orders).
     const productGroups: ProductGroup[] = [];
@@ -607,7 +623,8 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       };
       productGroups.push(group);
 
-      const client = item.onBehalfOfClient;
+      // Items carry their own on-behalf-of client; fall back to the order-level one.
+      const client = item.onBehalfOfClient ?? onBehalfOf;
       const key = client?.id != null ? String(client.id) : '_self';
       let cg = clientGroupMap.get(key);
       if (!cg) {
@@ -621,7 +638,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       }
       cg.productGroups.push(group);
     });
-    const isAgentOrder = (o.items || []).some(i => !!i.onBehalfOfClient);
+    const isAgentOrder = !!onBehalfOf || (o.items || []).some(i => !!i.onBehalfOfClient);
     const clientGroups = Array.from(clientGroupMap.values());
     const logMessages: LogMessage[] = (o.logs || []).map(log => ({
       status: this.statusLabelFor(log.newStatus),
@@ -646,8 +663,8 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       partsOrdered: partsCount,
       status: o.status || 'pending',
       enableSale: !o.isDraft,
-      accountId: String((o.user as { client?: { id?: number } })?.client?.id ?? ''),
-      account: (o.user as { client?: { name?: string } })?.client?.name ?? '',
+      accountId: orderingClientId != null ? String(orderingClientId) : '',
+      account: orderingClientName,
       contactId: String((o.user as { id?: number })?.id ?? ''),
       contact: userName,
       contactDropdown: userName,
@@ -661,6 +678,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       trackingUrl: (o as any).trackingUrl ?? '',
       cancellationReason: (o as any).cancellationReason ?? '',
       dispatchedAt: (o as any).dispatchedAt ?? '',
+      paidAt: o.paidAt ?? '',
       priceWithoutTax: o.totalAmount ?? 0,
       totalPrice: (o.totalAmount ?? 0) + (o.totalTax ?? 0),
       priceTax: o.totalTax ?? 0,
@@ -672,8 +690,21 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       isAgentOrder,
       agentName: userName,
       agentEmail: (o.user as { email?: string })?.email ?? '',
-      clientGroups
+      clientGroups,
+      checkoutReference: o.checkoutReference ?? ''
     };
+  }
+
+  /**
+   * `onBehalfOfClient` may arrive as an embedded object or as a bare IRI
+   * (`/api/v1/clients/12`), depending on the serialization group. Normalise to a
+   * client ref, or null when the order is not placed on behalf of anyone.
+   */
+  private resolveOnBehalfOfClient(ref: Order['onBehalfOfClient']): OrderClientRef | null {
+    if (!ref) return null;
+    if (typeof ref === 'object') return ref.id != null ? ref : null;
+    const match = ref.match(/\/(\d+)\/?$/);
+    return match ? { id: Number(match[1]), name: `Client #${match[1]}` } : null;
   }
 
   formatDate(dateStr: string): string {
@@ -1263,6 +1294,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
       'new': 'info',
       'in_process': 'warning',
       'waiting_for_payment': 'orange',
+      'paid': 'success',
       'ready_for_shipment': 'teal',
       'shipped': 'blue',
       'delivered': 'success',

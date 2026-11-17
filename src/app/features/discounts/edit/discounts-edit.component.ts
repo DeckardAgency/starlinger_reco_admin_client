@@ -15,26 +15,28 @@ import { MobileFooterComponent } from '@app/ui-kit/molecules/mobile-footer/mobil
 import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-footer.component';
 import { TableActionsDropdownComponent, TableAction, ActionClickEvent } from '@app/ui-kit/molecules/table-actions-dropdown/table-actions-dropdown.component';
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
-import { CalendarComponent } from '@app/ui-kit/molecules/calendar/calendar.component';
 import { ModalComponent } from '@app/ui-kit/organisms/modal/modal.component';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
+import { Discount } from '@core/models/discount.model';
+import { ValidationError } from '@core/models/client.model';
 import { DiscountService } from '@core/services/http/discount.service';
-import { AccountGroupService } from '@core/services/http/account-group.service';
 import { ClientService } from '@core/services/http/client.service';
 import { ProductDiscountService } from '@core/services/http/product-discount.service';
 import { ProductService } from '@core/services/http/product.service';
 import { LoggerService } from '@core/services/logger.service';
 
+/** Which way the percentage moves the price; it is the sign of `adjustmentPercent`. */
+type AdjustmentKind = 'discount' | 'markup';
+
 interface DiscountDetail {
   id: number;
   name: string;
   active: boolean;
-  dateFrom: string;
-  dateTo: string;
-  discountPercent: number;
-  priority: number;
-  accountGroups: string[];
-  accounts: string[];
+  /** Signed percentage: negative = discount (price down), positive = markup (price up). 0 = not entered. */
+  adjustmentPercent: number;
+  /** Plain client IDs; converted to `/api/v1/clients/{id}` IRIs on save. */
+  clients: string[];
+  /** VT / ET; empty = all product types. */
   productTypes: string[];
 }
 
@@ -55,14 +57,14 @@ const EMPTY_DISCOUNT: DiscountDetail = {
   id: 0,
   name: '',
   active: false,
-  dateFrom: '',
-  dateTo: '',
-  discountPercent: 0,
-  priority: 0,
-  accountGroups: [],
-  accounts: [],
+  adjustmentPercent: 0,
+  clients: [],
   productTypes: []
 };
+
+/** The API accepts -100 < adjustmentPercent <= 999, never 0. */
+const MAX_DISCOUNT_PERCENT = 100;  // exclusive: a 100 % discount is not allowed
+const MAX_MARKUP_PERCENT = 999;    // inclusive
 
 @Component({
   selector: 'app-discounts-edit',
@@ -81,7 +83,6 @@ const EMPTY_DISCOUNT: DiscountDetail = {
     TableFooterComponent,
     TableActionsDropdownComponent,
     DataTableComponent,
-    CalendarComponent,
     ModalComponent
   ],
   templateUrl: './discounts-edit.component.html',
@@ -101,14 +102,30 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   isLoading = signal(false);
   isSaving = signal(false);
 
+  // Adjustment control: the kind is the sign of adjustmentPercent, kept separately so the
+  // user's choice survives an empty percent input; the text is the raw input so typing
+  // (e.g. "0." on the way to "0.5") is never clobbered by re-formatting.
+  adjustmentKind = signal<AdjustmentKind>('discount');
+  percentText = signal('');
+  percentMax = computed(() => this.adjustmentKind() === 'discount' ? 99.99 : MAX_MARKUP_PERCENT);
+
   // Validation state
   touched = signal<Record<string, boolean>>({});
   errors = computed(() => {
     const discount = this.discount();
     const errs: Record<string, string> = {};
     if (!discount.name?.trim()) errs['name'] = 'Name is required';
-    if (discount.discountPercent < 0 || discount.discountPercent > 100) errs['discountPercent'] = 'Discount must be between 0 and 100';
-    if (discount.priority < 0) errs['priority'] = 'Priority must be 0 or greater';
+
+    const magnitude = Math.abs(discount.adjustmentPercent);
+    if (!(magnitude > 0)) {
+      errs['adjustmentPercent'] = 'Enter a percentage greater than 0';
+    } else if (this.adjustmentKind() === 'discount' && magnitude >= MAX_DISCOUNT_PERCENT) {
+      errs['adjustmentPercent'] = 'A discount must be less than 100 %';
+    } else if (this.adjustmentKind() === 'markup' && magnitude > MAX_MARKUP_PERCENT) {
+      errs['adjustmentPercent'] = 'A markup cannot exceed 999 %';
+    }
+
+    if (discount.clients.length === 0) errs['clients'] = 'Select at least one client';
     return errs;
   });
   isValid = computed(() => Object.keys(this.errors()).length === 0);
@@ -129,16 +146,8 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
   // Dropdown state
   openDropdownId = signal<number | null>(null);
 
-  // Calendar state
-  showDateFromCalendar = signal(false);
-  showDateToCalendar = signal(false);
-  dateFromDate = signal<Date | null>(null);
-  dateToDate = signal<Date | null>(null);
-
-  // Account options (loaded from API)
-  accountGroupOptions = signal<{ value: string; label: string }[]>([]);
-  accountOptions = signal<{ value: string; label: string }[]>([]);
-  // Server-side client typeahead state
+  // Client options for the server-side typeahead
+  clientOptions = signal<{ value: string; label: string }[]>([]);
   private clientSearch$ = new Subject<string>();
   private clientSearchResults: { value: string; label: string }[] = [];
   private knownClientLabels = new Map<string, string>();
@@ -147,7 +156,6 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     { value: 'VT', label: 'VT' },
     { value: 'ET', label: 'ET' }
   ];
-
 
   // Product modal
   isProductModalOpen = signal(false);
@@ -166,7 +174,6 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     private discountService: DiscountService,
-    private accountGroupService: AccountGroupService,
     private clientService: ClientService,
     private productDiscountService: ProductDiscountService,
     private productService: ProductService,
@@ -192,11 +199,12 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
         this.knownClientLabels.set(option.value, option.label);
         return option;
       });
-      this.updateAccountOptions();
+      this.updateClientOptions();
       this.cdr.markForCheck();
     });
 
-    this.loadDropdownOptions();
+    // Initial page of clients for the typeahead select
+    this.clientSearch$.next('');
 
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       this.discountId = params['id'] || null;
@@ -208,6 +216,8 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
       } else {
         // New discount - reset form
         this.discount.set({ ...EMPTY_DISCOUNT });
+        this.adjustmentKind.set('discount');
+        this.percentText.set('');
       }
     });
 
@@ -267,25 +277,18 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
 
     this.discountService.getDiscountById(id).subscribe({
       next: (discount) => {
-        // Map API property names to component's local interface
-        const discountAny = discount as any;
-        // Parse IRI arrays to plain IDs (e.g. "/api/account_groups/1" → "1")
-        const parseIris = (arr: any[]): string[] =>
-          (arr || []).map((v: any) => typeof v === 'string' ? v.split('/').pop()! : String(v));
+        const adjustment = parseFloat(discount.adjustmentPercent ?? '') || 0;
         this.discount.set({
           id: discount.id || Number(id),
           name: discount.name || '',
           active: discount.isActive || false,
-          dateFrom: discount.dateValidFrom || '',
-          dateTo: discount.dateValidTo || '',
-          discountPercent: parseFloat(discount.discountPercent || '0') || 0,
-          priority: discount.priority || 0,
-          accountGroups: parseIris(discountAny.accountGroups),
-          accounts: parseIris(discountAny.clients),
-          productTypes: Array.isArray(discountAny.productTypes) ? discountAny.productTypes : []
+          adjustmentPercent: adjustment,
+          clients: this.parseIris(discount.clients),
+          productTypes: Array.isArray(discount.productTypes) ? discount.productTypes : []
         });
-        this.dateFromDate.set(this.parseDateString(discount.dateValidFrom || ''));
-        this.dateToDate.set(this.parseDateString(discount.dateValidTo || ''));
+        // Sign -> control: negative is a discount, positive a markup; the input shows the magnitude.
+        this.adjustmentKind.set(adjustment > 0 ? 'markup' : 'discount');
+        this.percentText.set(adjustment === 0 ? '' : String(Math.abs(adjustment)));
         // Make sure the selected clients have labelled options in the typeahead
         this.ensureSelectedClientOptions();
         // Load linked products
@@ -299,6 +302,11 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
         this.cdr.markForCheck();
       }
     });
+  }
+
+  /** "/api/v1/clients/12" -> "12" (plain IDs are passed through unchanged). */
+  private parseIris(values: unknown[] | null | undefined): string[] {
+    return (values || []).map(v => typeof v === 'string' ? v.split('/').pop()! : String(v));
   }
 
   private loadProducts(): void {
@@ -341,41 +349,26 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     });
   }
 
-  private loadDropdownOptions(): void {
-    this.accountGroupService.getAllAccountGroups().subscribe({
-      next: (response) => {
-        this.accountGroupOptions.set(
-          (response.member || []).map(g => ({ value: String(g.id), label: g.name }))
-        );
-        this.cdr.markForCheck();
-      },
-      error: (err) => this.logger.error('Error loading account groups:', err)
-    });
-
-    // Initial page of clients for the typeahead select
-    this.clientSearch$.next('');
-  }
-
-  onAccountSearch(term: string): void {
+  onClientSearch(term: string): void {
     this.clientSearch$.next(term);
   }
 
   /** Options = latest search results plus any selected clients not in them. */
-  private updateAccountOptions(): void {
+  private updateClientOptions(): void {
     const options = [...this.clientSearchResults];
-    for (const id of this.discount().accounts) {
+    for (const id of this.discount().clients) {
       if (!options.some(o => o.value === id)) {
         options.unshift({ value: id, label: this.knownClientLabels.get(id) ?? id });
       }
     }
-    this.accountOptions.set(options);
+    this.clientOptions.set(options);
   }
 
   /** Resolve labels for selected client ids that the typeahead hasn't seen. */
   private ensureSelectedClientOptions(): void {
-    const missing = this.discount().accounts.filter(id => !this.knownClientLabels.has(id));
+    const missing = this.discount().clients.filter(id => !this.knownClientLabels.has(id));
     if (missing.length === 0) {
-      this.updateAccountOptions();
+      this.updateClientOptions();
       return;
     }
     forkJoin(missing.map(id => this.clientService.getClient(id))).pipe(
@@ -383,12 +376,12 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     ).subscribe({
       next: (clients) => {
         clients.forEach(c => this.knownClientLabels.set(String(c.id), c.name ?? String(c.id)));
-        this.updateAccountOptions();
+        this.updateClientOptions();
         this.cdr.markForCheck();
       },
       error: (err) => {
         this.logger.error('Error loading selected clients:', err);
-        this.updateAccountOptions();
+        this.updateClientOptions();
         this.cdr.markForCheck();
       }
     });
@@ -401,7 +394,7 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Validation helpers
   markAllTouched(): void {
-    this.touched.set({ name: true });
+    this.touched.set({ name: true, adjustmentPercent: true, clients: true });
   }
 
   markFieldTouched(field: string): void {
@@ -422,100 +415,37 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     this.markFieldTouched('name');
   }
 
-  toggleDateFromCalendar(event?: Event): void {
-    event?.stopPropagation();
-    this.showDateToCalendar.set(false);
-    this.showDateFromCalendar.update(v => !v);
+  /** Discount | Markup: re-signs the stored percentage (discount negative, markup positive). */
+  onAdjustmentKindChange(kind: AdjustmentKind): void {
+    this.adjustmentKind.set(kind);
+    this.discount.update(d => ({ ...d, adjustmentPercent: this.signed(Math.abs(d.adjustmentPercent), kind) }));
+    this.markFieldTouched('adjustmentPercent');
   }
 
-  toggleDateToCalendar(event?: Event): void {
-    event?.stopPropagation();
-    this.showDateFromCalendar.set(false);
-    this.showDateToCalendar.update(v => !v);
+  /** Percent input holds the magnitude; the sign comes from the selected kind. */
+  onPercentInput(event: Event): void {
+    const text = (event.target as HTMLInputElement).value;
+    this.percentText.set(text);
+    const magnitude = Math.abs(parseFloat(text));
+    this.discount.update(d => ({
+      ...d,
+      adjustmentPercent: Number.isFinite(magnitude) ? this.signed(magnitude, this.adjustmentKind()) : 0
+    }));
+    this.markFieldTouched('adjustmentPercent');
   }
 
-  onDateFromSelected(date: Date): void {
-    this.dateFromDate.set(date);
-    const isoString = this.formatDateToISO(date);
-    this.discount.update(d => ({ ...d, dateFrom: isoString }));
-    this.showDateFromCalendar.set(false);
+  private signed(magnitude: number, kind: AdjustmentKind): number {
+    return kind === 'discount' ? -magnitude : magnitude;
   }
 
-  onDateToSelected(date: Date): void {
-    this.dateToDate.set(date);
-    const isoString = this.formatDateToISO(date);
-    this.discount.update(d => ({ ...d, dateTo: isoString }));
-    this.showDateToCalendar.set(false);
-  }
-
-  clearDateFrom(event: Event): void {
-    event.stopPropagation();
-    this.dateFromDate.set(null);
-    this.discount.update(d => ({ ...d, dateFrom: '' }));
-    this.showDateFromCalendar.set(false);
-  }
-
-  clearDateTo(event: Event): void {
-    event.stopPropagation();
-    this.dateToDate.set(null);
-    this.discount.update(d => ({ ...d, dateTo: '' }));
-    this.showDateToCalendar.set(false);
-  }
-
-  formatDateDisplay(dateStr: string): string {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return dateStr;
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  }
-
-  private formatDateToISO(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}T00:00:00+00:00`;
-  }
-
-  private parseDateString(dateStr: string): Date | null {
-    if (!dateStr) return null;
-    const date = new Date(dateStr);
-    return isNaN(date.getTime()) ? null : date;
-  }
-
-  onDiscountPercentChange(value: string): void {
-    const parsed = parseFloat(value);
-    const numValue = isNaN(parsed) ? 0 : Math.min(100, Math.max(0, parsed));
-    this.discount.update(d => ({ ...d, discountPercent: numValue }));
-  }
-
-  onPriorityChange(value: string): void {
-    const parsed = parseInt(value, 10);
-    const numValue = isNaN(parsed) ? 0 : Math.max(0, parsed);
-    this.discount.update(d => ({ ...d, priority: numValue }));
-  }
-
-  onAccountGroupsChange(values: (string | number)[]): void {
-    this.discount.update(d => ({ ...d, accountGroups: values.map(String) }));
-  }
-
-  onAccountsChange(values: (string | number)[]): void {
-    this.discount.update(d => ({ ...d, accounts: values.map(String) }));
-    this.updateAccountOptions();
+  onClientsChange(values: (string | number)[]): void {
+    this.discount.update(d => ({ ...d, clients: values.map(String) }));
+    this.updateClientOptions();
+    this.markFieldTouched('clients');
   }
 
   onProductTypesChange(values: (string | number)[]): void {
     this.discount.update(d => ({ ...d, productTypes: values.map(String) }));
-  }
-
-  clearAccountGroups(): void {
-    this.discount.update(d => ({ ...d, accountGroups: [] }));
-  }
-
-  clearAccounts(): void {
-    this.discount.update(d => ({ ...d, accounts: [] }));
   }
 
   // Save actions
@@ -536,23 +466,19 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.isSaving()) return;
 
     const data = this.discount();
-    // Map component's local interface back to API format
-    const apiData = {
-      name: data.name,
+    const payload: Partial<Discount> = {
+      name: data.name.trim(),
       isActive: data.active,
-      dateValidFrom: data.dateFrom || null,
-      dateValidTo: data.dateTo || null,
-      discountPercent: data.discountPercent.toString(),
-      priority: data.priority,
-      accountGroups: data.accountGroups.map(id => `/api/v1/account_groups/${id}`),
-      clients: data.accounts.map(id => `/api/v1/clients/${id}`),
-      productTypes: data.productTypes.length > 0 ? data.productTypes : null
+      // Signed decimal string: "-20.0000" for a 20 % discount, "20.0000" for a 20 % markup
+      adjustmentPercent: data.adjustmentPercent.toFixed(4),
+      clients: data.clients.map(id => `/api/v1/clients/${id}`),
+      productTypes: data.productTypes
     };
 
     const isCreating = !this.isEditMode();
     const operation = isCreating
-      ? this.discountService.createDiscount(apiData)
-      : this.discountService.updateDiscount(this.discountId!, apiData);
+      ? this.discountService.createDiscount(payload)
+      : this.discountService.updateDiscount(this.discountId!, payload);
 
     this.isSaving.set(true);
     operation.pipe(finalize(() => { this.isSaving.set(false); this.cdr.markForCheck(); })).subscribe({
@@ -566,9 +492,17 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
       },
       error: (error) => {
         this.logger.error('Error saving discount:', error);
-        this.toastService.error('Failed to save discount');
+        this.toastService.error(this.describeSaveError(error));
       }
     });
+  }
+
+  /** Surface the API's 422 violation messages / detail instead of a generic message. */
+  private describeSaveError(error: unknown): string {
+    const body = (error as { error?: Partial<ValidationError> } | null)?.error;
+    const messages = (body?.violations ?? []).map(v => v.message).filter(Boolean);
+    if (messages.length > 0) return [...new Set(messages)].join(' ');
+    return body?.detail || 'Failed to save discount';
   }
 
   // Table handlers
@@ -634,8 +568,6 @@ export class DiscountsEditComponent implements OnInit, OnDestroy, AfterViewInit 
 
   closeDropdown(): void {
     this.openDropdownId.set(null);
-    this.showDateFromCalendar.set(false);
-    this.showDateToCalendar.set(false);
   }
 
   // Product actions

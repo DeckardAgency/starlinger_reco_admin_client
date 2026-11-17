@@ -27,6 +27,9 @@ import {
   mockFuelSurcharges
 } from './mock-data';
 
+// Placeholder only: mock mode answers logins in-memory and never reaches a backend.
+const MOCK_PASSWORD = 'mock-password';
+
 @Injectable()
 export class MockInterceptor implements HttpInterceptor {
   
@@ -261,19 +264,19 @@ export class MockInterceptor implements HttpInterceptor {
 
     let user;
 
-    // Standard test password for all RECO test users
-    if (password === 'recouser123!') {
+    // Placeholder password for the mock users (mock mode never reaches a backend)
+    if (password === MOCK_PASSWORD) {
       switch (username) {
-        case 'super@starlinger.com':
+        case 'super@example.test':
           user = mockUsers.superAdmin;
           break;
-        case 'admin@starlinger.com':
-          user = { ...mockUsers.superAdmin, email: 'admin@starlinger.com', roles: ['ROLE_ADMIN'] };
+        case 'admin@example.test':
+          user = { ...mockUsers.superAdmin, email: 'admin@example.test', roles: ['ROLE_ADMIN'] };
           break;
-        case 'clientadmin@starlinger.com':
+        case 'clientadmin@example.test':
           user = mockUsers.customerAdmin;
           break;
-        case 'recouser@starlinger.com':
+        case 'recouser@example.test':
           user = mockUsers.customer;
           break;
         default:
@@ -355,10 +358,10 @@ export class MockInterceptor implements HttpInterceptor {
         if (parts.length === 3) {
           const payload = JSON.parse(atob(parts[1]));
           // Find matching user - new test users
-          if (payload.email === 'super@starlinger.com') return mockUsers.superAdmin;
-          if (payload.email === 'admin@starlinger.com') return { ...mockUsers.superAdmin, email: 'admin@starlinger.com', roles: ['ROLE_ADMIN'] };
-          if (payload.email === 'clientadmin@starlinger.com') return mockUsers.customerAdmin;
-          if (payload.email === 'recouser@starlinger.com') return mockUsers.customer;
+          if (payload.email === 'super@example.test') return mockUsers.superAdmin;
+          if (payload.email === 'admin@example.test') return { ...mockUsers.superAdmin, email: 'admin@example.test', roles: ['ROLE_ADMIN'] };
+          if (payload.email === 'clientadmin@example.test') return mockUsers.customerAdmin;
+          if (payload.email === 'recouser@example.test') return mockUsers.customer;
           // Legacy test users
           if (payload.email === 'super@test.com') return mockUsers.superAdmin;
           if (payload.email === 'admin@test.com') return mockUsers.customerAdmin;
@@ -380,16 +383,16 @@ export class MockInterceptor implements HttpInterceptor {
     let user;
     switch (email) {
       // New test users
-      case 'super@starlinger.com':
+      case 'super@example.test':
         user = mockUsers.superAdmin;
         break;
-      case 'admin@starlinger.com':
-        user = { ...mockUsers.superAdmin, email: 'admin@starlinger.com', roles: ['ROLE_ADMIN'] };
+      case 'admin@example.test':
+        user = { ...mockUsers.superAdmin, email: 'admin@example.test', roles: ['ROLE_ADMIN'] };
         break;
-      case 'clientadmin@starlinger.com':
+      case 'clientadmin@example.test':
         user = mockUsers.customerAdmin;
         break;
-      case 'recouser@starlinger.com':
+      case 'recouser@example.test':
         user = mockUsers.customer;
         break;
       // Legacy test users

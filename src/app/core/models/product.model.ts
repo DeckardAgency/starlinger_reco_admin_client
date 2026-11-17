@@ -27,6 +27,8 @@ export interface Product {
   machineText: string;
   statistic: string;
   isActive: boolean;
+  // Active=off hides the product from the shop; inStock=off keeps it visible but not purchasable
+  inStock: boolean;
   qty: number | null;
   qtyStep: number | null;
   quoteItemLimit: number | null;

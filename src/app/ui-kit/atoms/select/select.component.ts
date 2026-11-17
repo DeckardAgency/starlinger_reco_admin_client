@@ -88,6 +88,12 @@ export class SelectComponent implements ControlValueAccessor {
   protected _disabled = signal(false);
   protected isOpen = signal(false);
   protected searchText = signal('');
+  /**
+   * Inline position of the dropdown. It is position:fixed and placed from the trigger's
+   * viewport rect, so it is never clipped by a scrolling ancestor (modal bodies, table
+   * wrappers) and flips above the trigger when there is no room below.
+   */
+  protected dropdownStyle = signal<Record<string, string>>({});
 
   constructor() {
     effect(() => {
@@ -112,8 +118,17 @@ export class SelectComponent implements ControlValueAccessor {
           this.isOpen.set(false);
         }
       };
+      // Any scroll (capture: also inside modals/tables) or resize moves the trigger,
+      // so the fixed-position dropdown follows it.
+      const reposition = () => this.positionDropdown();
       document.addEventListener('click', handler);
-      onCleanup(() => document.removeEventListener('click', handler));
+      window.addEventListener('scroll', reposition, true);
+      window.addEventListener('resize', reposition);
+      onCleanup(() => {
+        document.removeEventListener('click', handler);
+        window.removeEventListener('scroll', reposition, true);
+        window.removeEventListener('resize', reposition);
+      });
     });
   }
 
@@ -184,6 +199,9 @@ export class SelectComponent implements ControlValueAccessor {
   toggleDropdown(): void {
     if (this._disabled()) return;
     const willOpen = !this.isOpen();
+    if (willOpen) {
+      this.positionDropdown();
+    }
     this.isOpen.set(willOpen);
     if (willOpen) {
       this.searchText.set('');
@@ -194,6 +212,27 @@ export class SelectComponent implements ControlValueAccessor {
     } else {
       this.onTouched();
     }
+  }
+
+  private positionDropdown(): void {
+    const trigger = this.elementRef.nativeElement.querySelector('.ui-select__trigger') as HTMLElement | null;
+    if (!trigger || typeof window === 'undefined') return;
+    const rect = trigger.getBoundingClientRect();
+    const gap = 4;
+    const edge = 8;
+    const preferred = 250;
+    const spaceBelow = window.innerHeight - rect.bottom - gap - edge;
+    const spaceAbove = rect.top - gap - edge;
+    const openUp = spaceBelow < Math.min(preferred, 160) && spaceAbove > spaceBelow;
+    const maxHeight = Math.max(120, Math.min(preferred, openUp ? spaceAbove : spaceBelow));
+    this.dropdownStyle.set({
+      left: `${rect.left}px`,
+      width: `${rect.width}px`,
+      maxHeight: `${maxHeight}px`,
+      ...(openUp
+        ? { bottom: `${window.innerHeight - rect.top + gap}px` }
+        : { top: `${rect.bottom + gap}px` })
+    });
   }
 
   onSearch(event: Event): void {
@@ -270,6 +309,7 @@ export class SelectComponent implements ControlValueAccessor {
         break;
       case 'ArrowDown':
         if (!this.isOpen()) {
+          this.positionDropdown();
           this.isOpen.set(true);
           this.searchText.set('');
         }

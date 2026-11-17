@@ -22,6 +22,15 @@
 // =============================================================================
 .section-header {
   @include admin.detail-header;
+
+  // "Paid on …" next to the status badge
+  &__meta {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 20px;
+    color: #71717a;
+    white-space: nowrap;
+  }
 }
 
 // =============================================================================
@@ -48,6 +57,16 @@
 // =============================================================================
 .order-info-row {
   @include admin.detail-info-row;
+
+  &__left {
+    gap: 24px;
+  }
+
+  // Secondary info (checkout reference) in a smaller type
+  &__item--small .order-info-row__label,
+  &__item--small .order-info-row__value {
+    font-size: 12px;
+  }
 }
 
 // =============================================================================

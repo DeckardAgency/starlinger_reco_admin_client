@@ -77,15 +77,13 @@ export interface Client {
     otherEmail?: string | null;
     fax?: string | null;
     web?: string | null;
-    accountGroup?: {
-        '@id'?: string;
-        id: number;
-        name: string;
-    } | null;
     // Whether this client acts as an agent that manages/orders for other clients
     isClientAgent?: boolean;
     // Number of clients this agent manages (read-only, server-computed)
     managedClientCount?: number;
+    // Read-only, server-computed: at least one active delivery address exists. Without
+    // one the client's users cannot place orders (checkout needs a shipping address).
+    hasActiveDeliveryAddress?: boolean;
     createdAt: string;
     updatedAt: string;
 }
@@ -97,6 +95,15 @@ export interface ClientDetail extends Client {
     addresses?: ClientAddress[];
     // Clients managed by this agent — serialized as IRIs (client:read:details)
     managedClients?: string[] | Client[];
+    // Read-only id/name/code of the managed clients (client:read:details), so the
+    // UI can label them without fetching the whole client list.
+    managedClientSummaries?: ManagedClientSummary[];
+}
+
+export interface ManagedClientSummary {
+    id: number;
+    name: string;
+    code: string;
 }
 
 // User reference within Client
@@ -175,7 +182,6 @@ export interface CreateClientDto {
     maxActiveUsers?: number | null;
     isActive?: boolean;
     isArchived?: boolean;
-    accountGroup?: string | null;
     isClientAgent?: boolean;
     managedClients?: string[]; // IRI references to managed clients
 }
@@ -196,7 +202,6 @@ export interface UpdateClientDto {
     maxActiveUsers?: number | null;
     isActive?: boolean;
     isArchived?: boolean;
-    accountGroup?: string | null;
     isClientAgent?: boolean;
     managedClients?: string[]; // IRI references to managed clients
 }

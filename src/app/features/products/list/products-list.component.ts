@@ -7,6 +7,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
 import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
+import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import { ListHeaderComponent } from '@app/ui-kit/molecules/list-header/list-header.component';
 import { TableFooterComponent } from '@app/ui-kit/molecules/table-footer/table-footer.component';
@@ -28,6 +29,9 @@ interface Product {
   qtyStep: number;
   price: number;
   currency: string;
+  isActive: boolean;
+  /** false = visible in the shop but not purchasable */
+  inStock: boolean;
   selected?: boolean;
 }
 
@@ -40,6 +44,7 @@ interface Product {
     RouterModule,
     DataTableComponent,
     IconComponent,
+    BadgeComponent,
     BreadcrumbsComponent,
     ListHeaderComponent,
     TableFooterComponent,
@@ -67,6 +72,7 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
   @ViewChild('checkboxHeaderTemplate') checkboxHeaderTemplate!: TemplateRef<any>;
   @ViewChild('actionsTemplate') actionsTemplate!: TemplateRef<any>;
   @ViewChild('priceTemplate') priceTemplate!: TemplateRef<any>;
+  @ViewChild('statusTemplate') statusTemplate!: TemplateRef<any>;
 
   // Search state
   searchQuery = signal('');
@@ -200,6 +206,8 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
       qtyStep: 1,
       price: p.price ?? 0,
       currency: p.currency || 'EUR',
+      isActive: p.isActive ?? true,
+      inStock: p.inStock ?? true,
       selected: false
     };
   }
@@ -211,7 +219,8 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
       { key: 'name', label: 'Name', visible: true, locked: true },
       { key: 'shortDescription', label: 'Short description', visible: true },
       { key: 'price', label: 'Price', visible: true },
-      { key: 'qty', label: 'Qty', visible: true }
+      { key: 'qty', label: 'Qty', visible: true },
+      { key: 'status', label: 'Status', visible: true }
     ];
 
     this.columnDefs = this.columnSettingsService.loadColumns(this.COLUMN_STORAGE_KEY, defaultColumnDefs);
@@ -224,6 +233,7 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
       { key: 'shortDescription', label: 'Short description', sortable: true },
       { key: 'price', label: 'Price', sortable: true, width: '112px', align: 'right', template: this.priceTemplate },
       { key: 'qty', label: 'Qty', sortable: true, width: '96px', align: 'right' },
+      { key: 'status', label: 'Status', sortable: false, width: '190px', template: this.statusTemplate },
       { key: 'actions', label: '', sortable: false, width: '64px', template: this.actionsTemplate }
     ];
 
@@ -319,6 +329,7 @@ export class ProductsListComponent implements OnInit, AfterViewInit {
           partNo: fullProduct.partNo ? `${fullProduct.partNo}-copy` : '',
           slug: fullProduct.slug ? `${fullProduct.slug}-copy` : undefined,
           isActive: false,
+          inStock: fullProduct.inStock ?? true,
           qty: fullProduct.qty,
           qtyStep: fullProduct.qtyStep,
           quoteItemLimit: fullProduct.quoteItemLimit,

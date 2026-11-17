@@ -6,6 +6,8 @@ import { Subject, debounceTime, distinctUntilChanged, of, switchMap, catchError 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { DataTableComponent, TableColumn, SortEvent } from '@app/ui-kit/organisms/data-table/data-table.component';
+import { BadgeComponent } from '@app/ui-kit/atoms/badge/badge.component';
+import { IconComponent } from '@app/ui-kit/atoms/icon/icon.component';
 import { BreadcrumbsComponent } from '@app/ui-kit/molecules/breadcrumbs/breadcrumbs.component';
 import {
   ListHeaderComponent,
@@ -34,6 +36,8 @@ interface RoleOption {
   selector: 'app-users-list',
   standalone: true,
   imports: [
+    IconComponent,
+    BadgeComponent,
     CommonModule,
     FormsModule,
     RouterModule,
@@ -80,6 +84,8 @@ export class UsersListComponent implements OnInit, AfterViewInit {
   // Filter state
   hasClientFilter: HasClientFilter = 'all';
   roleFilter = 'all';
+  /** Users without any functional role (can sign in, cannot use the webshop) — shown above the table. */
+  noRoleCount = signal(0);
 
   // Filter options
   hasClientOptions: { value: HasClientFilter; label: string }[] = [
@@ -93,9 +99,10 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     { value: USER_ROLES.ADMIN, label: 'Admin' },
     { value: USER_ROLES.CLIENT_ADMIN, label: 'Client Admin' },
     { value: USER_ROLES.CLIENT, label: 'Client' },
-    { value: USER_ROLES.USER_CLIENT_AGENT, label: 'Client Agent' },
+    { value: USER_ROLES.USER_CLIENT_AGENT, label: 'Agent' },
     { value: USER_ROLES.FINANCE, label: 'Finance' },
-    { value: USER_ROLES.USER, label: 'User' }
+    // Accounts without any functional role (can sign in, cannot use the webshop)
+    { value: 'none', label: 'No role' }
   ];
 
   // Dropdown state
@@ -170,6 +177,7 @@ export class UsersListComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.loadAttentionCount();
     this.loadUsers();
   }
 
@@ -197,8 +205,10 @@ export class UsersListComponent implements OnInit, AfterViewInit {
       params['hasClient'] = false;
     }
 
-    // Apply role filter
-    if (this.roleFilter !== 'all') {
+    // Apply role filter ('none' = server-side hasRole=false, see NoRoleFilter)
+    if (this.roleFilter === 'none') {
+      params['hasRole'] = false;
+    } else if (this.roleFilter !== 'all') {
       params['roles'] = this.roleFilter;
     }
 
@@ -234,7 +244,8 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     // not read as regular webshop clients in the list.
     if (roles.includes('ROLE_FINANCE')) return 'finance';
     if (roles.includes('ROLE_CLIENT')) return 'client';
-    return 'client';
+    // ROLE_USER only: can log in, can do nothing — the list flags it as "No role".
+    return null;
   }
 
   ngAfterViewInit(): void {
@@ -294,6 +305,15 @@ export class UsersListComponent implements OnInit, AfterViewInit {
     this.roleFilter = value;
     this.currentPage.set(1);
     this.loadUsers();
+  }
+
+  private loadAttentionCount(): void {
+    this.userService.getUsers({ hasRole: false, itemsPerPage: 1 })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(response => {
+        this.noRoleCount.set(response.totalItems || 0);
+        this.cdr.markForCheck();
+      });
   }
 
   onSortChange(event: SortEvent): void {

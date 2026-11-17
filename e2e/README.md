@@ -186,10 +186,26 @@ Tests use a global setup to authenticate once and reuse the session:
 
 ### Test Credentials
 
+Credentials are **not** committed. They are read from environment variables, and a
+run fails with a clear `Missing environment variable ...` error when one it needs is
+not set:
+
+| Variable | Used for |
+|----------|----------|
+| `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` | Admin account (`ROLE_ADMIN`) - global setup, auth tests, teardown/cleanup. **Required.** |
+| `E2E_CLIENT_ADMIN_EMAIL` / `E2E_CLIENT_ADMIN_PASSWORD` | Client admin account (`ROLE_CLIENT_ADMIN`) - only needed by tests that use `TEST_USERS.clientAdmin`. |
+| `E2E_CLIENT_EMAIL` / `E2E_CLIENT_PASSWORD` | Client account (`ROLE_CLIENT`) - only needed by tests that use `TEST_USERS.client`. |
+
+Export them in your shell (or configure them as CI secrets) before running the tests:
+
+```bash
+export E2E_ADMIN_EMAIL=...
+export E2E_ADMIN_PASSWORD=...
+npx playwright test
 ```
-Email: admin@starlinger.com
-Password: recouser123!
-```
+
+Use a dedicated test account on a non-production backend; never put the values in
+a committed file.
 
 ## Best Practices
 
