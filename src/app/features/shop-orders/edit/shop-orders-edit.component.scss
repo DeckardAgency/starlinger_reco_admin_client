@@ -530,7 +530,7 @@
 }
 
 // =============================================================================
-// DHL Express shipment card + pickup modal
+// DHL Express shipment card + pickup modal, abas (ERP) card (same card styles)
 // =============================================================================
 .btn--ghost {
   @include admin.btn-ghost;
@@ -546,7 +546,8 @@
   }
 }
 
-.dhl-card {
+.dhl-card,
+.erp-card {
   background: #fff;
   border: 1px solid #e4e4e7;
   border-radius: 12px;
@@ -626,6 +627,130 @@
 
   &__error {
     color: #b91c1c;
+  }
+}
+
+// abas (ERP) card: problems, documents, collapsible message + log
+.erp-card {
+  &__header:last-child {
+    margin-bottom: 0;
+  }
+
+  &__problems {
+    margin: 0;
+    padding-left: 18px;
+    color: #b91c1c;
+  }
+
+  &__doc {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    & + & {
+      margin-top: 8px;
+    }
+  }
+
+  &__section {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #f4f4f5;
+  }
+
+  &__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: #232323;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__pre {
+    margin: 8px 0 0;
+    padding: 12px;
+    max-height: 360px;
+    overflow: auto;
+    background: #fafafa;
+    border: 1px solid #e4e4e7;
+    border-radius: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre;
+  }
+
+  &__empty {
+    margin: 8px 0 0;
+    font-size: 14px;
+    color: #71717a;
+    font-style: italic;
+  }
+}
+
+.erp-log {
+  margin-top: 8px;
+  overflow-x: auto;
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    th {
+      text-align: left;
+      font-weight: 500;
+      font-size: 12px;
+      color: #71717a;
+      padding: 6px 8px;
+      border-bottom: 1px solid #e4e4e7;
+    }
+
+    td {
+      padding: 8px;
+      border-bottom: 1px solid #f4f4f5;
+      vertical-align: top;
+      color: #232323;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__row--error td {
+    background: #fff7f7;
+  }
+
+  &__nowrap {
+    white-space: nowrap;
+  }
+
+  &__expand {
+    text-align: right;
+    white-space: nowrap;
+
+    .erp-card__toggle {
+      font-size: 13px;
+    }
+  }
+
+  &__detail td {
+    background: #fafafa;
+  }
+
+  &__label {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #71717a;
   }
 }
 

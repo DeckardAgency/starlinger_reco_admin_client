@@ -294,6 +294,169 @@
       </div>
     </div>
 
+    <!-- abas (ERP): the order's handoff through the middleware -->
+    @if (erp(); as erpState) {
+      <div class="erp-card" [class.erp-card--failed]="erpState.status === 'failed' || erpState.status === 'rejected'">
+        <div class="erp-card__header">
+          <div class="erp-card__title-group">
+            <ui-icon name="layers" size="md" color="#71717A"></ui-icon>
+            <h2 class="erp-card__title">abas (ERP)</h2>
+            <ui-badge [variant]="erpStatusVariant(erpState.status)">{{ erpStatusLabel(erpState.status) }}</ui-badge>
+          </div>
+          <div class="erp-card__actions">
+            <button class="btn btn--outline" [disabled]="erpSending()" (click)="refreshErp()">
+              <ui-icon name="refresh" size="sm"></ui-icon>
+              <span>Refresh</span>
+            </button>
+            @if (erpState.canSend) {
+              <button class="btn btn--primary" [disabled]="erpSending()" (click)="onSendToErp()">
+                <ui-icon name="send" size="sm"></ui-icon>
+                <span>{{ erpSending() ? 'Sending…' : 'Send to abas' }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <dl class="erp-card__grid">
+          <div><dt>Sending mode</dt><dd>{{ erpModeLabels[erpState.mode] }}</dd></div>
+          <div><dt>ERP reference</dt><dd>{{ erpState.erpReference || '—' }}</dd></div>
+          <div><dt>abas reference</dt><dd>{{ erpState.abasReference || '—' }}</dd></div>
+          <div><dt>Attempts</dt><dd>{{ erpState.attempts }}</dd></div>
+          <div><dt>Sent</dt><dd>{{ erpState.sentAt ? formatDateTime(erpState.sentAt) : '—' }}</dd></div>
+          <div><dt>abas result</dt><dd>{{ erpState.resultAt ? formatDateTime(erpState.resultAt) : '—' }}</dd></div>
+          <div><dt>Order confirmation</dt><dd>{{ erpState.confirmedAt ? formatDateTime(erpState.confirmedAt) : '—' }}</dd></div>
+          <div>
+            <dt>Delivery cost (net)</dt>
+            <dd>
+              @if (erpState.deliveryCost !== null) {
+                {{ formatCurrency(erpState.deliveryCost) }}{{ deliveryCostFixed() ? '' : ' (preview)' }}
+              } @else {
+                —
+              }
+            </dd>
+          </div>
+          @if (erpState.error) {
+            <div class="erp-card__wide">
+              <dt>{{ erpState.status === 'rejected' ? 'abas rejected the order' : 'Last error' }}</dt>
+              <dd class="erp-card__error">{{ erpState.error }}</dd>
+            </div>
+          }
+          @if (erpState.problems.length) {
+            <div class="erp-card__wide">
+              <dt>Problems — the order is not sent until these are fixed</dt>
+              <dd>
+                <ul class="erp-card__problems">
+                  @for (problem of erpState.problems; track $index) {
+                    <li>{{ problem }}</li>
+                  }
+                </ul>
+              </dd>
+            </div>
+          }
+          <div class="erp-card__wide">
+            <dt>Documents from abas</dt>
+            <dd>
+              @for (doc of orderDocuments(); track doc.id) {
+                <div class="erp-card__doc">
+                  <span>{{ orderDocumentLabel(doc) }}{{ doc.createdAt ? ' · ' + formatDateTime(doc.createdAt) : '' }}</span>
+                  <button class="btn btn--outline" (click)="onOpenOrderDocument(doc)">
+                    <ui-icon name="file-text" size="sm"></ui-icon>
+                    <span>Open PDF</span>
+                  </button>
+                </div>
+              } @empty {
+                No order confirmation received yet
+              }
+            </dd>
+          </div>
+        </dl>
+
+        <div class="erp-card__section">
+          <button type="button" class="erp-card__toggle" [attr.aria-expanded]="erpMessageOpen()" (click)="erpMessageOpen.set(!erpMessageOpen())">
+            <ui-icon [name]="erpMessageOpen() ? 'chevron-up' : 'chevron-down'" size="sm"></ui-icon>
+            <span>Message</span>
+          </button>
+          @if (erpMessageOpen()) {
+            @if (erpPayloadJson()) {
+              <pre class="erp-card__pre">{{ erpPayloadJson() }}</pre>
+            } @else {
+              <p class="erp-card__empty">No message — drafts are not sent to abas.</p>
+            }
+          }
+        </div>
+
+        <div class="erp-card__section">
+          <button type="button" class="erp-card__toggle" [attr.aria-expanded]="erpLogOpen()" (click)="erpLogOpen.set(!erpLogOpen())">
+            <ui-icon [name]="erpLogOpen() ? 'chevron-up' : 'chevron-down'" size="sm"></ui-icon>
+            <span>Log ({{ erpState.logs.length }})</span>
+          </button>
+          @if (erpLogOpen()) {
+            @if (erpState.logs.length) {
+              <div class="erp-log">
+                <table class="erp-log__table">
+                  <thead>
+                    <tr><th>Time</th><th>Direction</th><th>Kind</th><th>HTTP</th><th>Error</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    @for (log of erpState.logs; track log.id) {
+                      <tr [class.erp-log__row--error]="!!log.error">
+                        <td class="erp-log__nowrap">{{ formatDateTime(log.createdAt) }}</td>
+                        <td class="erp-log__nowrap">{{ log.direction === 'out' ? 'Out →' : '← In' }}</td>
+                        <td class="erp-log__nowrap">{{ erpKindLabel(log.kind) }}</td>
+                        <td>{{ log.httpStatus ?? '—' }}</td>
+                        <td class="erp-card__error">{{ log.error }}</td>
+                        <td class="erp-log__expand">
+                          <button type="button" class="erp-card__toggle" [attr.aria-expanded]="erpExpandedLogs().has(log.id)" (click)="toggleErpLog(log.id)">
+                            <span>{{ erpExpandedLogs().has(log.id) ? 'Hide' : 'Details' }}</span>
+                            <ui-icon [name]="erpExpandedLogs().has(log.id) ? 'chevron-up' : 'chevron-down'" size="sm"></ui-icon>
+                          </button>
+                        </td>
+                      </tr>
+                      @if (erpExpandedLogs().has(log.id)) {
+                        <tr class="erp-log__detail">
+                          <td colspan="6">
+                            @if (log.payload) {
+                              <div class="erp-log__label">Payload</div>
+                              <pre class="erp-card__pre">{{ formatErpBody(log.payload) }}</pre>
+                            }
+                            @if (log.response) {
+                              <div class="erp-log__label">Response</div>
+                              <pre class="erp-card__pre">{{ formatErpBody(log.response) }}</pre>
+                            }
+                            @if (!log.payload && !log.response) {
+                              <p class="erp-card__empty">No message body recorded.</p>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <p class="erp-card__empty">Nothing exchanged with the middleware yet.</p>
+            }
+          }
+        </div>
+      </div>
+    } @else if (erpLoadFailed()) {
+      <div class="erp-card erp-card--failed">
+        <div class="erp-card__header">
+          <div class="erp-card__title-group">
+            <ui-icon name="layers" size="md" color="#71717A"></ui-icon>
+            <h2 class="erp-card__title">abas (ERP)</h2>
+            <span class="erp-card__error">Could not load the abas status.</span>
+          </div>
+          <div class="erp-card__actions">
+            <button class="btn btn--outline" (click)="refreshErp()">
+              <ui-icon name="refresh" size="sm"></ui-icon>
+              <span>Retry</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- DHL Express shipment (booked via MyDHL from this page) -->
     @if (dhlShipment(); as shipment) {
       <div class="dhl-card" [class.dhl-card--cancelled]="shipment.status === 'cancelled'" [class.dhl-card--failed]="shipment.status === 'failed'">

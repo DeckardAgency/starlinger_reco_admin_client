@@ -67,6 +67,15 @@ export interface OrderLog {
     createdAt: string;
 }
 
+/** Document attached to an order (abas order confirmation PDF). */
+export interface OrderDocument {
+    id: number;
+    type: 'order_confirmation' | string;
+    createdAt: string | null;
+    /** Relative API path, e.g. "/api/v1/orders/12/documents/3" — returns application/pdf */
+    url: string;
+}
+
 export interface Order {
     '@context'?: string;
     '@id': string;
@@ -112,6 +121,10 @@ export interface Order {
     cancelledBy?: User;
     paymentType?: OrderPaymentType | string | null;
     deliveryType?: OrderDeliveryType | string | null;
+    /** Net delivery charge sent to abas; null until the order is first handed to the ERP. */
+    deliveryCost?: number | null;
+    /** abas order confirmations (detail responses). */
+    documents?: OrderDocument[];
 }
 
 // Tracking carrier options
