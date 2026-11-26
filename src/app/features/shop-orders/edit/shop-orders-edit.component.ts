@@ -17,13 +17,15 @@ import { PaymentTypeService } from '@core/services/http/payment-type.service';
 import { UserService } from '@core/services/http/user.service';
 import { ClientService } from '@core/services/http/client.service';
 import { AddressService } from '@core/services/http/address.service';
-import { Order, OrderClientRef } from '@core/models/order.model';
+import { Order, OrderClientRef, OrderDocument } from '@core/models/order.model';
 import { Client, ClientAddress } from '@core/models/client.model';
 import { ToastService } from '@app/ui-kit/organisms/toast-container/toast-container.component';
 import { AlertService } from '@services/alert.service';
 import { LoggerService } from '@core/services/logger.service';
 import { DhlShipmentService } from '@core/services/http/dhl-shipment.service';
 import { DhlApiError, DhlBookingResponse, DhlPrefill, DhlShipment } from '@core/models/dhl-shipment.model';
+import { OrderErpService } from '@core/services/http/order-erp.service';
+import { ERP_LOG_KIND_LABELS, ERP_MODE_LABELS, ERP_STATUS_LABELS, OrderErpApiError, OrderErpState } from '@core/models/order-erp.model';
 import { DhlShipmentModalComponent } from './dhl-shipment-modal/dhl-shipment-modal.component';
 import { ModalComponent } from '@app/ui-kit/organisms/modal/modal.component';
 
@@ -172,6 +174,7 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private clientService = inject(ClientService);
   private addressService = inject(AddressService);
   private dhlService = inject(DhlShipmentService);
+  private erpService = inject(OrderErpService);
   private toastService = inject(ToastService);
   private alertService = inject(AlertService);
   private logger = inject(LoggerService);
@@ -562,6 +565,8 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
           source: e.source ?? 'manual',
         })));
         this.loadDhlShipment(order.id);
+        this.applyOrderErpFields(order);
+        this.loadErp(order.id);
         // Contacts come from the ordering user's own company (that is where the
         // contact person lives); addresses and the Client dropdown come from the
         // company the order is for — for agent orders the on-behalf-of client,
@@ -1128,6 +1133,156 @@ export class ShopOrdersEditComponent implements OnInit, OnDestroy, AfterViewInit
   private dhlErrorMessage(err: any, fallback: string): string {
     const body = err?.error as DhlApiError | undefined;
     return body?.message || (typeof err?.message === 'string' && err.status ? `${fallback} (${err.status})` : fallback);
+  }
+
+  // ---------------------------------------------------------------------------
+  // abas (ERP) handoff through the middleware: status, message, log, order
+  // confirmations (admin only)
+  // ---------------------------------------------------------------------------
+  erp = signal<OrderErpState | null>(null);
+  erpLoadFailed = signal(false);
+  erpSending = signal(false);
+  erpMessageOpen = signal(false);
+  erpLogOpen = signal(false);
+  /** Log rows showing their payload/response */
+  erpExpandedLogs = signal<ReadonlySet<number>>(new Set());
+  /** abas order confirmations (`order.documents`) */
+  orderDocuments = signal<OrderDocument[]>([]);
+  /** The delivery cost is fixed when the order is first handed over; until then the ERP view shows a preview. */
+  deliveryCostFixed = signal(false);
+  readonly erpModeLabels = ERP_MODE_LABELS;
+
+  erpPayloadJson = computed(() => {
+    const payload = this.erp()?.payload;
+    return payload ? JSON.stringify(payload, null, 2) : '';
+  });
+
+  private applyOrderErpFields(order: Order): void {
+    this.orderDocuments.set(order.documents ?? []);
+    this.deliveryCostFixed.set(order.deliveryCost != null);
+  }
+
+  private loadErp(orderId: number): void {
+    if (!orderId) return;
+    this.erpService.get(orderId).subscribe({
+      next: (state) => { this.erp.set(state); this.erpLoadFailed.set(false); this.cdr.markForCheck(); },
+      error: (err) => {
+        this.logger.error('[ERP] Failed to load the abas status', err);
+        // A card already on screen stays (with its last state); otherwise show the failure card
+        if (this.erp()) {
+          this.toastService.error('Could not refresh the abas status.');
+        } else {
+          this.erpLoadFailed.set(true);
+        }
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  /** abas answers by callback — reload the card and the documents without touching the form. */
+  refreshErp(): void {
+    const id = this.order().id;
+    if (!id) return;
+    this.loadErp(id);
+    this.orderService.getOrder(String(id)).subscribe({
+      next: (order) => { this.applyOrderErpFields(order); this.cdr.markForCheck(); },
+      error: (err) => this.logger.error('[ERP] Failed to reload the order documents', err),
+    });
+  }
+
+  async onSendToErp(): Promise<void> {
+    const current = this.erp();
+    const id = this.order().id;
+    if (!current?.canSend || !id || this.erpSending()) return;
+    const ref = this.order().internalRef || String(id);
+    const message = current.mode === 'on'
+      ? `Send order #${ref} to abas now? This creates a real order in abas.`
+      : `Build the abas message for order #${ref}? Sending is in log-only mode: the message is only written to the log, nothing is sent to abas.`;
+    if (!(await this.alertService.confirm(message, 'Send to abas'))) return;
+    this.erpSending.set(true);
+    this.erpService.send(id)
+      .pipe(finalize(() => { this.erpSending.set(false); this.cdr.markForCheck(); }))
+      .subscribe({
+        next: ({ result, ...state }) => {
+          this.erp.set(state);
+          this.deliveryCostFixed.set(true);
+          if (result === 'sent') {
+            this.toastService.success('Order sent — queued at the middleware for abas.');
+          } else if (result === 'logged') {
+            this.toastService.info('Message logged only — nothing was sent to abas (log mode).');
+          } else {
+            this.toastService.error(`Not sent to abas${state.error ? ': ' + state.error : '.'}`);
+          }
+        },
+        error: (err) => {
+          const body = err?.error as OrderErpApiError | undefined;
+          this.toastService.error(body?.error || `Could not send the order to abas${err?.status ? ` (${err.status})` : ''}.`);
+          // 409: the state moved on (already with abas, switched off) — show where it stands now
+          this.loadErp(id);
+        },
+      });
+  }
+
+  onOpenOrderDocument(doc: OrderDocument): void {
+    this.erpService.downloadDocument(doc.url).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      },
+      error: (err) => {
+        this.logger.error('[ERP] Document download failed', err);
+        this.toastService.error('Could not open the document.');
+      },
+    });
+  }
+
+  toggleErpLog(id: number): void {
+    this.erpExpandedLogs.update(open => {
+      const next = new Set(open);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  erpStatusLabel(status: string | null): string {
+    return status ? (ERP_STATUS_LABELS as Record<string, string>)[status] ?? status : 'Not handed to abas';
+  }
+
+  erpStatusVariant(status: string | null): BadgeVariant {
+    const variants: Record<string, BadgeVariant> = {
+      pending: 'info',
+      sending: 'warning',
+      logged: 'secondary',
+      failed: 'danger',
+      sent: 'blue',
+      accepted: 'success',
+      rejected: 'danger',
+      confirmed: 'success',
+    };
+    return (status && variants[status]) || 'secondary';
+  }
+
+  erpKindLabel(kind: string): string {
+    return (ERP_LOG_KIND_LABELS as Record<string, string>)[kind] ?? kind;
+  }
+
+  orderDocumentLabel(doc: OrderDocument): string {
+    return doc.type === 'order_confirmation' ? 'Order confirmation' : doc.type.replace(/_/g, ' ');
+  }
+
+  /** Log bodies are raw strings, usually JSON — indent them when they parse. */
+  formatErpBody(body: string | null): string {
+    if (!body) return '';
+    try {
+      return JSON.stringify(JSON.parse(body), null, 2);
+    } catch {
+      return body;
+    }
   }
 
   // Show tracking fields when order is shipped/delivered or has a tracking number
